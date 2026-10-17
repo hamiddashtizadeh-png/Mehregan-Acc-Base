@@ -87,7 +87,7 @@ export interface DocumentNumberingConfig {
   incomePrefix: string;
 }
 
-export type IndustryProfileCode = 'CCTV_SECURITY' | 'RETAIL_GENERAL';
+export type IndustryProfileCode = 'CCTV_SECURITY' | 'RETAIL_GENERAL' | (string & {});
 
 export interface IndustryProfileFeatures {
   enableInstallationServices: boolean;
@@ -95,6 +95,14 @@ export interface IndustryProfileFeatures {
   enableInstallersRole: boolean;
   enableWarrantyTracking: boolean;
   enableBarcodeScanQuickPos: boolean;
+  [customFeature: string]: boolean | undefined;
+}
+
+export interface IndustryProfileUiLabels {
+  inventoryTabTitleFa?: string;
+  serialTrackerTitleFa?: string;
+  partiesInstallerRoleTitleFa?: string;
+  [customLabel: string]: string | undefined;
 }
 
 export interface IndustryProfileConfig {
@@ -103,6 +111,7 @@ export interface IndustryProfileConfig {
   descriptionFa: string;
   badgeLabelFa: string;
   features: IndustryProfileFeatures;
+  uiLabels?: IndustryProfileUiLabels;
 }
 
 export interface SystemSettingsRecord {

@@ -751,7 +751,10 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
           }`}
         >
           <Barcode className="h-4 w-4" />
-          <span>{enableHardwareMacTracking ? 'رهگیری سریال و MAC آدرس' : 'رهگیری شماره سریال کالا'}</span>
+          <span>
+            {foundationData.industryProfile?.uiLabels?.serialTrackerTitleFa ||
+              (enableHardwareMacTracking ? 'رهگیری سریال و MAC آدرس' : 'رهگیری شماره سریال کالا')}
+          </span>
         </button>
 
         <button

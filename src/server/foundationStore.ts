@@ -101,7 +101,7 @@ import {
   IndustryProfileFeatures,
 } from '../types/foundation';
 
-export const INDUSTRY_PROFILES: Record<IndustryProfileCode, IndustryProfileConfig> = {
+export const INDUSTRY_PROFILES: Record<string, IndustryProfileConfig> = {
   CCTV_SECURITY: {
     code: 'CCTV_SECURITY',
     titleFa: 'دوربین مداربسته و سیستم‌های حفاظتی و نظارتی (مهرگان)',
@@ -113,6 +113,11 @@ export const INDUSTRY_PROFILES: Record<IndustryProfileCode, IndustryProfileConfi
       enableInstallersRole: true,
       enableWarrantyTracking: true,
       enableBarcodeScanQuickPos: true,
+    },
+    uiLabels: {
+      inventoryTabTitleFa: 'کالا و تجهیزات نظارتی',
+      serialTrackerTitleFa: 'رهگیری سریال و MAC آدرس',
+      partiesInstallerRoleTitleFa: 'نصابان و تکنسین‌ها',
     },
   },
   RETAIL_GENERAL: {
@@ -126,6 +131,11 @@ export const INDUSTRY_PROFILES: Record<IndustryProfileCode, IndustryProfileConfi
       enableInstallersRole: false,
       enableWarrantyTracking: false,
       enableBarcodeScanQuickPos: true,
+    },
+    uiLabels: {
+      inventoryTabTitleFa: 'کالا و انبارداری',
+      serialTrackerTitleFa: 'رهگیری شماره سریال کالا',
+      partiesInstallerRoleTitleFa: 'مجریان و کارشناسان فنی',
     },
   },
 };
@@ -4152,6 +4162,23 @@ export class FoundationStore {
 
   public getAllIndustryProfiles(): IndustryProfileConfig[] {
     return Object.values(INDUSTRY_PROFILES);
+  }
+
+  public registerIndustryProfile(profile: IndustryProfileConfig): void {
+    if (!profile || !profile.code) {
+      throw new Error('مشخصات صنف نامعتبر است.');
+    }
+    INDUSTRY_PROFILES[profile.code] = {
+      ...profile,
+      features: {
+        enableInstallationServices: false,
+        enableHardwareMacTracking: false,
+        enableInstallersRole: false,
+        enableWarrantyTracking: false,
+        enableBarcodeScanQuickPos: true,
+        ...profile.features,
+      },
+    };
   }
 
   public updateIndustryProfile(

@@ -826,7 +826,16 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
               { id: 'ALL', label: 'همه اشخاص' },
               { id: 'CUSTOMER', label: 'مشتریان' },
               { id: 'SUPPLIER', label: 'تأمین‌کنندگان' },
-              ...(enableInstallersRole ? [{ id: 'INSTALLER', label: 'نصابان و تکنسین‌ها' }] : []),
+              ...(enableInstallersRole
+                ? [
+                    {
+                      id: 'INSTALLER',
+                      label:
+                        foundationData.industryProfile?.uiLabels?.partiesInstallerRoleTitleFa ||
+                        'نصابان و تکنسین‌ها',
+                    },
+                  ]
+                : []),
               { id: 'PARTNER_OTHER', label: 'همکاران و سایر' },
             ].map((t) => (
               <button
