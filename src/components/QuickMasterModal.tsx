@@ -19,6 +19,7 @@ export interface QuickMasterModalProps {
   onClose: () => void;
   type: QuickMasterType;
   defaultPartyRole?: 'CUSTOMER' | 'SUPPLIER' | 'INSTALLER' | 'OTHER';
+  enableInstallersRole?: boolean;
   onSuccess: (result: { id: number; title: string; entity: any; type: QuickMasterType }) => void;
   onRefresh?: () => Promise<void> | void;
 }
@@ -28,6 +29,7 @@ export function QuickMasterModal({
   onClose,
   type,
   defaultPartyRole = 'CUSTOMER',
+  enableInstallersRole = true,
   onSuccess,
   onRefresh,
 }: QuickMasterModalProps) {
@@ -208,7 +210,9 @@ export function QuickMasterModal({
   const titles = {
     PARTY: {
       header: 'افزودن سریع شخص / طرف تجاری',
-      sub: 'تعریف فوری مشتری، همکار، نصاب یا تأمین‌کننده بدون خروج از فرم جاری',
+      sub: enableInstallersRole
+        ? 'تعریف فوری مشتری، همکار، نصاب یا تأمین‌کننده بدون خروج از فرم جاری'
+        : 'تعریف فوری مشتری، همکار یا تأمین‌کننده بدون خروج از فرم جاری',
       icon: <UserPlus className="w-5 h-5 text-emerald-600" />,
       color: 'border-emerald-500 bg-emerald-50 text-emerald-800',
     },
@@ -294,7 +298,7 @@ export function QuickMasterModal({
                   >
                     <option value="CUSTOMER">خریدار / مشتری</option>
                     <option value="SUPPLIER">تأمین‌کننده / فروشنده</option>
-                    <option value="INSTALLER">نصاب / مجری پروژه</option>
+                    {enableInstallersRole && <option value="INSTALLER">نصاب / مجری پروژه</option>}
                     <option value="OTHER">سایر اشخاص</option>
                   </select>
                 </div>
@@ -346,7 +350,7 @@ export function QuickMasterModal({
                 </label>
                 <input
                   type="text"
-                  placeholder="مثال: انبار قطعات دوربین / انبار شعبه ۲"
+                  placeholder="مثال: انبار مرکزی / انبار شعبه ۲"
                   value={warehouseTitle}
                   onChange={(e) => setWarehouseTitle(e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"

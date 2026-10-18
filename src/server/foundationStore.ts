@@ -138,6 +138,24 @@ export const INDUSTRY_PROFILES: Record<string, IndustryProfileConfig> = {
       partiesInstallerRoleTitleFa: 'مجریان و کارشناسان فنی',
     },
   },
+  SUPERMARKET_GROCERY: {
+    code: 'SUPERMARKET_GROCERY',
+    titleFa: 'سوپرمارکت، هایپرمارکت و مواد غذایی',
+    descriptionFa: 'پروفایل متمرکز بر فروش سریع بارکدی، صندوق لمسی POS، خرید، انبارداری استاندارد و حسابداری بدون خدمات نصب و کابل‌کشی.',
+    badgeLabelFa: 'صنف سوپرمارکت و مواد غذایی',
+    features: {
+      enableInstallationServices: false,
+      enableHardwareMacTracking: false,
+      enableInstallersRole: false,
+      enableWarrantyTracking: false,
+      enableBarcodeScanQuickPos: true,
+    },
+    uiLabels: {
+      inventoryTabTitleFa: 'کالاها و اقلام سوپرمارکت',
+      serialTrackerTitleFa: 'رهگیری بارکد کالا',
+      partiesInstallerRoleTitleFa: 'پرسنل و متصدیان فروشگاه',
+    },
+  },
 };
 
 export type ConnectionMode = 'LOCAL' | 'LAN' | 'ONLINE';
@@ -323,6 +341,7 @@ export interface FoundationDatabaseState {
   projectRequisitions: ProjectMaterialRequisitionRecord[];
   fixedAssets: FixedAssetRecord[];
   depreciationEntries: DepreciationEntryRecord[];
+  customIndustryProfiles?: IndustryProfileConfig[];
 }
 
 export interface RbacEvaluationResult {
@@ -3221,6 +3240,7 @@ function buildDefaultState(): FoundationDatabaseState {
     projectRequisitions: defaultProjectRequisitions,
     fixedAssets: defaultFixedAssets,
     depreciationEntries: defaultDepreciationEntries,
+    customIndustryProfiles: [],
   };
 }
 
@@ -3391,7 +3411,60 @@ export class FoundationStore {
             dirty = true;
           }
 
-          if (!parsed.settings.industryProfileCode) {
+          // Hydrate and validate customIndustryProfiles from storage without crashing on corrupt entries
+          if (!Array.isArray(parsed.customIndustryProfiles)) {
+            parsed.customIndustryProfiles = [];
+            dirty = true;
+          } else {
+            const validProfiles: IndustryProfileConfig[] = [];
+            for (const cp of parsed.customIndustryProfiles) {
+              if (
+                cp &&
+                typeof cp.code === 'string' &&
+                /^[A-Z0-9_]{3,30}$/.test(cp.code) &&
+                cp.code !== 'CCTV_SECURITY' &&
+                cp.code !== 'RETAIL_GENERAL' &&
+                cp.code !== 'SUPERMARKET_GROCERY' &&
+                typeof cp.titleFa === 'string' &&
+                cp.titleFa.trim().length >= 3 &&
+                typeof cp.badgeLabelFa === 'string' &&
+                cp.badgeLabelFa.trim().length >= 2 &&
+                cp.features &&
+                typeof cp.features === 'object'
+              ) {
+                const completeConfig: IndustryProfileConfig = {
+                  code: cp.code,
+                  titleFa: cp.titleFa.trim(),
+                  descriptionFa: cp.descriptionFa || '',
+                  badgeLabelFa: cp.badgeLabelFa.trim(),
+                  features: {
+                    enableInstallationServices: false,
+                    enableHardwareMacTracking: false,
+                    enableInstallersRole: false,
+                    enableWarrantyTracking: false,
+                    enableBarcodeScanQuickPos: true,
+                    ...cp.features,
+                  },
+                  uiLabels: {
+                    inventoryTabTitleFa: cp.uiLabels?.inventoryTabTitleFa || 'کالا و انبارداری',
+                    serialTrackerTitleFa: cp.uiLabels?.serialTrackerTitleFa || 'رهگیری شماره سریال کالا',
+                    partiesInstallerRoleTitleFa: cp.uiLabels?.partiesInstallerRoleTitleFa || 'مجریان و کارشناسان فنی',
+                    ...cp.uiLabels,
+                  },
+                };
+                INDUSTRY_PROFILES[cp.code] = completeConfig;
+                validProfiles.push(completeConfig);
+              } else {
+                dirty = true; // Clean out corrupted/malformed custom profile entries
+              }
+            }
+            parsed.customIndustryProfiles = validProfiles;
+          }
+
+          if (
+            !parsed.settings.industryProfileCode ||
+            !INDUSTRY_PROFILES[parsed.settings.industryProfileCode]
+          ) {
             parsed.settings.industryProfileCode = 'CCTV_SECURITY';
             dirty = true;
           }
@@ -4164,21 +4237,97 @@ export class FoundationStore {
     return Object.values(INDUSTRY_PROFILES);
   }
 
-  public registerIndustryProfile(profile: IndustryProfileConfig): void {
-    if (!profile || !profile.code) {
-      throw new Error('مشخصات صنف نامعتبر است.');
+  public registerIndustryProfile(
+    profile: IndustryProfileConfig,
+    actorUserId?: number
+  ): IndustryProfileConfig {
+    if (!profile || typeof profile !== 'object') {
+      throw new Error('مشخصات صنف ارائه‌شده نامعتبر است.');
     }
-    INDUSTRY_PROFILES[profile.code] = {
-      ...profile,
+
+    const cleanCode = (profile.code || '').trim().toUpperCase();
+    if (!cleanCode || !/^[A-Z0-9_]{3,30}$/.test(cleanCode)) {
+      throw new Error('کد صنف باید تنها شامل حروف بزرگ انگلیسی، اعداد و خط زیر (بین ۳ تا ۳۰ کاراکتر) باشد.');
+    }
+
+    // 1. Protect reserved core profiles
+    if (
+      cleanCode === 'CCTV_SECURITY' ||
+      cleanCode === 'RETAIL_GENERAL' ||
+      cleanCode === 'SUPERMARKET_GROCERY'
+    ) {
+      throw new Error('امکان بازنویسی پروفایل‌های پیش‌فرض و رزروشده سیستم (CCTV_SECURITY، RETAIL_GENERAL و SUPERMARKET_GROCERY) وجود ندارد.');
+    }
+
+    // 2. Prevent duplicate codes
+    if (INDUSTRY_PROFILES[cleanCode]) {
+      throw new Error(`صنف با کد «${cleanCode}» قبلاً در سیستم ثبت شده است.`);
+    }
+
+    // 3. Validate mandatory titles
+    const cleanTitle = (profile.titleFa || '').trim();
+    if (cleanTitle.length < 3) {
+      throw new Error('عنوان فارسی صنف الزامی است و باید حداقل ۳ کاراکتر باشد.');
+    }
+
+    const cleanBadge = (profile.badgeLabelFa || '').trim();
+    if (cleanBadge.length < 2) {
+      throw new Error('برچسب کوتاه صنف (Badge) الزامی است و باید حداقل ۲ کاراکتر باشد.');
+    }
+
+    // 4. Safe defaults for features & uiLabels
+    const completeProfile: IndustryProfileConfig = {
+      code: cleanCode,
+      titleFa: cleanTitle,
+      descriptionFa: (profile.descriptionFa || '').trim() || `پروفایل تجاری تخصصی ${cleanTitle}`,
+      badgeLabelFa: cleanBadge,
       features: {
         enableInstallationServices: false,
         enableHardwareMacTracking: false,
         enableInstallersRole: false,
         enableWarrantyTracking: false,
         enableBarcodeScanQuickPos: true,
-        ...profile.features,
+        ...(profile.features || {}),
+      },
+      uiLabels: {
+        inventoryTabTitleFa: profile.uiLabels?.inventoryTabTitleFa?.trim() || 'کالا و انبارداری',
+        serialTrackerTitleFa: profile.uiLabels?.serialTrackerTitleFa?.trim() || 'رهگیری شماره سریال کالا',
+        partiesInstallerRoleTitleFa: profile.uiLabels?.partiesInstallerRoleTitleFa?.trim() || 'مجریان و کارشناسان فنی',
+        ...(profile.uiLabels || {}),
       },
     };
+
+    // 5. Store in memory dictionary
+    INDUSTRY_PROFILES[cleanCode] = completeProfile;
+
+    // 6. Persist to database state JSON
+    if (!Array.isArray(this.dbState.customIndustryProfiles)) {
+      this.dbState.customIndustryProfiles = [];
+    }
+    const existingIdx = this.dbState.customIndustryProfiles.findIndex((p) => p.code === cleanCode);
+    if (existingIdx >= 0) {
+      this.dbState.customIndustryProfiles[existingIdx] = completeProfile;
+    } else {
+      this.dbState.customIndustryProfiles.push(completeProfile);
+    }
+    this.saveDbState();
+
+    // 7. Audit log
+    this.recordAuditLog({
+      actorUserId: actorUserId || this.getActiveUser().id,
+      action: 'REGISTER_CUSTOM_INDUSTRY_PROFILE',
+      category: 'SETTINGS',
+      targetEntity: 'industry_profiles',
+      targetId: cleanCode,
+      status: 'SUCCESS',
+      detailsFa: `صنف تجاری جدید «${cleanTitle}» با موفقیت تعریف و پایدارسازی شد.`,
+      metadata: {
+        profileCode: cleanCode,
+        features: completeProfile.features,
+      },
+    });
+
+    return completeProfile;
   }
 
   public updateIndustryProfile(
@@ -4197,8 +4346,8 @@ export class FoundationStore {
       throw new Error('فقط راهبر کل و کاربر دارای دسترسی مدیریت تنظیمات مجاز به تغییر صنف کاری سامانه است.');
     }
 
-    if (!INDUSTRY_PROFILES[profileCode]) {
-      throw new Error(`کد صنف نامعتبر است: ${profileCode}`);
+    if (!profileCode || typeof profileCode !== 'string' || !INDUSTRY_PROFILES[profileCode]) {
+      throw new Error(`تعریف صنف با کد «${profileCode}» در سیستم موجود نیست یا نامعتبر است.`);
     }
 
     const previousProfile = this.dbState.settings.industryProfileCode || 'CCTV_SECURITY';
@@ -6139,6 +6288,7 @@ export class FoundationStore {
       },
       settings: this.dbState.settings,
       industryProfile: this.getIndustryProfile(),
+      customIndustryProfiles: this.dbState.customIndustryProfiles || [],
       users: sanitizedUsers,
       roles: this.dbState.roles,
       permissions: this.dbState.permissions,

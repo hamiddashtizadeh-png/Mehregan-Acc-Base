@@ -357,6 +357,27 @@ async function startServer() {
     });
   });
 
+  app.post(
+    '/api/foundation/industry-profile',
+    requirePermission('foundation.settings.manage'),
+    (req: Request, res: Response) => {
+      try {
+        const activeUser = foundationStore.getActiveUser();
+        const created = foundationStore.registerIndustryProfile(req.body || {}, activeUser.id);
+        res.status(201).json({
+          ok: true,
+          messageFa: `صنف تجاری «${created.titleFa}» با موفقیت ثبت و پایدارسازی شد.`,
+          profile: created,
+        });
+      } catch (err: unknown) {
+        res.status(400).json({
+          ok: false,
+          messageFa: err instanceof Error ? err.message : 'خطا در تعریف صنف کاری جدید.',
+        });
+      }
+    }
+  );
+
   app.put(
     '/api/foundation/industry-profile',
     requirePermission('foundation.settings.manage'),

@@ -87,7 +87,11 @@ export interface DocumentNumberingConfig {
   incomePrefix: string;
 }
 
-export type IndustryProfileCode = 'CCTV_SECURITY' | 'RETAIL_GENERAL' | (string & {});
+export type IndustryProfileCode =
+  | 'CCTV_SECURITY'
+  | 'RETAIL_GENERAL'
+  | 'SUPERMARKET_GROCERY'
+  | (string & {});
 
 export interface IndustryProfileFeatures {
   enableInstallationServices: boolean;
@@ -186,6 +190,7 @@ export interface FoundationDataResponse {
   activeUser: PublicUser;
   settings: SystemSettingsRecord;
   industryProfile?: IndustryProfileConfig;
+  customIndustryProfiles?: IndustryProfileConfig[];
   users: PublicUser[];
   roles: RoleRecord[];
   permissions: PermissionRecord[];

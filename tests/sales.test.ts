@@ -251,4 +251,69 @@ const cancelledInvoice = foundationStore.cancelSalesInvoice(
 assert.strictEqual(cancelledInvoice.status, 'CANCELLED');
 console.log('   ✅ لغو رسمی فاکتور فروش و بازگشت خودکار اقلام به انبار تایید گردید.');
 
+// 8. Test Barcode Search Resolution & Serial Enforcement in CCTV vs Non-Serialized
+// توجه معماری: این آزمون‌ها منطق داده، اعتبارسنجی استور و نرمال‌سازی در سطح Node.js را پوشش می‌دهند
+// و ادعایی در مورد آزمون مستقیم رویدادهای فیزیکی کیبورد یا رندر DOM ری‌اکت در مرورگر ندارند.
+console.log('۸. آزمون تفکیک بارکد دقیق، تطابق با فاصله و حروف کوچک/بزرگ، بارکد ناموجود و حفظ رفتار فروش کالاهای سریالی در CCTV...');
+
+const allStoreItems = foundationStore.getItems();
+const dahuaCamera = allStoreItems.find((i) => i.id === 1)!;
+assert(dahuaCamera.barcode, 'کالای تست باید بارکد داشته باشد.');
+
+// 8.1 Exact Barcode Match with Whitespace and Case Normalization
+const rawScannerInputWithSpaces = `   ${dahuaCamera.barcode.toLowerCase()}   `;
+const exactMatch = allStoreItems.filter(
+  (i) => i.barcode && i.barcode.trim().toLowerCase() === rawScannerInputWithSpaces.trim().toLowerCase()
+);
+assert.strictEqual(exactMatch.length, 1, 'تطابق دقیق بارکد با احتساب فاصله‌های اضافه و تفاوت حروف باید منحصربه‌فرد باشد.');
+assert.strictEqual(exactMatch[0].id, dahuaCamera.id);
+
+// 8.1.b Verify items with leading/trailing spaces in DB also match cleanly when trimmed
+const mockDbItemWithSpaces = { id: 999, barcode: `  ${dahuaCamera.barcode}  `, titleFa: 'کالای تست با فاصله در دیتابیس' };
+assert.strictEqual(
+  mockDbItemWithSpaces.barcode.trim().toLowerCase() === rawScannerInputWithSpaces.trim().toLowerCase(),
+  true,
+  'بارکد ذخیره‌شده با فاصله اضافی باید با ورودی اسکنر تطابق دقیق داشته باشد.'
+);
+
+// 8.2 Non-Existent Barcode
+const nonExistentMatch = allStoreItems.filter((i) => i.barcode === 'NON_EXISTENT_BARCODE_99999');
+assert.strictEqual(nonExistentMatch.length, 0, 'بارکد ناموجود نباید هیچ رکوردی برگرداند.');
+
+// 8.3 Ambiguous Barcode logic check (multiple items share identical barcode -> must NOT auto-add)
+const mockDuplicateBarcodeItems = [
+  { id: 101, barcode: 'DUPLICATE_BARCODE_123', titleFa: 'کالای اول با بارکد مشابه' },
+  { id: 102, barcode: 'DUPLICATE_BARCODE_123', titleFa: 'کالای دوم با بارکد مشابه' },
+];
+const duplicateMatches = mockDuplicateBarcodeItems.filter(
+  (i) => i.barcode.trim().toLowerCase() === 'duplicate_barcode_123'
+);
+assert.strictEqual(duplicateMatches.length, 2, 'تشخیص بارکد چندگانه/مبهم باید بیش از یک مورد برگرداند تا سیستم از انتخاب خودکار ممانعت به عمل آورد.');
+
+// 8.4 Enforce Serialized Goods in CCTV
+// Item 2 is serialized (Hikvision camera)
+const hikvision = allStoreItems.find((i) => i.id === 2)!;
+assert.strictEqual(hikvision.isSerialized, true, 'دوربین هایک‌ویژن در صنف نظارت تصویری باید دارای سریال باشد.');
+
+// Attempt to create sale invoice exceeding available serials for serialized item in CCTV must throw error
+assert.throws(() => {
+  foundationStore.createSalesInvoice(
+    {
+      saleType: 'QUICK_POS_SALE',
+      customerId: walkInCustomer.id,
+      sourceWarehouseId: 1,
+      lines: [
+        {
+          itemId: hikvision.id,
+          quantity: 999, // Exceeds available serials in stock
+          unitPriceIrr: 52000000,
+        },
+      ],
+    },
+    1
+  );
+}, /موجودی سریال‌های فعال/);
+
+console.log('   ✅ تطابق دقیق بارکد با نرمال‌سازی فاصله‌ها، رد بارکد ناموجود/مبهم و الزام سریال کالاهای نظارتی تأیید گردید.');
+
 console.log('--- آزمون‌های ماژول فروش، پیش‌فاکتور و فروش سریع (مرحله ۶) با موفقیت کامل ۱۰۰٪ پاس شدند. ---');

@@ -75,6 +75,10 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<SalesSubTab>('QUICK_POS');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Industry Profile Context from actual foundationData
+  const industryProfile = foundationData.industryProfile;
+  const profileCode = industryProfile?.code || 'CCTV_SECURITY';
+
   // Lists from foundationData
   const salesInvoices = foundationData.salesInvoices || [];
   const salesProformas = foundationData.salesProformas || [];
@@ -109,6 +113,8 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
   const [isSubmittingPos, setIsSubmittingPos] = useState(false);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const focusTimerRef = useRef<NodeJS.Timeout | number | null>(null);
+  const activeSubTabRef = useRef(activeSubTab);
 
   // Modal States
   const [selectedInvoiceForView, setSelectedInvoiceForView] = useState<SalesInvoiceRecord | null>(null);
@@ -155,17 +161,28 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
     setPosPaidAmount(cartTotalPayable);
   }, [cartTotalPayable]);
 
-  // Search Items Filter
+  // Search Items Filter: Prioritizes exact barcode matches to the very top
   const filteredSearchItems = useMemo(() => {
-    if (!itemSearchQuery.trim()) return [];
-    const q = itemSearchQuery.trim().toLowerCase();
-    return items.filter(
+    const raw = itemSearchQuery.trim();
+    if (!raw) return [];
+    const q = raw.toLowerCase();
+
+    const matches = items.filter(
       (i) =>
+        (i.barcode && i.barcode.trim().toLowerCase() === q) ||
         i.titleFa.toLowerCase().includes(q) ||
         i.itemCode.toLowerCase().includes(q) ||
-        (i.barcode && i.barcode.toLowerCase().includes(q)) ||
+        (i.barcode && i.barcode.trim().toLowerCase().includes(q)) ||
         (i.model && i.model.toLowerCase().includes(q))
-    ).slice(0, 8);
+    );
+
+    matches.sort((a, b) => {
+      const aExact = a.barcode && a.barcode.trim().toLowerCase() === q ? 1 : 0;
+      const bExact = b.barcode && b.barcode.trim().toLowerCase() === q ? 1 : 0;
+      return bExact - aExact;
+    });
+
+    return matches.slice(0, 8);
   }, [itemSearchQuery, items]);
 
   // Handle Add Item to Cart
@@ -195,7 +212,15 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
       }
     });
     setItemSearchQuery('');
-    if (barcodeInputRef.current) barcodeInputRef.current.focus();
+    if (focusTimerRef.current) {
+      clearTimeout(focusTimerRef.current);
+      focusTimerRef.current = null;
+    }
+    focusTimerRef.current = setTimeout(() => {
+      if (activeSubTabRef.current === 'QUICK_POS' && barcodeInputRef.current) {
+        barcodeInputRef.current.focus();
+      }
+    }, 10);
   };
 
   const handleRemoveFromCart = (index: number) => {
@@ -362,6 +387,67 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
     onConfirm: async () => {},
   });
 
+  // Sync activeSubTabRef and cancel pending focus timer when switching away from QUICK_POS
+  useEffect(() => {
+    activeSubTabRef.current = activeSubTab;
+    if (activeSubTab !== 'QUICK_POS' && focusTimerRef.current) {
+      clearTimeout(focusTimerRef.current);
+      focusTimerRef.current = null;
+    }
+  }, [activeSubTab]);
+
+  // Clean up focus timer on unmount
+  useEffect(() => {
+    return () => {
+      if (focusTimerRef.current) {
+        clearTimeout(focusTimerRef.current);
+        focusTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  // F2 shortcut: only refocus barcode input when in QUICK_POS and NO blocking modal is active
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'F2') return;
+
+      const hasBlockingModal = Boolean(
+        quickMasterType ||
+        serialPickerLineIndex !== null ||
+        showPrintModal ||
+        showPaymentModal ||
+        showReturnModal ||
+        showProformaModal ||
+        selectedInvoiceForView ||
+        deleteConfirmState.isOpen
+      );
+
+      // In invalid conditions, do NOT move focus AND do NOT call preventDefault()
+      if (activeSubTab !== 'QUICK_POS' || hasBlockingModal) {
+        return;
+      }
+
+      e.preventDefault();
+      if (barcodeInputRef.current) {
+        barcodeInputRef.current.focus();
+        barcodeInputRef.current.select();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [
+    activeSubTab,
+    quickMasterType,
+    serialPickerLineIndex,
+    showPrintModal,
+    showPaymentModal,
+    showReturnModal,
+    showProformaModal,
+    selectedInvoiceForView,
+    deleteConfirmState.isOpen,
+  ]);
+
   // Delete Invoice Permanently
   const handleDeleteInvoice = (invoiceId: number, invoiceNumber: string) => {
     setDeleteConfirmState({
@@ -517,10 +603,18 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
             <ShoppingCart className="w-6 h-6 text-blue-600" />
-            مدیریت فروش، پیش‌فاکتور و صندوق فروش سریع (Quick POS)
+            {profileCode === 'SUPERMARKET_GROCERY'
+              ? 'صندوق فروش سریع بارکدی و مدیریت فروش سوپرمارکت'
+              : profileCode === 'RETAIL_GENERAL'
+              ? 'مدیریت فروش، پیش‌فاکتور و صندوق فروشگاهی (POS)'
+              : 'مدیریت فروش، پیش‌فاکتور و صندوق فروش سریع (Quick POS)'}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            ماژول کامل فروش آنی حضوری، صدور پیش‌فاکتور، ثبت دریافت وجه، محاسبه بهای تمام‌شده COGS و مرجوعی فروش
+            {profileCode === 'SUPERMARKET_GROCERY'
+              ? 'ثبت سریع بارکد اقلام، تسویه صندوق POS، فاکتورهای فروشگاهی و گردش انبار سوپرمارکت'
+              : profileCode === 'RETAIL_GENERAL'
+              ? 'ماژول فروش سریع بارکدی، خرید، تسویه نقدی و کارتخوان و صدور فاکتور رسمی'
+              : 'ماژول کامل فروش آنی حضوری، صدور پیش‌فاکتور، ثبت دریافت وجه، محاسبه بهای تمام‌شده COGS و مرجوعی فروش'}
           </p>
         </div>
 
@@ -665,9 +759,14 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
               <label className="block text-xs font-bold text-slate-700 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Barcode className="w-4 h-4 text-blue-600" />
-                  جستجوی سریع کالا / اسکن بارکد / کد کالا / مدل / نام
+                  {profileCode === 'SUPERMARKET_GROCERY'
+                    ? 'اسکن بارکد کالا / کد کالا / نام محصول'
+                    : 'جستجوی سریع کالا / اسکن بارکد / کد کالا / مدل / نام'}
                 </span>
-                <span className="text-slate-400 font-normal">آماده اتصال به بارکدخوان نوری</span>
+                <span className="flex items-center gap-2 text-slate-500 font-normal text-[11px]">
+                  <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-700 font-mono text-[10px] shadow-2xs">F2</kbd>
+                  <span>فوکوس سریع بارکدخوان</span>
+                </span>
               </label>
 
               <div className="relative">
@@ -681,23 +780,58 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                     setSelectedSearchIndex(0);
                   }}
                   onKeyDown={(e) => {
-                    if (filteredSearchItems.length === 0) return;
                     if (e.key === 'ArrowDown') {
+                      if (filteredSearchItems.length === 0) return;
                       e.preventDefault();
                       setSelectedSearchIndex((prev) =>
                         prev < filteredSearchItems.length - 1 ? prev + 1 : 0
                       );
                     } else if (e.key === 'ArrowUp') {
+                      if (filteredSearchItems.length === 0) return;
                       e.preventDefault();
                       setSelectedSearchIndex((prev) =>
                         prev > 0 ? prev - 1 : filteredSearchItems.length - 1
                       );
                     } else if (e.key === 'Enter') {
                       e.preventDefault();
-                      const target = filteredSearchItems[selectedSearchIndex] || filteredSearchItems[0];
-                      if (target) {
-                        handleAddItemToCart(target);
+                      const rawQuery = itemSearchQuery.trim();
+                      if (!rawQuery) return;
+
+                      // 1. Check for single unique exact barcode match
+                      const exactBarcodeMatches = items.filter(
+                        (i) => i.barcode && i.barcode.trim().toLowerCase() === rawQuery.toLowerCase()
+                      );
+
+                      if (exactBarcodeMatches.length === 1) {
+                        // Unique exact barcode: auto-add immediately
+                        handleAddItemToCart(exactBarcodeMatches[0]);
                         setSelectedSearchIndex(0);
+                        return;
+                      }
+
+                      if (exactBarcodeMatches.length > 1) {
+                        // Multiple items share the exact same barcode: ambiguous! Do not auto-select.
+                        setFeedback({
+                          type: 'error',
+                          message: `چند کالا دارای بارکد یکسان «${rawQuery}» هستند. لطفاً کالای مورد نظر را از لیست نتایج به صورت دستی انتخاب کنید.`,
+                        });
+                        return;
+                      }
+
+                      // 2. If no exact barcode match, fallback to keyboard-navigated search selection
+                      if (filteredSearchItems.length > 0) {
+                        const target = filteredSearchItems[selectedSearchIndex] || filteredSearchItems[0];
+                        if (target) {
+                          handleAddItemToCart(target);
+                          setSelectedSearchIndex(0);
+                          return;
+                        }
+                      } else {
+                        // No match found
+                        setFeedback({
+                          type: 'error',
+                          message: `کالایی با بارکد یا مشخصات «${rawQuery}» در سیستم یافت نشد.`,
+                        });
                       }
                     } else if (e.key === 'Escape') {
                       setItemSearchQuery('');
@@ -2226,9 +2360,10 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                           let nextSerials = [...prevSerials];
                           if (e.target.checked) {
                             if (nextSerials.length >= cartLines[serialPickerLineIndex].quantity) {
-                              alert(
-                                `تعداد سریال‌های انتخاب‌شده نمی‌تواند از ${cartLines[serialPickerLineIndex].quantity} بیشتر باشد.`
-                              );
+                              setFeedback({
+                                type: 'error',
+                                message: `تعداد سریال‌های انتخاب‌شده نمی‌تواند از ${cartLines[serialPickerLineIndex].quantity} بیشتر باشد.`,
+                              });
                               return;
                             }
                             nextSerials.push(s.serialNumber);

@@ -141,6 +141,9 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
   const enableHardwareMacTracking = foundationData.industryProfile
     ? foundationData.industryProfile.features.enableHardwareMacTracking
     : true;
+  const enableInstallersRole = foundationData.industryProfile
+    ? foundationData.industryProfile.features.enableInstallersRole
+    : true;
   const [itemSearch, setItemSearch] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<number | 'ALL'>('ALL');
   const [selectedBrandFilter, setSelectedBrandFilter] = useState<number | 'ALL'>('ALL');
@@ -601,7 +604,9 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
             </h1>
           </div>
           <p className="text-xs text-slate-600 mt-1">
-            رهگیری دقیق اسناد ورود، خروج، انتقال و مرجوعی کالا • کنترل هوشمند موجودی منفی • ردیابی سریال و MAC تجهیزات شبکه
+            {enableHardwareMacTracking
+              ? 'رهگیری دقیق اسناد ورود، خروج، انتقال و مرجوعی کالا • کنترل هوشمند موجودی منفی • ردیابی سریال و MAC تجهیزات شبکه'
+              : 'رهگیری دقیق اسناد ورود، خروج، انتقال و مرجوعی کالا • کنترل هوشمند موجودی منفی • کاردکس ریالی و تعدادی اقلام'}
           </p>
         </div>
 
@@ -1363,7 +1368,7 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
                     'لیست سریال‌ها',
                     [
                       { header: 'شماره سریال', key: 'serialNumber', width: 22 },
-                      { header: 'مک آدرس', key: 'macAddress', width: 20 },
+                      ...(enableHardwareMacTracking ? [{ header: 'مک آدرس', key: 'macAddress', width: 20 }] : []),
                       { header: 'نام کالا', key: 'itemTitle', width: 30 },
                       { header: 'مدل', key: 'itemModel', width: 18 },
                       { header: 'انبار استقرار', key: 'warehouse', width: 18 },
@@ -1392,10 +1397,12 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
                     party: s.lastPartyNameFa || '-',
                   }));
                   exportToPdf(
-                    'گزارش رسمی ردگیری سریال و MAC آدرس تجهیزات نظارت تصویری مهرگان',
+                    enableHardwareMacTracking
+                      ? 'گزارش رسمی ردگیری سریال و MAC آدرس تجهیزات نظارت تصویری مهرگان'
+                      : 'گزارش رسمی ردگیری شماره سریال و وضعیت کالا',
                     [
                       { header: 'شماره سریال (S/N)', key: 'serialNumber' },
-                      { header: 'MAC شبکه', key: 'macAddress' },
+                      ...(enableHardwareMacTracking ? [{ header: 'MAC شبکه', key: 'macAddress' }] : []),
                       { header: 'شرح کالا', key: 'itemTitle' },
                       { header: 'انبار فعلی', key: 'warehouse' },
                       { header: 'وضعیت', key: 'status' },
@@ -1422,7 +1429,7 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
               <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold">
                 <tr>
                   <th className="p-3">شماره سریال (S/N)</th>
-                  <th className="p-3">MAC آدرس شبکه</th>
+                  {enableHardwareMacTracking && <th className="p-3">MAC آدرس شبکه</th>}
                   <th className="p-3">نام و مدل کالا</th>
                   <th className="p-3">انبار فعلی استقرار</th>
                   <th className="p-3 text-center">وضعیت فیزیکی</th>
@@ -1437,9 +1444,11 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
                     <td className="p-3 font-mono font-bold text-slate-900 whitespace-nowrap">
                       {s.serialNumber}
                     </td>
-                    <td className="p-3 font-mono text-purple-700 whitespace-nowrap">
-                      {s.macAddress || 'ندارد'}
-                    </td>
+                    {enableHardwareMacTracking && (
+                      <td className="p-3 font-mono text-purple-700 whitespace-nowrap">
+                        {s.macAddress || 'ندارد'}
+                      </td>
+                    )}
                     <td className="p-3">
                       <div className="font-bold text-slate-900">{s.itemTitleFa}</div>
                       <div className="font-mono text-[10px] text-slate-500">{s.itemCode}</div>
@@ -2347,6 +2356,7 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
           isOpen={true}
           onClose={() => setQuickMasterType(null)}
           type={quickMasterType}
+          enableInstallersRole={enableInstallersRole}
           onSuccess={async (result) => {
             if (result.type === 'WAREHOUSE') {
               if (quickMasterWarehouseTarget === 'SOURCE') {

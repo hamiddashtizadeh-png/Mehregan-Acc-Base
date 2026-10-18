@@ -86,6 +86,15 @@ export default function App() {
     fetchFoundationData();
   }, [fetchFoundationData]);
 
+  const enableInstallationServices =
+    foundationData?.industryProfile?.features?.enableInstallationServices ?? true;
+
+  useEffect(() => {
+    if (!enableInstallationServices && activeTab === 'INSTALLATION') {
+      setActiveTab('DASHBOARD');
+    }
+  }, [enableInstallationServices, activeTab]);
+
   const handleSwitchUser = async (userId: number) => {
     try {
       const res = await fetch('/api/auth/switch-user', {
@@ -164,6 +173,7 @@ export default function App() {
   const activeUser = foundationData.activeUser;
   const isDefaultAdminPass = activeUser.isInitialAdmin;
   const industryProfile = foundationData.industryProfile;
+  const profileCode = industryProfile?.code || 'CCTV_SECURITY';
   const features = industryProfile?.features || {
     enableInstallationServices: true,
     enableHardwareMacTracking: true,
@@ -171,12 +181,11 @@ export default function App() {
     enableWarrantyTracking: true,
     enableBarcodeScanQuickPos: true,
   };
-
-  useEffect(() => {
-    if (!features.enableInstallationServices && activeTab === 'INSTALLATION') {
-      setActiveTab('DASHBOARD');
-    }
-  }, [features.enableInstallationServices, activeTab]);
+  const uiLabels = industryProfile?.uiLabels || {
+    inventoryTabTitleFa: 'کالا و انبارداری',
+    serialTrackerTitleFa: 'رهگیری شماره سریال کالا',
+    partiesInstallerRoleTitleFa: 'نصابان و تکنسین‌ها',
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
@@ -189,20 +198,26 @@ export default function App() {
               href="#top"
               className="text-sm font-extrabold tracking-tight text-slate-900 whitespace-nowrap flex items-center gap-2"
             >
-              <span className="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-black text-xs shadow-xs">
-                مهرگان
+              <span className="bg-slate-900 text-white px-2.5 py-1 rounded-lg font-black text-xs shadow-xs">
+                {foundationData.settings?.companyName || 'مهرگان'}
               </span>
               <span className="font-extrabold text-slate-900 text-xs sm:text-sm">
-                سامانه ERP، فروش و حسابداری دوطرفه
+                {profileCode === 'SUPERMARKET_GROCERY'
+                  ? 'سامانه فروشگاهی و حسابداری سوپرمارکت'
+                  : profileCode === 'RETAIL_GENERAL'
+                  ? 'سامانه جامع فروشگاهی و حسابداری دوبل'
+                  : 'سامانه جامع ERP و حسابداری دوطرفه'}
               </span>
             </a>
             <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-              سال مالی ۱۴۰۵
+              سال مالی {foundationData.settings?.activeFiscalYearCode || '۱۴۰۵'}
             </span>
             <span
               className={`hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                industryProfile?.code === 'RETAIL_GENERAL'
+                profileCode === 'RETAIL_GENERAL'
                   ? 'bg-blue-50 text-blue-800 border-blue-300'
+                  : profileCode === 'SUPERMARKET_GROCERY'
+                  ? 'bg-amber-50 text-amber-800 border-amber-300'
                   : 'bg-emerald-50 text-emerald-800 border-emerald-300'
               }`}
               title={industryProfile?.descriptionFa}
@@ -261,25 +276,25 @@ export default function App() {
                   type="button"
                   onClick={() => setActiveTab('SALES')}
                   className="px-2 py-0.5 rounded text-slate-700 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 transition-colors cursor-pointer"
-                  title="فروش سریع POS"
+                  title="صندوق فروش سریع (F2)"
                 >
-                  🛒 فاکتور فروش POS
+                  {profileCode === 'SUPERMARKET_GROCERY' ? '🛒 صندوق سریع POS' : '🛒 فاکتور فروش POS'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('TREASURY')}
-                  className="px-2 py-0.5 rounded text-slate-700 bg-slate-100 hover:bg-teal-100 hover:text-teal-800 transition-colors cursor-pointer"
-                  title="دریافت / پرداخت"
+                  onClick={() => setActiveTab(profileCode === 'SUPERMARKET_GROCERY' ? 'INVENTORY' : 'TREASURY')}
+                  className="px-2 py-0.5 rounded text-slate-700 bg-slate-100 hover:bg-indigo-100 hover:text-indigo-800 transition-colors cursor-pointer"
+                  title={profileCode === 'SUPERMARKET_GROCERY' ? 'موجودی اقلام سوپرمارکت' : 'دریافت و پرداخت'}
                 >
-                  💳 دریافت و پرداخت
+                  {profileCode === 'SUPERMARKET_GROCERY' ? '📦 موجودی اقلام' : '💳 دریافت و پرداخت'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('ACCOUNTING')}
+                  onClick={() => setActiveTab(profileCode === 'SUPERMARKET_GROCERY' ? 'PURCHASES' : 'ACCOUNTING')}
                   className="px-2 py-0.5 rounded text-slate-700 bg-slate-100 hover:bg-purple-100 hover:text-purple-800 transition-colors cursor-pointer hidden md:inline-block"
-                  title="ثبت هزینه / درآمد"
+                  title={profileCode === 'SUPERMARKET_GROCERY' ? 'فاکتورهای خرید کالا' : 'ثبت هزینه و درآمد'}
                 >
-                  💸 هزینه و درآمد
+                  {profileCode === 'SUPERMARKET_GROCERY' ? '🛍️ خرید کالا' : '💸 هزینه و درآمد'}
                 </button>
               </div>
 
@@ -305,7 +320,13 @@ export default function App() {
                     >
                       <span className="flex items-center gap-2">
                         <ShoppingCart className="w-4 h-4 text-emerald-600" />
-                        <span>🛒 فروش، POS و پیش‌فاکتور</span>
+                        <span>
+                          {profileCode === 'SUPERMARKET_GROCERY'
+                            ? '🛒 صندوق فروش سریع بارکدی و تسویه POS'
+                            : profileCode === 'RETAIL_GENERAL'
+                            ? '🛒 فروشگاه، پیش‌فاکتور و صندوق POS'
+                            : '🛒 فروش، POS و پیش‌فاکتور'}
+                        </span>
                       </span>
                       <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-mono">
                         POS
@@ -319,7 +340,11 @@ export default function App() {
                     >
                       <span className="flex items-center gap-2">
                         <ShoppingBag className="w-4 h-4 text-amber-600" />
-                        <span>🛍️ فاکتور خرید و بهای تمام‌شده</span>
+                        <span>
+                          {profileCode === 'SUPERMARKET_GROCERY'
+                            ? '🛍️ خرید کالا، فاکتور و ورود به انبار'
+                            : '🛍️ فاکتور خرید و بهای تمام‌شده'}
+                        </span>
                       </span>
                       <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono">
                         Landed Cost
@@ -333,7 +358,11 @@ export default function App() {
                     >
                       <span className="flex items-center gap-2">
                         <Landmark className="w-4 h-4 text-teal-600" />
-                        <span>💳 دریافت، پرداخت و چک صیادی</span>
+                        <span>
+                          {profileCode === 'SUPERMARKET_GROCERY'
+                            ? '💳 صندوق‌ها، کارتخوان و واریز بانکی'
+                            : '💳 دریافت، پرداخت و چک صیادی'}
+                        </span>
                       </span>
                       <span className="text-[10px] bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded font-mono">
                         خزانه
@@ -347,7 +376,7 @@ export default function App() {
                     >
                       <span className="flex items-center gap-2">
                         <Package className="w-4 h-4 text-indigo-600" />
-                        <span>📦 موجودی انبار، کاردکس و بارکد</span>
+                        <span>📦 {uiLabels.inventoryTabTitleFa || 'کالا و انبارداری'} و کاردکس</span>
                       </span>
                       <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-mono">
                         کالا
@@ -361,7 +390,11 @@ export default function App() {
                     >
                       <span className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-blue-600" />
-                        <span>👥 صورت‌حساب مشتریان و اشخاص</span>
+                        <span>
+                          {profileCode === 'SUPERMARKET_GROCERY'
+                            ? '👥 حساب‌های دفتری و تأمین‌کنندگان'
+                            : '👥 صورت‌حساب مشتریان و اشخاص'}
+                        </span>
                       </span>
                       <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono">
                         طرفین
@@ -413,7 +446,7 @@ export default function App() {
                     ? 'bg-slate-900 text-white font-extrabold shadow-sm ring-2 ring-slate-900/30'
                     : 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-100'
                 }`}
-                title="داشبورد اختصاصی و خلاصه عملکرد مدیریتی"
+                title="داشبورد مدیریتی و شاخص‌های کلیدی عملکرد"
               >
                 <LayoutDashboard className="w-3.5 h-3.5 text-indigo-500" />
                 <span>داشبورد</span>
@@ -428,10 +461,20 @@ export default function App() {
                     ? 'bg-emerald-600 text-white font-extrabold shadow-sm ring-2 ring-emerald-600/30'
                     : 'bg-emerald-50 text-emerald-900 border border-emerald-300 hover:bg-emerald-100'
                 }`}
-                title="فروش، صندوق فروش سریع POS، پیش‌فاکتور و مرجوعی"
+                title={
+                  profileCode === 'SUPERMARKET_GROCERY'
+                    ? 'صندوق فروش سریع بارکدی POS و فاکتورها'
+                    : 'فروش، پیش‌فاکتور، صندوق POS و مرجوعی'
+                }
               >
                 <ShoppingCart className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-700" />
-                <span>فروش و POS</span>
+                <span>
+                  {profileCode === 'SUPERMARKET_GROCERY'
+                    ? 'صندوق و فروش'
+                    : profileCode === 'RETAIL_GENERAL'
+                    ? 'فروشگاه و POS'
+                    : 'فروش و POS'}
+                </span>
               </button>
 
               {/* 2. PURCHASES (خرید و تدارکات) - Amber */}
@@ -443,10 +486,10 @@ export default function App() {
                     ? 'bg-amber-600 text-white font-extrabold shadow-sm ring-2 ring-amber-600/30'
                     : 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
                 }`}
-                title="فاکتورهای خرید، پیش‌فاکتور ارزی و بهای تمام‌شده Landed Cost"
+                title="فاکتورهای خرید، تأمین کالا و بهای تمام‌شده"
               >
                 <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
-                <span>خرید و تدارکات</span>
+                <span>{profileCode === 'SUPERMARKET_GROCERY' ? 'خرید کالا' : 'خرید و تدارکات'}</span>
               </button>
 
               {/* 3. TREASURY (عملیات پرداخت و دریافت) - Teal */}
@@ -458,10 +501,10 @@ export default function App() {
                     ? 'bg-teal-700 text-white font-extrabold shadow-sm ring-2 ring-teal-600/30'
                     : 'bg-teal-50 text-teal-900 border border-teal-200 hover:bg-teal-100'
                 }`}
-                title="صندوق‌ها، حساب‌های بانکی، چک‌های صیادی و اقساط"
+                title="صندوق‌ها، حساب‌های بانکی، چک‌ها و دریافت/پرداخت"
               >
                 <Landmark className="w-3.5 h-3.5 text-teal-600" />
-                <span>عملیات پرداخت و دریافت</span>
+                <span>{profileCode === 'SUPERMARKET_GROCERY' ? 'صندوق و بانک' : 'عملیات پرداخت و دریافت'}</span>
               </button>
 
               {/* 4. PARTIES (اشخاص و طرفین) - Blue */}
@@ -473,10 +516,10 @@ export default function App() {
                     ? 'bg-blue-600 text-white font-extrabold shadow-sm ring-2 ring-blue-600/30'
                     : 'bg-blue-50 text-blue-900 border border-blue-300 hover:bg-blue-100'
                 }`}
-                title="مشتریان، تأمین‌کنندگان، نصابان و مانده‌حساب اشخاص"
+                title="مشتریان، تأمین‌کنندگان و مانده‌حساب اشخاص"
               >
                 <Users className="w-3.5 h-3.5 text-blue-600" />
-                <span>اشخاص و طرفین</span>
+                <span>{profileCode === 'SUPERMARKET_GROCERY' ? 'مشتریان و طرفین' : 'اشخاص و طرفین'}</span>
               </button>
 
               {/* 5. INVENTORY (کالا و انبارداری) - Indigo */}
@@ -488,10 +531,10 @@ export default function App() {
                     ? 'bg-indigo-600 text-white font-extrabold shadow-sm ring-2 ring-indigo-600/30'
                     : 'bg-indigo-50 text-indigo-900 border border-indigo-300 hover:bg-indigo-100'
                 }`}
-                title="مدیریت کالا، کاردکس، سریال/مک‌آدرس و موجودی انبار"
+                title="مدیریت موجودی انبار، کاردکس و بارکد"
               >
                 <Package className="w-3.5 h-3.5 text-indigo-600" />
-                <span>کالا و انبارداری</span>
+                <span>{uiLabels.inventoryTabTitleFa || 'کالا و انبارداری'}</span>
               </button>
 
               {/* 6. ACCOUNTING (حسابداری) - Purple */}
@@ -503,7 +546,7 @@ export default function App() {
                     ? 'bg-purple-700 text-white font-extrabold shadow-sm ring-2 ring-purple-600/30'
                     : 'bg-purple-50 text-purple-900 border border-purple-200 hover:bg-purple-100'
                 }`}
-                title="کدینگ حساب‌ها، اسناد دوبل، تراز آزمایشی، سال مالی، مراکز هزینه و تحلیل سودآوری"
+                title="کدینگ حساب‌ها، اسناد دوبل، تراز و دفاتر کل"
               >
                 <BookOpen className="w-3.5 h-3.5 text-purple-600" />
                 <span>حسابداری</span>

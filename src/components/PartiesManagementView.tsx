@@ -764,7 +764,9 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
             <span>ماژول اشخاص و طرف‌های تجاری (مرحله ۳)</span>
           </h1>
           <p className="text-xs text-slate-600 mt-1">
-            مدیریت یکپارچه مشتریان، تأمین‌کنندگان، نصابان دوربین مداربسته، کنترل هوشمند تکرار و سوابق اسناد
+            {enableInstallersRole
+              ? 'مدیریت یکپارچه مشتریان، تأمین‌کنندگان، نصابان دوربین مداربسته، کنترل هوشمند تکرار و سوابق اسناد'
+              : 'مدیریت یکپارچه مشتریان، تأمین‌کنندگان، حساب‌های دفتری و سوابق اسناد مالی'}
           </p>
         </div>
 
@@ -807,14 +809,28 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
           <div className="text-[11px] text-slate-500">واردکنندگان و شرکت‌های پخش</div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-1">
-          <div className="flex items-center justify-between text-amber-700 text-xs">
-            <span>نصابان و تکنسین‌ها</span>
-            <Wrench className="h-4 w-4 text-amber-500" />
+        {enableInstallersRole ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-1">
+            <div className="flex items-center justify-between text-amber-700 text-xs">
+              <span>
+                {foundationData.industryProfile?.uiLabels?.partiesInstallerRoleTitleFa ||
+                  'نصابان و تکنسین‌ها'}
+              </span>
+              <Wrench className="h-4 w-4 text-amber-500" />
+            </div>
+            <div className="text-xl font-bold font-mono text-amber-900">{stats.installers}</div>
+            <div className="text-[11px] text-slate-500">مجریان کابل‌کشی و راه‌اندازی</div>
           </div>
-          <div className="text-xl font-bold font-mono text-amber-900">{stats.installers}</div>
-          <div className="text-[11px] text-slate-500">مجریان کابل‌کشی و راه‌اندازی</div>
-        </div>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-1">
+            <div className="flex items-center justify-between text-indigo-700 text-xs">
+              <span>طرف‌های تجاری فعال</span>
+              <Users className="h-4 w-4 text-indigo-500" />
+            </div>
+            <div className="text-xl font-bold font-mono text-indigo-900">{stats.total}</div>
+            <div className="text-[11px] text-slate-500">مجموع مشتریان و تأمین‌کنندگان</div>
+          </div>
+        )}
       </div>
 
       {/* Filter and Search Bar */}
@@ -1094,7 +1110,9 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                 <h2 className="text-base font-bold">
                   {editingParty
                     ? `ویرایش پرونده طرف تجاری [${editingParty.partyCode}]`
-                    : 'تعریف طرف تجاری جدید (مشتری، تأمین‌کننده، نصاب، همکار)'}
+                    : enableInstallersRole
+                    ? 'تعریف طرف تجاری جدید (مشتری، تأمین‌کننده، نصاب، همکار)'
+                    : 'تعریف طرف تجاری جدید (مشتری، تأمین‌کننده، همکار)'}
                 </h2>
               </div>
               <button
@@ -1381,19 +1399,21 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
               </div>
 
               {/* Row 6: Installer Skills & Notes */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    مهارت‌های فنی و تخصصی نصاب (دوربین IP، داهوا، هایک‌ویژن، NVR، دزدگیر)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.installerSkills}
-                    onChange={(e) => setFormData({ ...formData, installerSkills: e.target.value })}
-                    placeholder="مثال: کانفیگ سوییچ‌های سیسکو، فیوژن فیبر نوری، انتقال تصویر P2P"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900"
-                  />
-                </div>
+              <div className={`grid grid-cols-1 ${enableInstallersRole ? 'md:grid-cols-2' : ''} gap-4`}>
+                {enableInstallersRole && (
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      مهارت‌های فنی و تخصصی نصاب (دوربین IP، داهوا، هایک‌ویژن، NVR، دزدگیر)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.installerSkills}
+                      onChange={(e) => setFormData({ ...formData, installerSkills: e.target.value })}
+                      placeholder="مثال: کانفیگ سوییچ‌های سیسکو، فیوژن فیبر نوری، انتقال تصویر P2P"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">سقف اعتبار مالی (ریال)</label>

@@ -70,14 +70,36 @@ const DEFAULT_WIDGETS: WidgetVisibility = {
   quickShortcuts: true,
 };
 
-type DashboardPerspective = 'ALL' | 'TREASURY' | 'SALES' | 'PROJECTS' | 'INVENTORY';
+type DashboardPerspective = 'ALL' | 'TREASURY' | 'SALES' | 'PROJECTS' | 'INVENTORY' | 'PURCHASES';
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   foundationData,
   onNavigateTab,
   onRefresh,
 }) => {
+  const industryProfile = foundationData.industryProfile;
+  const profileCode = industryProfile?.code || 'CCTV_SECURITY';
+  const features = industryProfile?.features || {
+    enableInstallationServices: true,
+    enableHardwareMacTracking: true,
+    enableInstallersRole: true,
+    enableWarrantyTracking: true,
+    enableBarcodeScanQuickPos: true,
+  };
+  const uiLabels = industryProfile?.uiLabels || {
+    inventoryTabTitleFa: 'کالا و انبارداری',
+    serialTrackerTitleFa: 'رهگیری شماره سریال کالا',
+    partiesInstallerRoleTitleFa: 'نصابان و تکنسین‌ها',
+  };
+
   const [activePerspective, setActivePerspective] = useState<DashboardPerspective>('ALL');
+
+  useEffect(() => {
+    if (!features.enableInstallationServices && activePerspective === 'PROJECTS') {
+      setActivePerspective('ALL');
+    }
+  }, [features.enableInstallationServices, activePerspective]);
+
   const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'ALL' | 'PAID' | 'PENDING'>('ALL');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -418,17 +440,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             >
               فروش و مطالبات
             </button>
-            <button
-              type="button"
-              onClick={() => setActivePerspective('PROJECTS')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
-                activePerspective === 'PROJECTS'
-                  ? 'bg-cyan-700 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-cyan-50 hover:text-cyan-900'
-              }`}
-            >
-              پروژه‌ها و نصب CCTV
-            </button>
+            {features.enableInstallationServices ? (
+              <button
+                type="button"
+                onClick={() => setActivePerspective('PROJECTS')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                  activePerspective === 'PROJECTS'
+                    ? 'bg-cyan-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-cyan-50 hover:text-cyan-900'
+                }`}
+              >
+                پروژه‌ها و نصب CCTV
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActivePerspective('PURCHASES')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                  activePerspective === 'PURCHASES'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-amber-50 hover:text-amber-900'
+                }`}
+              >
+                {profileCode === 'SUPERMARKET_GROCERY' ? 'خرید و تأمین کالا' : 'خرید و تدارکات'}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setActivePerspective('INVENTORY')}
@@ -452,7 +488,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span>مدیریت و تنظیم ویجت‌ها ({Object.values(widgets).filter(Boolean).length}/8)</span>
             </button>
             <div className="text-[11px] text-slate-500 font-normal px-2 hidden sm:block">
-              سال مالی: <strong className="text-slate-800 font-mono">1404</strong>
+              سال مالی: <strong className="text-slate-800 font-mono">{foundationData.settings?.activeFiscalYearCode || '1405'}</strong>
             </div>
           </div>
         </div>
@@ -480,7 +516,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 { key: 'salesChart', label: 'نمودار تحلیل فروش' },
                 { key: 'liquidityChart', label: 'نمودار ترکیب نقدینگی' },
                 { key: 'recentInvoices', label: 'جدول فاکتورهای اخیر' },
-                { key: 'cctvProjects', label: 'پروژه‌های نصب CCTV' },
+                {
+                  key: 'cctvProjects',
+                  label: features.enableInstallationServices
+                    ? 'پروژه‌های نصب CCTV'
+                    : profileCode === 'SUPERMARKET_GROCERY'
+                    ? 'دیده‌بان صندوق و موجودی'
+                    : 'دیده‌بان فروشگاه و پیش‌فاکتور',
+                },
                 { key: 'bankVault', label: 'موجودی بانک و صندوق' },
                 { key: 'lowStockAlerts', label: 'دیده‌بان موجودی انبار' },
                 { key: 'quickShortcuts', label: 'پنل عمودی میانبرها (راست)' },
@@ -536,8 +579,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <ShoppingCart className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-extrabold text-xs text-slate-900 block">فروش و POS</span>
-                    <span className="text-[10px] text-emerald-700 block font-medium">صدور فاکتور و تسویه</span>
+                    <span className="font-extrabold text-xs text-slate-900 block">
+                      {profileCode === 'SUPERMARKET_GROCERY'
+                        ? 'صندوق فروش (POS)'
+                        : profileCode === 'RETAIL_GENERAL'
+                        ? 'فروشگاه و POS'
+                        : 'فروش و POS'}
+                    </span>
+                    <span className="text-[10px] text-emerald-700 block font-medium">
+                      {profileCode === 'SUPERMARKET_GROCERY' ? 'بارکدخوان و تسویه آنی' : 'صدور فاکتور و تسویه'}
+                    </span>
                   </div>
                 </div>
                 <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
@@ -554,8 +605,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <ShoppingBag className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-extrabold text-xs text-slate-900 block">خرید و تدارکات</span>
-                    <span className="text-[10px] text-amber-700 block font-medium">تأمین و بهای تمام‌شده</span>
+                    <span className="font-extrabold text-xs text-slate-900 block">
+                      {profileCode === 'SUPERMARKET_GROCERY' ? 'خرید اقلام سوپرمارکت' : 'خرید و تدارکات'}
+                    </span>
+                    <span className="text-[10px] text-amber-700 block font-medium">
+                      {profileCode === 'SUPERMARKET_GROCERY' ? 'تأمین کالا و شارژ انبار' : 'تأمین و بهای تمام‌شده'}
+                    </span>
                   </div>
                 </div>
                 <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
@@ -572,8 +627,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <Landmark className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-extrabold text-xs text-slate-900 block">خزانه و چک</span>
-                    <span className="text-[10px] text-teal-700 block font-medium">بانک، صندوق و صیاد</span>
+                    <span className="font-extrabold text-xs text-slate-900 block">
+                      {profileCode === 'SUPERMARKET_GROCERY' ? 'صندوق و کارتخوان' : 'خزانه و چک'}
+                    </span>
+                    <span className="text-[10px] text-teal-700 block font-medium">
+                      {profileCode === 'SUPERMARKET_GROCERY' ? 'موجودی نقد و پوز' : 'بانک، صندوق و صیاد'}
+                    </span>
                   </div>
                 </div>
                 <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
@@ -590,8 +649,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <Users className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-extrabold text-xs text-slate-900 block">طرفین و مشتریان</span>
-                    <span className="text-[10px] text-blue-700 block font-medium">گردش حساب و وضعیت</span>
+                    <span className="font-extrabold text-xs text-slate-900 block">
+                      {profileCode === 'SUPERMARKET_GROCERY' ? 'مشتریان و تأمین‌کنندگان' : 'طرفین و مشتریان'}
+                    </span>
+                    <span className="text-[10px] text-blue-700 block font-medium">
+                      {profileCode === 'SUPERMARKET_GROCERY' ? 'حساب دفتری و اشخاص' : 'گردش حساب و وضعیت'}
+                    </span>
                   </div>
                 </div>
                 <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
@@ -608,7 +671,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <Package className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-extrabold text-xs text-slate-900 block">کالا و انبارداری</span>
+                    <span className="font-extrabold text-xs text-slate-900 block">
+                      {uiLabels.inventoryTabTitleFa || 'کالا و انبارداری'}
+                    </span>
                     <span className="text-[10px] text-indigo-700 block font-medium">کاردکس و بارکد</span>
                   </div>
                 </div>
@@ -634,22 +699,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
 
               {/* 7. INSTALLATION */}
-              <button
-                type="button"
-                onClick={() => onNavigateTab('INSTALLATION')}
-                className="w-full p-3 bg-linear-to-r from-cyan-50/80 to-blue-50/40 border border-cyan-200 hover:border-cyan-400 hover:shadow-xs rounded-2xl text-right transition-all cursor-pointer flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-cyan-600 text-white rounded-xl shadow-xs group-hover:scale-105 transition-transform">
-                    <Wrench className="w-4 h-4" />
+              {features.enableInstallationServices && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('INSTALLATION')}
+                  className="w-full p-3 bg-linear-to-r from-cyan-50/80 to-blue-50/40 border border-cyan-200 hover:border-cyan-400 hover:shadow-xs rounded-2xl text-right transition-all cursor-pointer flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-cyan-600 text-white rounded-xl shadow-xs group-hover:scale-105 transition-transform">
+                      <Wrench className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-extrabold text-xs text-slate-900 block">خدمات و نصب CCTV</span>
+                      <span className="text-[10px] text-cyan-700 block font-medium">پروژه‌های نظارتی</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-extrabold text-xs text-slate-900 block">خدمات و نصب CCTV</span>
-                    <span className="text-[10px] text-cyan-700 block font-medium">پروژه‌های نظارتی</span>
-                  </div>
-                </div>
-                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
-              </button>
+                  <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
+                </button>
+              )}
 
               {/* 8. SETTINGS_HEALTH */}
               <button
@@ -662,7 +729,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <SlidersHorizontal className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-extrabold text-xs text-slate-900 block">تنظیمات و سلامت</span>
+                    <span className="font-extrabold text-xs text-slate-900 block">تنظیمات و صنف</span>
                     <span className="text-[10px] text-slate-600 block font-medium">پیکربندی سیستم</span>
                   </div>
                 </div>
@@ -737,7 +804,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="absolute top-0 right-0 w-1.5 h-full bg-emerald-500 rounded-r" />
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">فروش کل دوره‌ای</span>
+              <span className="text-xs font-bold text-slate-500">
+                {profileCode === 'SUPERMARKET_GROCERY'
+                  ? 'فروش کل صندوق و POS'
+                  : profileCode === 'RETAIL_GENERAL'
+                  ? 'فروش و فاکتورهای فروشگاهی'
+                  : 'فروش کل دوره‌ای'}
+              </span>
               <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all">
                 <ShoppingCart className="w-4 h-4" />
               </div>
@@ -753,7 +826,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <span className="text-[11px] font-bold text-emerald-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>میز فروش POS</span>
+            <span>{profileCode === 'SUPERMARKET_GROCERY' ? 'صندوق فروش سریع' : 'میز فروش POS'}</span>
             <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
           </span>
         </div>
@@ -791,38 +864,74 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </span>
         </div>
 
-        {/* Card 4: Installation & Projects */}
-        <div
-          onClick={() => onNavigateTab('INSTALLATION')}
-          className={`group bg-white p-5 rounded-2xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between ${
-            activePerspective === 'PROJECTS' || activePerspective === 'ALL'
-              ? 'border-slate-200 hover:border-cyan-400 ring-1 ring-transparent hover:ring-cyan-400/20'
-              : 'opacity-60 border-slate-200'
-          }`}
-        >
-          <div className="absolute top-0 right-0 w-1.5 h-full bg-cyan-500 rounded-r" />
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">پروژه‌های نصب دوربین</span>
-              <div className="p-2.5 bg-cyan-50 text-cyan-700 rounded-xl group-hover:scale-110 group-hover:bg-cyan-600 group-hover:text-white transition-all">
-                <Wrench className="w-4 h-4" />
+        {/* Card 4: Installation & Projects OR Purchases & Supply */}
+        {features.enableInstallationServices ? (
+          <div
+            onClick={() => onNavigateTab('INSTALLATION')}
+            className={`group bg-white p-5 rounded-2xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between ${
+              activePerspective === 'PROJECTS' || activePerspective === 'ALL'
+                ? 'border-slate-200 hover:border-cyan-400 ring-1 ring-transparent hover:ring-cyan-400/20'
+                : 'opacity-60 border-slate-200'
+            }`}
+          >
+            <div className="absolute top-0 right-0 w-1.5 h-full bg-cyan-500 rounded-r" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">پروژه‌های نصب دوربین</span>
+                <div className="p-2.5 bg-cyan-50 text-cyan-700 rounded-xl group-hover:scale-110 group-hover:bg-cyan-600 group-hover:text-white transition-all">
+                  <Wrench className="w-4 h-4" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
+                  {activeProjects.length + activeJobs.length}
+                  <span className="text-[10px] font-normal text-slate-500 mr-1.5">مورد فعال</span>
+                </p>
+                <p className="text-[11px] text-cyan-800 font-medium mt-1">
+                  کارتابل نصابان و پیشرفت میدانی
+                </p>
               </div>
             </div>
-            <div>
-              <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
-                {activeProjects.length + activeJobs.length}
-                <span className="text-[10px] font-normal text-slate-500 mr-1.5">مورد فعال</span>
-              </p>
-              <p className="text-[11px] text-cyan-800 font-medium mt-1">
-                کارتابل نصابان و پیشرفت میدانی
-              </p>
-            </div>
+            <span className="text-[11px] font-bold text-cyan-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span>مدیریت پروژه‌ها</span>
+              <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
+            </span>
           </div>
-          <span className="text-[11px] font-bold text-cyan-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>مدیریت پروژه‌ها</span>
-            <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-          </span>
-        </div>
+        ) : (
+          <div
+            onClick={() => onNavigateTab('PURCHASES')}
+            className={`group bg-white p-5 rounded-2xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between ${
+              activePerspective === 'PURCHASES' || activePerspective === 'ALL'
+                ? 'border-slate-200 hover:border-amber-400 ring-1 ring-transparent hover:ring-amber-400/20'
+                : 'opacity-60 border-slate-200'
+            }`}
+          >
+            <div className="absolute top-0 right-0 w-1.5 h-full bg-amber-500 rounded-r" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">
+                  {profileCode === 'SUPERMARKET_GROCERY' ? 'خرید و تأمین کالا' : 'خرید و تدارکات کالا'}
+                </span>
+                <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                  <ShoppingBag className="w-4 h-4" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
+                  {(totalPurchasesIrr / 10).toLocaleString('fa-IR')}
+                  <span className="text-[10px] font-normal text-slate-500 mr-1.5">تومان</span>
+                </p>
+                <p className="text-[11px] text-amber-800 font-medium mt-1">
+                  تعداد: <strong className="font-mono">{purchaseInvoices.length}</strong> فاکتور خرید دوره
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] font-bold text-amber-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span>مدیریت خرید و ورود انبار</span>
+              <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
+            </span>
+          </div>
+        )}
 
         {/* Card 5: In-hand Cheques */}
         <div
@@ -1212,85 +1321,266 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Active CCTV Projects & Installations Section */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-cyan-50 text-cyan-700 rounded-xl">
-                  <Wrench className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-black text-sm text-slate-900">
-                    پروژه‌ها و سفارشات نصب فعال دوربین مداربسته (CCTV)
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
-                    نظارت بر کارتابل نصابان، بازدیدهای میدانی و تحویل تجهیزات
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onNavigateTab('INSTALLATION')}
-                className="text-xs font-bold text-cyan-700 hover:text-cyan-800 flex items-center gap-1 cursor-pointer bg-cyan-50/60 px-3 py-1.5 rounded-xl border border-cyan-200 hover:bg-cyan-100 transition-colors"
-              >
-                <span>مشاهده کارتابل نصابان</span>
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {projects.slice(0, 4).length === 0 && installationJobs.slice(0, 4).length === 0 ? (
-                <div className="col-span-2 p-6 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                  هیچ سفارش یا پروژه فعالی در جریان نیست. برای ثبت پروژه به بخش خدمات و نصب مراجعه کنید.
-                </div>
-              ) : (
-                projects.slice(0, 4).map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => onNavigateTab('INSTALLATION')}
-                    className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-cyan-50/30 border border-slate-200 hover:border-cyan-300 hover:shadow-md transition-all cursor-pointer space-y-2.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[11px] font-bold text-cyan-900 bg-cyan-100/70 px-2 py-0.5 rounded-md">
-                        {p.projectCode}
-                      </span>
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                          p.status === 'COMPLETED'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : p.status === 'IN_PROGRESS'
-                            ? 'bg-cyan-100 text-cyan-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {p.status === 'COMPLETED'
-                          ? 'تکمیل‌شده'
-                          : p.status === 'IN_PROGRESS'
-                          ? 'در حال اجرا'
-                          : 'در انتظار'}
-                      </span>
+          {/* Operations & Industry Specific Section */}
+          {widgets.cctvProjects && (
+            features.enableInstallationServices ? (
+              /* Active CCTV Projects & Installations Section */
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-cyan-50 text-cyan-700 rounded-xl">
+                      <Wrench className="w-4 h-4" />
                     </div>
-
                     <div>
-                      <h4 className="font-extrabold text-xs text-slate-900 truncate">{p.titleFa}</h4>
-                      <p className="text-[11px] text-slate-600 truncate mt-0.5">
-                        مشتری: <strong>{p.customerTitleFa}</strong> · نصاب:{' '}
-                        <span className="text-cyan-800 font-bold">{p.installerTitleFa || 'تعیین‌نشده'}</span>
+                      <h3 className="font-black text-sm text-slate-900">
+                        پروژه‌ها و سفارشات نصب فعال دوربین مداربسته (CCTV)
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        نظارت بر کارتابل نصابان، بازدیدهای میدانی و تحویل تجهیزات
                       </p>
                     </div>
+                  </div>
 
-                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                      <span className="text-slate-500">مبلغ قرارداد:</span>
-                      <span className="font-mono font-black text-slate-900">
-                        {(p.contractAmountIrr / 10).toLocaleString('fa-IR')} تومان
-                      </span>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab('INSTALLATION')}
+                    className="text-xs font-bold text-cyan-700 hover:text-cyan-800 flex items-center gap-1 cursor-pointer bg-cyan-50/60 px-3 py-1.5 rounded-xl border border-cyan-200 hover:bg-cyan-100 transition-colors"
+                  >
+                    <span>مشاهده کارتابل نصابان</span>
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {projects.slice(0, 4).length === 0 && installationJobs.slice(0, 4).length === 0 ? (
+                    <div className="col-span-2 p-6 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      هیچ سفارش یا پروژه فعالی در جریان نیست. برای ثبت پروژه به بخش خدمات و نصب مراجعه کنید.
+                    </div>
+                  ) : (
+                    projects.slice(0, 4).map((p) => (
+                      <div
+                        key={p.id}
+                        onClick={() => onNavigateTab('INSTALLATION')}
+                        className="p-4 rounded-2xl bg-linear-to-br from-slate-50 to-cyan-50/30 border border-slate-200 hover:border-cyan-300 hover:shadow-md transition-all cursor-pointer space-y-2.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-[11px] font-bold text-cyan-900 bg-cyan-100/70 px-2 py-0.5 rounded-md">
+                            {p.projectCode}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                              p.status === 'COMPLETED'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : p.status === 'IN_PROGRESS'
+                                ? 'bg-cyan-100 text-cyan-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {p.status === 'COMPLETED'
+                              ? 'تکمیل‌شده'
+                              : p.status === 'IN_PROGRESS'
+                              ? 'در حال اجرا'
+                              : 'در انتظار'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h4 className="font-extrabold text-xs text-slate-900 truncate">{p.titleFa}</h4>
+                          <p className="text-[11px] text-slate-600 truncate mt-0.5">
+                            مشتری: <strong>{p.customerTitleFa}</strong> · نصاب:{' '}
+                            <span className="text-cyan-800 font-bold">{p.installerTitleFa || 'تعیین‌نشده'}</span>
+                          </p>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                          <span className="text-slate-500">مبلغ قرارداد:</span>
+                          <span className="font-mono font-black text-slate-900">
+                            {(p.contractAmountIrr / 10).toLocaleString('fa-IR')} تومان
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : profileCode === 'SUPERMARKET_GROCERY' ? (
+              /* Supermarket Operations & Fast POS Monitor */
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl">
+                      <ShoppingCart className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm text-slate-900">
+                        دیده‌بان فروش سریع صندوق و وضعیت تأمین اقلام سوپرمارکت
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        میز کار عملیاتی فروش بارکدی، بررسی موجودی قفسه‌ها و ثبت فاکتورهای خرید
+                      </p>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('SALES')}
+                      className="text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <ShoppingCart className="w-3.5 h-3.5" />
+                      <span>صندوق فروش سریع (F2)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('PURCHASES')}
+                      className="text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>فاکتور خرید جدید</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div
+                    onClick={() => onNavigateTab('SALES')}
+                    className="p-4 rounded-2xl bg-linear-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-200 hover:border-emerald-300 transition-all cursor-pointer space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-emerald-900">فاکتورهای ثبت‌شده دوره</span>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">صندوق POS</span>
+                    </div>
+                    <p className="text-xl font-black text-emerald-800 font-mono">
+                      {salesInvoices.length} <span className="text-xs font-normal text-slate-500">فاکتور</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      مجموع فروش: {((totalSalesIrr) / 10).toLocaleString('fa-IR')} تومان
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => onNavigateTab('INVENTORY')}
+                    className="p-4 rounded-2xl bg-linear-to-br from-indigo-50/70 to-blue-50/40 border border-indigo-200 hover:border-indigo-300 transition-all cursor-pointer space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-indigo-900">تنوع اقلام و کاردکس</span>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded">موجودی انبار</span>
+                    </div>
+                    <p className="text-xl font-black text-indigo-800 font-mono">
+                      {items.length} <span className="text-xs font-normal text-slate-500">قلم کالا</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      اقلام کمتر از نقطه سفارش: <strong className="text-amber-700">{lowStockItems.length}</strong> کالا
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => onNavigateTab('TREASURY')}
+                    className="p-4 rounded-2xl bg-linear-to-br from-teal-50/70 to-cyan-50/40 border border-teal-200 hover:border-teal-300 transition-all cursor-pointer space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-teal-900">صندوق‌ها و کارتخوان‌ها</span>
+                      <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded">نقدینگی</span>
+                    </div>
+                    <p className="text-xl font-black text-teal-800 font-mono">
+                      {cashBoxes.length + bankAccounts.length} <span className="text-xs font-normal text-slate-500">مرکز تسویه</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      موجودی نقد: {((totalCashBalanceIrr) / 10).toLocaleString('fa-IR')} تومان
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Retail General Store Monitor */
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2.5 bg-blue-50 text-blue-700 rounded-xl">
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm text-slate-900">
+                        دیده‌بان فروشگاه، پیش‌فاکتورها و گردش کالا
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        مدیریت سفارشات فروشگاهی، کنترل مطالبات خریداران و ورود کالاهای خریداری‌شده
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('SALES')}
+                      className="text-xs font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1.5 cursor-pointer bg-blue-50 px-3.5 py-2 rounded-xl border border-blue-200 hover:bg-blue-100 transition-colors"
+                    >
+                      <ShoppingCart className="w-3.5 h-3.5" />
+                      <span>فروشگاه و POS</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('PURCHASES')}
+                      className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1.5 cursor-pointer bg-amber-50 px-3.5 py-2 rounded-xl border border-amber-200 hover:bg-amber-100 transition-colors"
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                      <span>خرید و تدارکات</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div
+                    onClick={() => onNavigateTab('SALES')}
+                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition-all cursor-pointer space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-800">فاکتورهای فروشگاهی</span>
+                      <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">فروش</span>
+                    </div>
+                    <p className="text-xl font-black text-slate-900 font-mono">
+                      {salesInvoices.length} <span className="text-xs font-normal text-slate-500">سند</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      مبلغ کل: {((totalSalesIrr) / 10).toLocaleString('fa-IR')} تومان
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => onNavigateTab('PARTIES')}
+                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition-all cursor-pointer space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-800">مشتریان و خریداران</span>
+                      <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded">طرفین</span>
+                    </div>
+                    <p className="text-xl font-black text-slate-900 font-mono">
+                      {parties.length} <span className="text-xs font-normal text-slate-500">شخص</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      مطالبات جاری: {((totalReceivablesIrr) / 10).toLocaleString('fa-IR')} تومان
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => onNavigateTab('INVENTORY')}
+                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition-all cursor-pointer space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-800">کاردکس و انبار</span>
+                      <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">کالا</span>
+                    </div>
+                    <p className="text-xl font-black text-slate-900 font-mono">
+                      {items.length} <span className="text-xs font-normal text-slate-500">کالا</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      کسری نقطه سفارش: <strong className="text-amber-700">{lowStockItems.length}</strong> قلم
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )
+          )}
         </div>
 
         {/* Right 1 Col: Real-time Bank Balances & Critical Inventory Alerts */}

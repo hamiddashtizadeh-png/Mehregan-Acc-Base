@@ -15,6 +15,7 @@ import {
   Wrench,
   Shield,
   Check,
+  ShoppingCart,
 } from 'lucide-react';
 import {
   EnvDocItem,
@@ -290,7 +291,7 @@ export const SettingsAndHealthView: React.FC<SettingsAndHealthViewProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* 1. CCTV & Security Profile */}
           <div
             className={`rounded-xl border-2 p-4 transition-all flex flex-col justify-between ${
@@ -408,6 +409,67 @@ export const SettingsAndHealthView: React.FC<SettingsAndHealthViewProps> = ({
                   className="w-full py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {switchingProfile ? 'در حال فعال‌سازی...' : 'فعال‌سازی صنف فروشگاه عمومی'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 3. Supermarket & Grocery Profile */}
+          <div
+            className={`rounded-xl border-2 p-4 transition-all flex flex-col justify-between ${
+              selectedIndustryProfile === 'SUPERMARKET_GROCERY'
+                ? 'border-amber-600 bg-amber-50/40 shadow-xs ring-2 ring-amber-500/20'
+                : 'border-slate-200 bg-slate-50/60 hover:border-slate-300'
+            }`}
+          >
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                    <ShoppingCart className="w-4 h-4 text-amber-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">
+                      سوپرمارکت و مواد غذایی
+                    </h3>
+                    <span className="text-[10px] text-slate-500 font-mono">SUPERMARKET_GROCERY (سیستمی)</span>
+                  </div>
+                </div>
+                {selectedIndustryProfile === 'SUPERMARKET_GROCERY' && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                    <Check className="w-3 h-3 text-amber-700" />
+                    فعال
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                مخصوص فروشگاه‌های مواد غذایی و هایپرمارکت‌ها؛ متمرکز بر فروش فوق‌سریع بارکدی، صندوق لمسی، انبارداری استاندارد و گردش مالی بدون خدمات نصب.
+              </p>
+              <div className="pt-2 border-t border-slate-200/70 flex flex-wrap gap-1.5 text-[10px] text-slate-700">
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 font-semibold">✔ بارکدخوان و صندوق لمسی</span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 font-semibold">✔ کاردکس و گردش انبار</span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 font-semibold">✔ تسویه نقد و کارتخوان</span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 font-semibold text-slate-400">✖ خدمات نصب غیرفعال</span>
+              </div>
+            </div>
+
+            <div className="pt-4 mt-3">
+              {selectedIndustryProfile === 'SUPERMARKET_GROCERY' ? (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full py-2 text-xs font-bold text-amber-800 bg-amber-100/70 rounded-lg cursor-default border border-amber-300"
+                >
+                  صنف جاری سیستم
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleSwitchIndustryProfile('SUPERMARKET_GROCERY')}
+                  disabled={switchingProfile || !canManageSettings}
+                  className="w-full py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {switchingProfile ? 'در حال فعال‌سازی...' : 'فعال‌سازی صنف سوپرمارکت'}
                 </button>
               )}
             </div>

@@ -47,6 +47,10 @@ interface PurchasesManagementViewProps {
 type TabType = 'INVOICES' | 'PROFORMAS' | 'LANDED_COST_ENGINE' | 'CREATE_INVOICE' | 'PAYMENTS_DEBT' | 'RETURNS';
 
 export function PurchasesManagementView({ foundationData, onRefresh }: PurchasesManagementViewProps) {
+  const industryProfile = foundationData.industryProfile;
+  const profileCode = industryProfile?.code || 'CCTV_SECURITY';
+  const enableInstallersRole = industryProfile?.features?.enableInstallersRole ?? true;
+
   const [activeTab, setActiveTab] = useState<TabType>('INVOICES');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -120,7 +124,7 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
       vatAmountIrr: 0,
       serialNumbersText: 'SN-TEST-NEW-01, SN-TEST-NEW-02, SN-TEST-NEW-03, SN-TEST-NEW-04, SN-TEST-NEW-05',
       macAddressesText: '',
-      notesFa: 'ردیفت اول خرید دوربین',
+      notesFa: 'ردیف اول خرید کالا',
     },
   ]);
 
@@ -343,10 +347,16 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
             </div>
             <div>
               <h1 className="text-lg font-bold text-slate-900">
-                ماژول جامع خرید، ارز، بهای تمام‌شده و بدهی تأمین‌کنندگان (مرحله ۵)
+                {profileCode === 'SUPERMARKET_GROCERY'
+                  ? 'مدیریت خرید اقلام و ورود کالا به انبار'
+                  : profileCode === 'RETAIL_GENERAL'
+                  ? 'مدیریت خرید، بهای تمام‌شده و بدهی تأمین‌کنندگان'
+                  : 'ماژول جامع خرید، ارز، بهای تمام‌شده و بدهی تأمین‌کنندگان (مرحله ۵)'}
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
-                مدیریت پیش‌فاکتور ارزی، فاکتور خرید قطعی، تخصیص هزینه‌های سربار (Landed Cost)، تسویه بدهی و مرجوعی کالا
+                {profileCode === 'SUPERMARKET_GROCERY'
+                  ? 'ثبت فاکتورهای خرید، شارژ موجودی انبار، تسویه حساب تأمین‌کنندگان و مرجوعی کالا'
+                  : 'مدیریت پیش‌فاکتور ارزی، فاکتور خرید قطعی، تخصیص هزینه‌های سربار (Landed Cost)، تسویه بدهی و مرجوعی کالا'}
               </p>
             </div>
           </div>
@@ -1626,6 +1636,7 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
         onClose={() => setQuickMasterType(null)}
         type={quickMasterType || 'PARTY'}
         defaultPartyRole={quickMasterRole}
+        enableInstallersRole={enableInstallersRole}
         onSuccess={(result) => {
           if (result.type === 'PARTY') {
             setFormSupplierId(result.id);
