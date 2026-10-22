@@ -99,6 +99,36 @@ import {
   IndustryProfileCode,
   IndustryProfileConfig,
   IndustryProfileFeatures,
+  GoldTradeType,
+  GoldItemCategory,
+  GoldColleagueTrade,
+  GoldDualLedgerItem,
+  RestaurantOrderType,
+  TableStatus,
+  RestaurantTableRecord,
+  RestaurantOrderLine,
+  RestaurantOrderRecord,
+  PriceTierCode,
+  WholesalePackagingConfig,
+  WholesaleItemPriceTiers,
+  WholesaleOrderLine,
+  WholesaleOrderRecord,
+  WholesaleDispatchRecord,
+  JobTicketPriority,
+  JobTicketStatus,
+  ServiceSparePartLine,
+  ServiceJobTicketRecord,
+  MobileDeviceCondition,
+  MobileRegistryStatus,
+  MobileWarrantyStatus,
+  MobileDeviceRecord,
+  MobileRepairStatus,
+  MobileRepairPartLine,
+  MobileRepairTicketRecord,
+  InventoryTransferRecord,
+  InventoryTransferLine,
+  TransferStatus,
+  ExecutiveBiMetrics,
 } from '../types/foundation';
 
 export const INDUSTRY_PROFILES: Record<string, IndustryProfileConfig> = {
@@ -118,6 +148,34 @@ export const INDUSTRY_PROFILES: Record<string, IndustryProfileConfig> = {
       inventoryTabTitleFa: 'کالا و تجهیزات نظارتی',
       serialTrackerTitleFa: 'رهگیری سریال و MAC آدرس',
       partiesInstallerRoleTitleFa: 'نصابان و تکنسین‌ها',
+      salesTabTitleFa: 'فروش و POS',
+      salesTabDescFa: 'فروش تجهیزات، پیش‌فاکتور و صندوق سریع',
+      purchasesTabTitleFa: 'خرید و تدارکات',
+      purchasesTabDescFa: 'فاکتورهای خرید، تأمین تجهیزات و بهای تمام‌شده',
+      treasuryTabTitleFa: 'دریافت و پرداخت',
+      treasuryTabDescFa: 'صندوق‌ها، حساب‌های بانکی و چک‌های صیادی',
+      partiesTabTitleFa: 'اشخاص و طرفین',
+      partiesTabDescFa: 'صورت‌حساب مشتریان، نصابان و کارفرمایان',
+      installationTabTitleFa: 'خدمات و نصب CCTV',
+      quickPosButtonLabelFa: 'فاکتور فروش POS',
+      quickSalesSubmenuTitleFa: 'فروش، POS و پیش‌فاکتور',
+      quickPurchasesSubmenuTitleFa: 'فاکتور خرید و بهای تمام‌شده',
+      quickTreasurySubmenuTitleFa: 'دریافت، پرداخت و چک صیادی',
+      quickPartiesSubmenuTitleFa: 'صورت‌حساب مشتریان و اشخاص',
+      quickInventorySubmenuTitleFa: 'کالا و تجهیزات نظارتی و کاردکس',
+    },
+    theme: {
+      id: 'cctv',
+      primaryColor: '#0284c7',
+      badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      badgeText: 'text-emerald-700',
+      headerBrandTitleFa: 'سامانه جامع ERP و نظارت تصویری',
+    },
+    layout: {
+      preset: 'ENGINEERING_PROJECTS',
+      defaultSalesMode: 'STANDARD',
+      showInstallationTab: true,
+      showProjectsTab: true,
     },
   },
   RETAIL_GENERAL: {
@@ -136,6 +194,34 @@ export const INDUSTRY_PROFILES: Record<string, IndustryProfileConfig> = {
       inventoryTabTitleFa: 'کالا و انبارداری',
       serialTrackerTitleFa: 'رهگیری شماره سریال کالا',
       partiesInstallerRoleTitleFa: 'مجریان و کارشناسان فنی',
+      salesTabTitleFa: 'فروشگاه و POS',
+      salesTabDescFa: 'فروش سریع بارکدی، صدور فاکتور و تسویه POS',
+      purchasesTabTitleFa: 'خرید و تأمین کالا',
+      purchasesTabDescFa: 'فاکتور خرید کالا و انبار ورودی',
+      treasuryTabTitleFa: 'صندوق و بانک',
+      treasuryTabDescFa: 'مدیریت موجودی نقد، کارتخوان و چک‌ها',
+      partiesTabTitleFa: 'مشتریان و طرفین',
+      partiesTabDescFa: 'حساب‌های دفتری و تأمین‌کنندگان',
+      installationTabTitleFa: 'خدمات فنی',
+      quickPosButtonLabelFa: 'صندوق سریع POS',
+      quickSalesSubmenuTitleFa: 'صندوق فروش سریع بارکدی POS',
+      quickPurchasesSubmenuTitleFa: 'خرید کالا، فاکتور و ورود به انبار',
+      quickTreasurySubmenuTitleFa: 'صندوق‌ها، کارتخوان و واریز بانکی',
+      quickPartiesSubmenuTitleFa: 'مشتریان و حساب‌های دفتری',
+      quickInventorySubmenuTitleFa: 'کالا و انبارداری و کاردکس',
+    },
+    theme: {
+      id: 'retail',
+      primaryColor: '#2563eb',
+      badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
+      badgeText: 'text-blue-700',
+      headerBrandTitleFa: 'سامانه فروشگاهی و خرده‌فروشی عمومی',
+    },
+    layout: {
+      preset: 'RETAIL_FAST_POS',
+      defaultSalesMode: 'TOUCH_POS',
+      showInstallationTab: false,
+      showProjectsTab: false,
     },
   },
   SUPERMARKET_GROCERY: {
@@ -154,6 +240,264 @@ export const INDUSTRY_PROFILES: Record<string, IndustryProfileConfig> = {
       inventoryTabTitleFa: 'کالاها و اقلام سوپرمارکت',
       serialTrackerTitleFa: 'رهگیری بارکد کالا',
       partiesInstallerRoleTitleFa: 'پرسنل و متصدیان فروشگاه',
+      salesTabTitleFa: 'صندوق و فروش',
+      salesTabDescFa: 'فروش فوق‌سریع بارکدی، صندوق لمسی و تسویه آنی',
+      purchasesTabTitleFa: 'خرید کالا',
+      purchasesTabDescFa: 'تأمین اقلام سوپرمارکت و شارژ انبار',
+      treasuryTabTitleFa: 'صندوق و کارتخوان',
+      treasuryTabDescFa: 'موجودی نقد صندوق، کارتخوان و واریز',
+      partiesTabTitleFa: 'مشتریان و طرفین',
+      partiesTabDescFa: 'حساب‌های دفتری و تأمین‌کنندگان مواد غذایی',
+      installationTabTitleFa: 'خدمات',
+      quickPosButtonLabelFa: 'صندوق سریع POS',
+      quickSalesSubmenuTitleFa: 'صندوق فروش سریع بارکدی و تسویه POS',
+      quickPurchasesSubmenuTitleFa: 'خرید اقلام سوپرمارکت و شارژ انبار',
+      quickTreasurySubmenuTitleFa: 'صندوق‌ها، کارتخوان و واریز بانکی',
+      quickPartiesSubmenuTitleFa: 'حساب‌های دفتری و تأمین‌کنندگان',
+      quickInventorySubmenuTitleFa: 'کالاها و اقلام سوپرمارکت و کاردکس',
+    },
+    theme: {
+      id: 'grocery',
+      primaryColor: '#059669',
+      badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
+      badgeText: 'text-amber-700',
+      headerBrandTitleFa: 'سامانه فروشگاهی سوپرمارکت و مواد غذایی',
+    },
+    layout: {
+      preset: 'GROCERY_BARCODE',
+      defaultSalesMode: 'TOUCH_POS',
+      showInstallationTab: false,
+      showProjectsTab: false,
+    },
+  },
+  GOLD_JEWELRY: {
+    code: 'GOLD_JEWELRY',
+    titleFa: 'طلا، جواهر و نقره‌فروشی',
+    descriptionFa: 'پروفایل تخصصی طلا و جواهرفروشی؛ شامل مدیریت وزن (گرم و سوت)، عیار ۱۸، اجرت ساخت، مظنه زنده و تهاتر طلای مستعمل.',
+    badgeLabelFa: 'صنف طلا و جواهرات',
+    features: {
+      enableInstallationServices: false,
+      enableHardwareMacTracking: false,
+      enableInstallersRole: false,
+      enableWarrantyTracking: true,
+      enableBarcodeScanQuickPos: true,
+    },
+    uiLabels: {
+      inventoryTabTitleFa: 'موجودی طلا و جواهرات',
+      serialTrackerTitleFa: 'شناسنامه و کد کالا',
+      partiesInstallerRoleTitleFa: 'مخبران و بنکداران طلا',
+      salesTabTitleFa: 'فروش طلا و جواهر',
+      salesTabDescFa: 'فروش بر اساس وزن، عیار ۱۸، اجرت، سود و تهاتر',
+      purchasesTabTitleFa: 'خرید طلا و متفرقه',
+      purchasesTabDescFa: 'خرید آبشده، طلای کهنه/مستعمل و طلای نو',
+      treasuryTabTitleFa: 'خزانه و صندوق طلا',
+      treasuryTabDescFa: 'صندوق ریالی، حساب بانکی، چک و موازنه طلا',
+      partiesTabTitleFa: 'مشتریان و همکاران طلا',
+      partiesTabDescFa: 'حساب دفتری طلا و ریال مشتریان و بنکداران',
+      installationTabTitleFa: 'کارگاه طلاسازی',
+      quickPosButtonLabelFa: 'فروش سریع طلا',
+      quickSalesSubmenuTitleFa: 'فاکتور طلا با عیار، اجرت و تهاتر',
+      quickPurchasesSubmenuTitleFa: 'خرید طلای کهنه، آبشده و متفرقه',
+      quickTreasurySubmenuTitleFa: 'صندوق ریالی، کارتخوان و تسویه',
+      quickPartiesSubmenuTitleFa: 'مشتریان و بنکداران صنف طلا',
+      quickInventorySubmenuTitleFa: 'موجودی طلا، سکه، جواهرات و کاردکس',
+    },
+    theme: {
+      id: 'gold',
+      primaryColor: '#d97706',
+      badgeBg: 'bg-amber-50 text-amber-800 border-amber-300',
+      badgeText: 'text-amber-800',
+      headerBrandTitleFa: 'سامانه جامع مدیریت طلا و جواهرات',
+    },
+    layout: {
+      preset: 'GOLD_JEWELRY_CALC',
+      defaultSalesMode: 'JEWELRY_CALC',
+      showInstallationTab: false,
+      showProjectsTab: false,
+    },
+  },
+  RESTAURANT_CAFE: {
+    code: 'RESTAURANT_CAFE',
+    titleFa: 'رستوران، فست‌فود و کافی‌شاپ',
+    descriptionFa: 'پروفایل تخصصی رستوران و کافه؛ شامل منوی لمسی، سفارشات سالن و بیرون‌بر، بن آشپزخانه و مدیریت انبار مواد مصرفی.',
+    badgeLabelFa: 'صنف رستوران و کافه',
+    features: {
+      enableInstallationServices: false,
+      enableHardwareMacTracking: false,
+      enableInstallersRole: false,
+      enableWarrantyTracking: false,
+      enableBarcodeScanQuickPos: true,
+    },
+    uiLabels: {
+      inventoryTabTitleFa: 'منو و مواد اولیه آشپزخانه',
+      serialTrackerTitleFa: 'کد سفارش و بن آشپزخانه',
+      partiesInstallerRoleTitleFa: 'پرسنل سالن و تأمین‌کنندگان',
+      salesTabTitleFa: 'صندوق و سفارشات',
+      salesTabDescFa: 'سفارش‌گیری لمسی سالن، بیرون‌بر و بن آشپزخانه',
+      purchasesTabTitleFa: 'خرید مواد مصرفی',
+      purchasesTabDescFa: 'تأمین مواد اولیه آشپزخانه، انبار و بار روز',
+      treasuryTabTitleFa: 'صندوق و کارتخوان',
+      treasuryTabDescFa: 'تسویه نقد و پوز سالن و پیک‌های بیرون‌بر',
+      partiesTabTitleFa: 'مشتریان و تأمین‌کنندگان',
+      partiesTabDescFa: 'مشترکین تلفنی، تأمین‌کنندگان و پرسنل',
+      installationTabTitleFa: 'آشپزخانه و بار',
+      quickPosButtonLabelFa: 'صندوق سریع رستوران',
+      quickSalesSubmenuTitleFa: 'سفارش سریع سالن/بیرون‌بر و چاپ فاکتور',
+      quickPurchasesSubmenuTitleFa: 'خرید و ورود مواد اولیه آشپزخانه',
+      quickTreasurySubmenuTitleFa: 'صندوق فروش، کارتخوان و تسویه پیک',
+      quickPartiesSubmenuTitleFa: 'مشترکین و تأمین‌کنندگان غذا',
+      quickInventorySubmenuTitleFa: 'منو و مواد اولیه آشپزخانه و کاردکس',
+    },
+    theme: {
+      id: 'restaurant',
+      primaryColor: '#ea580c',
+      badgeBg: 'bg-orange-50 text-orange-800 border-orange-300',
+      badgeText: 'text-orange-800',
+      headerBrandTitleFa: 'سامانه مدیریت رستوران و کافه',
+    },
+    layout: {
+      preset: 'RESTAURANT_TOUCH_TABLES',
+      defaultSalesMode: 'TOUCH_POS',
+      showInstallationTab: false,
+      showProjectsTab: false,
+    },
+  },
+  WHOLESALE_DISTRIBUTION: {
+    code: 'WHOLESALE_DISTRIBUTION',
+    titleFa: 'پخش عمده، بازرگانی و بنکداری',
+    descriptionFa: 'پروفایل تخصصی پخش عمده و بنکداری؛ شامل بسته‌بندی کارتن و جزء، نرخ همکار، موزعین و کنترل سقف اعتبار باز.',
+    badgeLabelFa: 'صنف پخش عمده و بنکداری',
+    features: {
+      enableInstallationServices: false,
+      enableHardwareMacTracking: false,
+      enableInstallersRole: false,
+      enableWarrantyTracking: false,
+      enableBarcodeScanQuickPos: true,
+    },
+    uiLabels: {
+      inventoryTabTitleFa: 'موجودی انبار و کارتن‌ها',
+      serialTrackerTitleFa: 'رهگیری بارکد تجاری و کارتن',
+      partiesInstallerRoleTitleFa: 'ویزیتورها و رانندگان پخش',
+      salesTabTitleFa: 'فروش عمده و سفارشات',
+      salesTabDescFa: 'صدور فاکتور عمده، نرخ همکار، تیراژ و حواله خروج',
+      purchasesTabTitleFa: 'خرید عمده و بارگیری',
+      purchasesTabDescFa: 'ورود بارهای کارتن و بهای تمام‌شده محموله',
+      treasuryTabTitleFa: 'خزانه‌داری و اسناد',
+      treasuryTabDescFa: 'تسویه موزعین، چک‌های صیادی و سقف اعتبار',
+      partiesTabTitleFa: 'طرفین تجاری و بنکداران',
+      partiesTabDescFa: 'صورت‌حساب خریداران عمده، ویزیتورها و موزعین',
+      installationTabTitleFa: 'پخش و توزیع',
+      quickPosButtonLabelFa: 'ثبت سفارش عمده',
+      quickSalesSubmenuTitleFa: 'فروش عمده، نرخ همکار و حواله بار',
+      quickPurchasesSubmenuTitleFa: 'ورود محموله عمده و شارژ انبار',
+      quickTreasurySubmenuTitleFa: 'خزانه، تسویه موزعین و چک‌ها',
+      quickPartiesSubmenuTitleFa: 'بنکداران، خریداران عمده و ویزیتورها',
+      quickInventorySubmenuTitleFa: 'موجودی انبار، کارتن‌ها و کاردکس',
+    },
+    theme: {
+      id: 'wholesale',
+      primaryColor: '#0f766e',
+      badgeBg: 'bg-teal-50 text-teal-800 border-teal-300',
+      badgeText: 'text-teal-800',
+      headerBrandTitleFa: 'سامانه پخش عمده و بازرگانی',
+    },
+    layout: {
+      preset: 'WHOLESALE_TIERS_MATRIX',
+      defaultSalesMode: 'WHOLESALE_MATRIX',
+      showInstallationTab: false,
+      showProjectsTab: false,
+    },
+  },
+  SERVICES_CONTRACTING: {
+    code: 'SERVICES_CONTRACTING',
+    titleFa: 'خدمات فنی، مهندسی و پیمانکاری',
+    descriptionFa: 'پروفایل تخصصی شرکت‌های خدماتی و پیمانکاری؛ شامل پروژه‌های اجرایی، قراردادها و ارجاع تیکت به تکنسین‌ها.',
+    badgeLabelFa: 'صنف خدمات و پیمانکاری',
+    features: {
+      enableInstallationServices: true,
+      enableHardwareMacTracking: false,
+      enableInstallersRole: true,
+      enableWarrantyTracking: true,
+      enableBarcodeScanQuickPos: false,
+    },
+    uiLabels: {
+      inventoryTabTitleFa: 'قطعات و مصالح مصرفی',
+      serialTrackerTitleFa: 'کد رهگیری تیکت کار',
+      partiesInstallerRoleTitleFa: 'تکنسین‌ها و مجریان فنی',
+      salesTabTitleFa: 'صورت‌حساب و خدمات',
+      salesTabDescFa: 'فاکتور خدمات، دستمزد، اجرت و قطعات مصرفی',
+      purchasesTabTitleFa: 'تأمین قطعات و مصالح',
+      purchasesTabDescFa: 'خرید لوازم یدکی، تجهیزات و قطعات کارگاه',
+      treasuryTabTitleFa: 'دریافت و پرداخت',
+      treasuryTabDescFa: 'تسویه دستمزد تکنسین‌ها، چک‌ها و تنخواه‌گردان',
+      partiesTabTitleFa: 'مشتریان و تکنسین‌ها',
+      partiesTabDescFa: 'حساب کارفرمایان، مشتریان و پیمانکاران جزء',
+      installationTabTitleFa: 'کارتابل خدمات و تکنسین‌ها',
+      quickPosButtonLabelFa: 'پذیرش و قبض کار',
+      quickSalesSubmenuTitleFa: 'صدور فاکتور خدمات و قطعات',
+      quickPurchasesSubmenuTitleFa: 'خرید قطعات و مصالح کارگاهی',
+      quickTreasurySubmenuTitleFa: 'تسویه دستمزد و حساب‌های بانکی',
+      quickPartiesSubmenuTitleFa: 'کارفرمایان و تکنسین‌های فنی',
+      quickInventorySubmenuTitleFa: 'قطعات و مصالح کارگاهی و کاردکس',
+    },
+    theme: {
+      id: 'services',
+      primaryColor: '#4f46e5',
+      badgeBg: 'bg-indigo-50 text-indigo-800 border-indigo-300',
+      badgeText: 'text-indigo-800',
+      headerBrandTitleFa: 'سامانه خدمات فنی و مهندسی',
+    },
+    layout: {
+      preset: 'SERVICES_JOB_TICKETS',
+      defaultSalesMode: 'STANDARD',
+      showInstallationTab: true,
+      showProjectsTab: true,
+    },
+  },
+  MOBILE_ELECTRONICS: {
+    code: 'MOBILE_ELECTRONICS',
+    titleFa: 'موبایل، رایانه و لوازم الکترونیک',
+    descriptionFa: 'پروفایل تخصصی فروشگاه‌های موبایل و دیجیتال؛ شامل رهگیری کد IMEI و شماره سریال، خدمات گارانتی دستگاه‌ها و صندوق سریع فروشگاهی POS.',
+    badgeLabelFa: 'صنف موبایل و الکترونیک',
+    features: {
+      enableInstallationServices: false,
+      enableHardwareMacTracking: true,
+      enableInstallersRole: false,
+      enableWarrantyTracking: true,
+      enableBarcodeScanQuickPos: true,
+    },
+    uiLabels: {
+      inventoryTabTitleFa: 'گوشی، قطعات و لوازم جانبی',
+      serialTrackerTitleFa: 'رهگیری کد IMEI و شماره سریال',
+      partiesInstallerRoleTitleFa: 'تکنسین‌های گارانتی و تعمیرات',
+      salesTabTitleFa: 'فروش و صندوق دیجیتال',
+      salesTabDescFa: 'فروش گوشی، لوازم جانبی و ثبت گارانتی و IMEI',
+      purchasesTabTitleFa: 'خرید دستگاه و قطعات',
+      purchasesTabDescFa: 'ورود دستگاه‌ها با سریال/IMEI و فاکتور خرید',
+      treasuryTabTitleFa: 'خزانه و دریافت/پرداخت',
+      treasuryTabDescFa: 'صندوق نقد، کارتخوان، تسویه و چک صیادی',
+      partiesTabTitleFa: 'مشتریان و همکاران',
+      partiesTabDescFa: 'حساب مشتریان، خریداران گوشی و شرکت‌های گارانتی',
+      installationTabTitleFa: 'خدمات گارانتی و تعمیر',
+      quickPosButtonLabelFa: 'صندوق سریع دیجیتال',
+      quickSalesSubmenuTitleFa: 'فروش دستگاه، لوازم و ثبت IMEI',
+      quickPurchasesSubmenuTitleFa: 'خرید دستگاه، لوازم و بهای تمام‌شده',
+      quickTreasurySubmenuTitleFa: 'صندوق، پوز بانکی و چک صیادی',
+      quickPartiesSubmenuTitleFa: 'مشتریان، همکاران و گارانتی‌ها',
+      quickInventorySubmenuTitleFa: 'گوشی، قطعات و لوازم جانبی و کاردکس',
+    },
+    theme: {
+      id: 'mobile',
+      primaryColor: '#0284c7',
+      badgeBg: 'bg-cyan-50 text-cyan-800 border-cyan-300',
+      badgeText: 'text-cyan-800',
+      headerBrandTitleFa: 'سامانه فروشگاه موبایل و الکترونیک',
+    },
+    layout: {
+      preset: 'RETAIL_FAST_POS',
+      defaultSalesMode: 'TOUCH_POS',
+      showInstallationTab: false,
+      showProjectsTab: false,
     },
   },
 };
@@ -275,6 +619,7 @@ export interface SystemSettingsRecord {
   landedCostAllocationDefault: 'BY_VALUE' | 'BY_WEIGHT' | 'BY_QUANTITY';
   activeFiscalYearCode: string;
   allowNegativeInventory: boolean;
+  enableDoubleEntryAccounting?: boolean;
   industryProfileCode?: IndustryProfileCode;
   documentNumbering?: DocumentNumberingConfig;
   defaultWarehouseId?: number;
@@ -342,6 +687,15 @@ export interface FoundationDatabaseState {
   fixedAssets: FixedAssetRecord[];
   depreciationEntries: DepreciationEntryRecord[];
   customIndustryProfiles?: IndustryProfileConfig[];
+  goldColleagueTrades?: GoldColleagueTrade[];
+  restaurantTables?: RestaurantTableRecord[];
+  restaurantOrders?: RestaurantOrderRecord[];
+  wholesaleOrders?: WholesaleOrderRecord[];
+  wholesaleDispatches?: WholesaleDispatchRecord[];
+  serviceJobTickets?: ServiceJobTicketRecord[];
+  mobileDevices?: MobileDeviceRecord[];
+  mobileRepairTickets?: MobileRepairTicketRecord[];
+  inventoryTransfers?: InventoryTransferRecord[];
 }
 
 export interface RbacEvaluationResult {
@@ -3178,6 +3532,7 @@ function buildDefaultState(): FoundationDatabaseState {
       landedCostAllocationDefault: 'BY_VALUE',
       activeFiscalYearCode: '1405',
       allowNegativeInventory: false,
+      enableDoubleEntryAccounting: true,
       industryProfileCode: 'CCTV_SECURITY',
       documentNumbering: {
         salesInvoicePrefix: 'INV-1405-',
@@ -3241,6 +3596,343 @@ function buildDefaultState(): FoundationDatabaseState {
     fixedAssets: defaultFixedAssets,
     depreciationEntries: defaultDepreciationEntries,
     customIndustryProfiles: [],
+    goldColleagueTrades: [
+      {
+        id: 1,
+        tradeNumber: 'GLD-TRD-1405-101',
+        tradeType: 'COLLEAGUE_WEIGHT_SALE',
+        partyId: 1,
+        partyTitleFa: 'حاج محمد زرین‌پور (بنکدار و زرگر همکار)',
+        dateJalali: '1405/01/18',
+        goldItemCategory: 'GOLD_18K_MADE',
+        rawWeightGrams: 35.5,
+        stoneWeightGrams: 0,
+        netWeightGrams: 35.5,
+        ayar: 750,
+        pure750WeightGrams: 35.5,
+        makingWageGrams: 0,
+        totalGoldEffectGrams: 35.5,
+        isPureGoldTradeNoRial: true,
+        descriptionFa: 'تحویل طلای ۱۸ عیار ساخته بدون ریال به همکار (بدهکار وزنی طلا)',
+        createdAt: nowIso,
+      },
+      {
+        id: 2,
+        tradeNumber: 'GLD-TRD-1405-102',
+        tradeType: 'COLLEAGUE_WEIGHT_RECEIPT',
+        partyId: 1,
+        partyTitleFa: 'حاج محمد زرین‌پور (بنکدار و زرگر همکار)',
+        dateJalali: '1405/01/22',
+        goldItemCategory: 'MELTED_GOLD',
+        rawWeightGrams: 22.1,
+        stoneWeightGrams: 0,
+        netWeightGrams: 22.1,
+        ayar: 748,
+        pure750WeightGrams: 22.041,
+        makingWageGrams: 0,
+        totalGoldEffectGrams: -22.041,
+        isPureGoldTradeNoRial: true,
+        engravingCode: 'ANG-7821',
+        descriptionFa: 'دریافت قطعه آبشده با انگ آزمایشگاهی تهران عیار ۷۴۸ بابت بده‌بستان',
+        createdAt: nowIso,
+      },
+    ],
+    restaurantTables: [
+      { id: 1, tableNumber: 'T-01', titleFa: 'میز ۱ (سالن اصلی)', capacity: 4, sectionFa: 'سالن اصلی', status: 'AVAILABLE' },
+      { id: 2, tableNumber: 'T-02', titleFa: 'میز ۲ (سالن اصلی)', capacity: 2, sectionFa: 'سالن اصلی', status: 'OCCUPIED', currentOrderId: 1, currentOrderAmountIrr: 4200000 },
+      { id: 3, tableNumber: 'T-03', titleFa: 'میز ۳ (سالن اصلی)', capacity: 6, sectionFa: 'سالن اصلی', status: 'AVAILABLE' },
+      { id: 4, tableNumber: 'T-04', titleFa: 'میز ۴ (فضای باز/تراس)', capacity: 4, sectionFa: 'تراس و بالکن', status: 'AVAILABLE' },
+      { id: 5, tableNumber: 'T-05', titleFa: 'میز ۵ (فضای باز/تراس)', capacity: 4, sectionFa: 'تراس و بالکن', status: 'AVAILABLE' },
+      { id: 6, tableNumber: 'VIP-1', titleFa: 'میز VIP اختصاصی', capacity: 10, sectionFa: 'سالن VIP', status: 'RESERVED' },
+      { id: 7, tableNumber: 'T-07', titleFa: 'میز ۷ (طبقه دوم)', capacity: 4, sectionFa: 'طبقه دوم', status: 'AVAILABLE' },
+      { id: 8, tableNumber: 'T-08', titleFa: 'میز ۸ (طبقه دوم)', capacity: 8, sectionFa: 'طبقه دوم', status: 'AVAILABLE' },
+    ],
+    restaurantOrders: [
+      {
+        id: 1,
+        orderNumber: 'ORD-1405-501',
+        orderType: 'DINE_IN',
+        tableNumber: 'T-02',
+        customerNameFa: 'مشتری میز ۲ (آقای دکتر احمدی)',
+        phone: '09121112233',
+        lines: [
+          { itemId: 101, itemTitleFa: 'چلو کباب کوبیده مخصوص زعفرانی', quantity: 2, unitPriceIrr: 1800000, notesFa: 'کره اضافه' },
+          { itemId: 102, itemTitleFa: 'سالاد فصل و ماست موسیر محلی', quantity: 2, unitPriceIrr: 300000 },
+        ],
+        subtotalIrr: 4200000,
+        serviceChargeIrr: 0,
+        vatAmountIrr: 420000,
+        totalPayableIrr: 4620000,
+        status: 'PREPARING',
+        dateJalali: '1405/01/25',
+        createdAt: nowIso,
+      },
+    ],
+    wholesaleOrders: [
+      {
+        id: 1,
+        orderNumber: 'WHO-1405-001',
+        customerId: 1, // شرکت فنی مهندسی دژسازان نوین
+        customerNameFa: 'شرکت پخش و بنکداری دژسازان (شعبه غرب)',
+        customerCreditLimitIrr: 500000000, // ۵۰ میلیون تومان سقف اعتبار
+        currentOutstandingDebtIrr: 120000000,
+        isCreditLimitExceeded: false,
+        visitorNameFa: 'سعید مرادی (ویزیتور منطقه ۲)',
+        paymentTermsFa: 'CHEQUE_30_DAYS',
+        lines: [
+          {
+            itemId: 1,
+            itemTitleFa: 'دوربین بولت 5MP سونی بدنه فلزی ضدآب',
+            packCount: 5, // ۵ کارتن
+            looseUnitsCount: 0,
+            unitsPerPack: 10, // ۱۰ عدد در هر کارتن
+            totalUnits: 50,
+            priceTier: 'WHOLESALE_BULK',
+            unitPriceIrr: 2800000, // نرخ بنکداری
+            packPriceIrr: 28000000,
+            discountPercent: 5,
+            lineTotalIrr: 133000000,
+          },
+          {
+            itemId: 4,
+            itemTitleFa: 'کابل شبکه Cat6 SFTP تمام مس قرقره ۳۰۵ متری',
+            packCount: 4, // ۴ قرقره/کارتن
+            looseUnitsCount: 0,
+            unitsPerPack: 1,
+            totalUnits: 4,
+            priceTier: 'WHOLESALE_BULK',
+            unitPriceIrr: 32000000,
+            packPriceIrr: 32000000,
+            discountPercent: 2,
+            lineTotalIrr: 125440000,
+          },
+        ],
+        totalCartons: 9,
+        totalLooseUnits: 0,
+        subtotalIrr: 268000000,
+        discountTotalIrr: 9560000,
+        shippingFeeIrr: 2500000,
+        vatAmountIrr: 0,
+        totalPayableIrr: 260940000,
+        dispatchStatus: 'DISPATCHED',
+        dateJalali: '1405/01/24',
+        createdAt: nowIso,
+      },
+    ],
+    wholesaleDispatches: [
+      {
+        id: 1,
+        dispatchNumber: 'DSP-1405-001',
+        orderId: 1,
+        orderNumber: 'WHO-1405-001',
+        customerNameFa: 'شرکت پخش و بنکداری دژسازان (شعبه غرب)',
+        destinationCityFa: 'تهران',
+        destinationAddressFa: 'بزرگراه فتح، کیلومتر ۴، شهرک صنعتی، انبار مرکزی شماره ۲',
+        driverNameFa: 'اکبر قنبری',
+        driverPhone: '09123456780',
+        vehiclePlateFa: '۶۸ ج ۸۲۵ ایران ۲۲',
+        vehicleTypeFa: 'وانت نیسان دیزل آبی',
+        totalCartons: 9,
+        grossWeightKg: 85,
+        status: 'ON_THE_WAY',
+        dateJalali: '1405/01/25',
+        shippingCostIrr: 2500000,
+        notesFa: 'بارگیری در سکوی شماره ۳ انجام شد؛ تحویل به آقای مهندس کریمی',
+        createdAt: nowIso,
+      },
+    ],
+    serviceJobTickets: [
+      {
+        id: 1,
+        ticketNumber: 'TCK-1405-001',
+        customerId: 1,
+        customerNameFa: 'شرکت مهندسی دژسازان نوین',
+        customerPhone: '09121112233',
+        customerAddressFa: 'تهران، خیابان سهروردی شمالی، پلاک ۱۱۸، واحد ۴',
+        titleFa: 'سرویس دوره‌ای و رفع قطعی رک شبکه و دوربین‌های محوطه',
+        descriptionFa: 'دستگاه NVR کانال ۸ تصویر نمی‌دهد و سوییچ شبکه PoE نیاز به ریست و تست کابل دارد.',
+        priority: 'URGENT',
+        status: 'IN_PROGRESS',
+        technicianId: 3, // تکنسین علی میرزایی
+        technicianNameFa: 'مهندس علی میرزایی (تکنسین ارشد)',
+        laborFeeIrr: 4500000,
+        spareParts: [
+          {
+            itemId: 4,
+            itemTitleFa: 'کابل شبکه Cat6 SFTP تمام مس قرقره ۳۰۵ متری',
+            quantity: 20, // ۲۰ متر
+            unitPriceIrr: 120000,
+            totalPriceIrr: 2400000,
+          },
+        ],
+        sparePartsTotalIrr: 2400000,
+        totalCostIrr: 6900000,
+        dateJalali: '1405/01/25',
+        dueDateJalali: '1405/01/27',
+        completionNotesFa: 'کابل‌کشی مجدد کانال ۸ انجام شد و ارتباط پایدار گردید.',
+        createdAt: nowIso,
+      },
+      {
+        id: 2,
+        ticketNumber: 'TCK-1405-002',
+        customerId: 2,
+        customerNameFa: 'فروشگاه و بنکداری الماس غرب',
+        customerPhone: '09123334455',
+        customerAddressFa: 'کرج، میدان آزادگان، جنب برج میلاد',
+        titleFa: 'نصب و راه‌اندازی ۲ دستگاه دوربین پلاک‌خوان ورودی پارکینگ',
+        descriptionFa: 'کابل‌کشی، زاویه‌بندی و تعریف پلاک در نرم‌افزار نظارتی',
+        priority: 'NORMAL',
+        status: 'ASSIGNED',
+        technicianId: 3,
+        technicianNameFa: 'مهندس علی میرزایی (تکنسین ارشد)',
+        laborFeeIrr: 8500000,
+        spareParts: [],
+        sparePartsTotalIrr: 0,
+        totalCostIrr: 8500000,
+        dateJalali: '1405/01/26',
+        dueDateJalali: '1405/01/29',
+        createdAt: nowIso,
+      },
+    ],
+    mobileDevices: [
+      {
+        id: 1,
+        itemId: 1,
+        modelFa: 'سامسونگ Galaxy S24 Ultra (512GB/12GB)',
+        brandFa: 'سامسونگ (Samsung)',
+        imei1: '354892110294819',
+        imei2: '354892110294827',
+        serialNumber: 'R5CW109KJFL',
+        storageGb: 512,
+        ramGb: 12,
+        colorFa: 'خاکستری تیتانیومی (Titanium Gray)',
+        condition: 'NEW',
+        registryStatus: 'COMMERCIAL_CUSTOMS',
+        warrantyStatus: 'UNDER_WARRANTY',
+        warrantyCompanyFa: 'داریا همراه پایتخت (۱۸ ماهه)',
+        warrantyExpiresJalali: '1406/07/20',
+        batteryHealthPercent: 100,
+        purchasePriceIrr: 740000000,
+        salePriceIrr: 795000000,
+        stockStatus: 'IN_STOCK',
+        warehouseId: 1,
+        createdAt: nowIso,
+      },
+      {
+        id: 2,
+        itemId: 2,
+        modelFa: 'اپل آیفون ۱۳ نرمال CH دو سیم‌کارت (128GB/4GB)',
+        brandFa: 'اپل (Apple)',
+        imei1: '359128092837411',
+        imei2: '359128092837429',
+        serialNumber: 'F2LZX8K40M',
+        storageGb: 128,
+        ramGb: 4,
+        colorFa: 'مشکی نیمه‌شب (Midnight Black)',
+        condition: 'USED_LIKE_NEW',
+        registryStatus: 'REGISTERED',
+        warrantyStatus: 'EXPIRED',
+        warrantyCompanyFa: 'گارانتی آروند (منقضی)',
+        warrantyExpiresJalali: '1404/09/15',
+        batteryHealthPercent: 91,
+        purchasePriceIrr: 385000000,
+        salePriceIrr: 425000000,
+        stockStatus: 'IN_STOCK',
+        warehouseId: 1,
+        createdAt: nowIso,
+      },
+      {
+        id: 3,
+        itemId: 3,
+        modelFa: 'لپ‌تاپ گیمینگ ایسوس ROG Zephyrus G16 (1TB/16GB)',
+        brandFa: 'ایسوس (ASUS)',
+        imei1: '861947029481729',
+        serialNumber: 'SN-ASUS-2026-G16-9921',
+        storageGb: 1024,
+        ramGb: 16,
+        colorFa: 'نوک‌مدادی اکلیپسی',
+        condition: 'NEW',
+        registryStatus: 'COMMERCIAL_CUSTOMS',
+        warrantyStatus: 'UNDER_WARRANTY',
+        warrantyCompanyFa: 'گارانتی یکپارچه سازگار ارقام (۲۴ ماه)',
+        warrantyExpiresJalali: '1407/01/15',
+        batteryHealthPercent: 100,
+        purchasePriceIrr: 1120000000,
+        salePriceIrr: 1210000000,
+        stockStatus: 'IN_STOCK',
+        warehouseId: 1,
+        createdAt: nowIso,
+      },
+    ],
+    mobileRepairTickets: [
+      {
+        id: 1,
+        ticketNumber: 'REP-1405-101',
+        customerId: 1,
+        customerNameFa: 'مهندس حمیدرضا احمدی',
+        customerPhone: '09121112233',
+        deviceModelFa: 'آیفون ۱۲ پرو مکس (iPhone 12 Pro Max 256GB)',
+        colorFa: 'آبی اقیانوسی (Pacific Blue)',
+        imeiOrSerial: '356891028374192',
+        securityPasscodeOrPattern: 'الگوی L شکل (یا پین ۱۲۳۴)',
+        accompaniedAccessoriesFa: 'قاب سیلیکونی، بدون شارژر، سیم‌کارت خارج شد',
+        reportedFaultsFa: 'شکستگی شیشه و تاچ ال‌سی‌دی بر اثر سقوط از ارتفاع؛ تصویر سیاه شده اما ویبره می‌زند.',
+        physicalConditionNotesFa: 'ضربه شدید در گوشه پایین سمت راست بدنه، خط و خش جزئی فریم استیل',
+        assignedTechnicianId: 3,
+        assignedTechnicianNameFa: 'مهندس علی میرزایی (تعمیرکار ارشد سخت‌افزار)',
+        estimatedCostIrr: 95000000,
+        depositPaidIrr: 30000000,
+        parts: [
+          {
+            id: 1,
+            partNameFa: 'تاچ و ال‌سی‌دی اولد اورجینال روکاری آیفون ۱۲ پرو مکس',
+            partCostIrr: 75000000,
+            quantity: 1,
+            totalCostIrr: 75000000,
+          },
+        ],
+        partsTotalIrr: 75000000,
+        laborFeeIrr: 20000000,
+        discountIrr: 0,
+        finalTotalIrr: 95000000,
+        remainingPayableIrr: 65000000,
+        status: 'REPAIRED',
+        receptionDateJalali: '1405/01/24',
+        estimatedDeliveryDateJalali: '1405/01/26',
+        notesFa: 'تست فیس‌آیدی و تاچ با موفقیت انجام شد؛ دستگاه آماده تحویل به مشتری است.',
+        createdAt: nowIso,
+      },
+      {
+        id: 2,
+        ticketNumber: 'REP-1405-102',
+        customerId: 2,
+        customerNameFa: 'خانم مریم صادقی',
+        customerPhone: '09124445566',
+        deviceModelFa: 'سامسونگ Galaxy A54 5G',
+        colorFa: 'بنفش لایت',
+        imeiOrSerial: '357192839481726',
+        securityPasscodeOrPattern: 'پین: 2580',
+        accompaniedAccessoriesFa: 'فقط خود گوشی بدون متعلقات',
+        reportedFaultsFa: 'عدم شارژ شدن، داغی غیرعادی زیر پورت شارژ Type-C و تخلیه ناگهانی باتری.',
+        physicalConditionNotesFa: 'بدنه کامپکت و تمیز، بدون شکستگی ظاهری',
+        assignedTechnicianId: 3,
+        assignedTechnicianNameFa: 'مهندس علی میرزایی (تعمیرکار ارشد سخت‌افزار)',
+        estimatedCostIrr: 18500000,
+        depositPaidIrr: 5000000,
+        parts: [],
+        partsTotalIrr: 0,
+        laborFeeIrr: 18500000,
+        discountIrr: 0,
+        finalTotalIrr: 18500000,
+        remainingPayableIrr: 13500000,
+        status: 'IN_REPAIR',
+        receptionDateJalali: '1405/01/25',
+        estimatedDeliveryDateJalali: '1405/01/27',
+        notesFa: 'برد شارژ و آی‌سی تغذیه در حال بررسی زیر لوپ و مولتی‌متر',
+        createdAt: nowIso,
+      },
+    ],
+    inventoryTransfers: [],
   };
 }
 
@@ -3657,6 +4349,43 @@ export class FoundationStore {
             }
           }
 
+          if (!Array.isArray(parsed.goldColleagueTrades)) {
+            parsed.goldColleagueTrades = defaultInitial.goldColleagueTrades || [];
+            dirty = true;
+          }
+          if (!Array.isArray(parsed.restaurantTables)) {
+            parsed.restaurantTables = defaultInitial.restaurantTables || [];
+            dirty = true;
+          }
+          if (!Array.isArray(parsed.restaurantOrders)) {
+            parsed.restaurantOrders = defaultInitial.restaurantOrders || [];
+            dirty = true;
+          }
+          if (!Array.isArray(parsed.wholesaleOrders)) {
+            parsed.wholesaleOrders = defaultInitial.wholesaleOrders || [];
+            dirty = true;
+          }
+          if (!Array.isArray(parsed.wholesaleDispatches)) {
+            parsed.wholesaleDispatches = defaultInitial.wholesaleDispatches || [];
+            dirty = true;
+          }
+          if (!Array.isArray(parsed.serviceJobTickets)) {
+            parsed.serviceJobTickets = defaultInitial.serviceJobTickets || [];
+            dirty = true;
+          }
+          if (!Array.isArray(parsed.mobileDevices)) {
+            parsed.mobileDevices = defaultInitial.mobileDevices || [];
+            dirty = true;
+          }
+          if (!Array.isArray(parsed.mobileRepairTickets)) {
+            parsed.mobileRepairTickets = defaultInitial.mobileRepairTickets || [];
+            dirty = true;
+          }
+          if (!Array.isArray(parsed.inventoryTransfers)) {
+            parsed.inventoryTransfers = defaultInitial.inventoryTransfers || [];
+            dirty = true;
+          }
+
           if (dirty) {
             this.saveDbState(parsed);
           }
@@ -3959,6 +4688,8 @@ export class FoundationStore {
     };
   }
 
+
+
   // ==========================================================================
   // USER, ROLE & OVERRIDE MUTATIONS
   // ==========================================================================
@@ -4230,11 +4961,22 @@ export class FoundationStore {
   // ==========================================================================
   public getIndustryProfile(code?: IndustryProfileCode): IndustryProfileConfig {
     const profileCode = code || this.dbState.settings.industryProfileCode || 'CCTV_SECURITY';
-    return INDUSTRY_PROFILES[profileCode] || INDUSTRY_PROFILES.CCTV_SECURITY;
+    if (INDUSTRY_PROFILES[profileCode]) {
+      return INDUSTRY_PROFILES[profileCode];
+    }
+    const custom = (this.dbState.customIndustryProfiles || []).find((p) => p.code === profileCode);
+    if (custom) {
+      return custom;
+    }
+    return INDUSTRY_PROFILES.CCTV_SECURITY;
   }
 
   public getAllIndustryProfiles(): IndustryProfileConfig[] {
-    return Object.values(INDUSTRY_PROFILES);
+    const systemProfiles = Object.values(INDUSTRY_PROFILES);
+    const customProfiles = (this.dbState.customIndustryProfiles || []).filter(
+      (cp) => !INDUSTRY_PROFILES[cp.code]
+    );
+    return [...systemProfiles, ...customProfiles];
   }
 
   public registerIndustryProfile(
@@ -4378,6 +5120,10 @@ export class FoundationStore {
       profile: selectedConfig,
       messageFa: `صنف کاری سامانه با موفقیت به «${selectedConfig.titleFa}» تغییر یافت و قابلیت‌های متناسب فعال گردید.`,
     };
+  }
+
+  public getSettings(): SystemSettingsRecord {
+    return this.dbState.settings;
   }
 
   public updateSettings(partial: Partial<SystemSettingsRecord>): SystemSettingsRecord {
@@ -5500,6 +6246,7 @@ export class FoundationStore {
           warehouseStocks,
           activeSerialsCount,
           isLowStock,
+          inventoryOnHand: (item as any).inventoryOnHand ?? totalStock,
         };
       })
       .filter((item) => {
@@ -6328,6 +7075,16 @@ export class FoundationStore {
       fixedAssets: this.getFixedAssets(),
       depreciationEntries: this.getDepreciationEntries(),
       openingBalanceDoc: this.getOpeningBalanceDoc(),
+      goldColleagueTrades: this.getGoldColleagueTrades(),
+      restaurantTables: this.getRestaurantTables(),
+      restaurantOrders: this.getRestaurantOrders(),
+      wholesaleOrders: this.getWholesaleOrders(),
+      wholesaleDispatches: this.getWholesaleDispatches(),
+      serviceJobTickets: this.getServiceJobTickets(),
+      mobileDevices: this.getMobileDevices(),
+      mobileRepairTickets: this.getMobileRepairTickets(),
+      inventoryTransfers: this.getInventoryTransfers(),
+      executiveBi: this.getExecutiveBiMetrics(),
     };
   }
 
@@ -6831,6 +7588,8 @@ export class FoundationStore {
       sourceAccountOrBank: string;
       trackingReference: string;
       notesFa?: string;
+      sourceCashBoxId?: number;
+      sourceBankAccountId?: number;
     },
     actorUserId: number
   ): PurchasePaymentRecord {
@@ -6852,10 +7611,54 @@ export class FoundationStore {
       }
       if (amount > invoice.remainingDebtIrr) {
         throw new Error(
-          `مبلغ پرداخت (${amount.toLocaleString()} ریال) از مانده بدهی فاکتور (${invoice.remainingDebtIrr.toLocaleString()} ریال) بیشتر است.`
+          `مبلغ پرداخت (${amount.toLocaleString('fa-IR')} ریال) از مانده بدهی فاکتور (${invoice.remainingDebtIrr.toLocaleString('fa-IR')} ریال) بیشتر است.`
         );
       }
     }
+
+    // Resolve source cashbox / bank account if not explicitly provided
+    let sourceCashBoxId = data.sourceCashBoxId;
+    let sourceBankAccountId = data.sourceBankAccountId;
+
+    if (!sourceCashBoxId && !sourceBankAccountId) {
+      const srcStr = (data.sourceAccountOrBank || '').trim();
+      const foundCash = (this.dbState.cashBoxes || []).find(
+        (c) => String(c.id) === srcStr || c.boxCode === srcStr || (c.titleFa && srcStr.includes(c.titleFa)) || (c.titleFa && c.titleFa.includes(srcStr))
+      );
+      if (foundCash) {
+        sourceCashBoxId = foundCash.id;
+      } else {
+        const foundBank = (this.dbState.bankAccounts || []).find(
+          (b) => String(b.id) === srcStr || b.accountCode === srcStr || (b.bankNameFa && srcStr.includes(b.bankNameFa)) || (b.bankNameFa && b.bankNameFa.includes(srcStr))
+        );
+        if (foundBank) {
+          sourceBankAccountId = foundBank.id;
+        } else if (data.paymentMethod === 'CASH' || srcStr.includes('صندوق')) {
+          sourceCashBoxId = this.dbState.cashBoxes[0]?.id || 1;
+        } else {
+          sourceBankAccountId = this.dbState.bankAccounts[0]?.id || 1;
+        }
+      }
+    }
+
+    const paymentMethodMap: 'CASH' | 'BANK_TRANSFER' | 'POS' | 'CHEQUE' =
+      data.paymentMethod === 'CASH' ? 'CASH' : data.paymentMethod === 'CHEQUE' ? 'CHEQUE' : 'BANK_TRANSFER';
+
+    // Record treasury outflow with balance validation FIRST (throws if balance is insufficient, preventing partial updates)
+    this.createTreasuryTransaction(
+      {
+        txType: 'PAYMENT',
+        dateJalali: data.paymentDateJalali || '1405/01/20',
+        partyId: supplier.id,
+        amountIrr: amount,
+        paymentMethod: paymentMethodMap,
+        sourceCashBoxId,
+        sourceBankAccountId,
+        notesFa: data.notesFa || `پرداخت به تأمین‌کننده (${supplier.fullName}) - پیگیری ${data.trackingReference}`,
+        skipPartyTx: true, // We append to partyTransactions below once
+      },
+      actorUserId
+    );
 
     const nowIso = new Date().toISOString();
     const nextId =
@@ -6872,13 +7675,13 @@ export class FoundationStore {
       invoice.updatedAt = nowIso;
     }
 
-    // Update supplier balance in Parties
+    // Update supplier balance in Parties cache
     if (supplier.transactionsSummary) {
       supplier.transactionsSummary.totalPaymentsIrr += amount;
-      supplier.transactionsSummary.netBalanceIrr -= amount; // Reduces creditor liability
+      supplier.transactionsSummary.netBalanceIrr -= amount;
     }
 
-    // Append to partyTransactions
+    // Append to partyTransactions ONCE
     const partyTxId =
       this.dbState.partyTransactions.length > 0
         ? Math.max(...this.dbState.partyTransactions.map((t) => t.id)) + 1
@@ -7080,6 +7883,14 @@ export class FoundationStore {
 
     this.dbState.purchaseReturns.push(returnRecord);
     this.saveDbState();
+
+    if (this.isDoubleEntryAccountingEnabled()) {
+      try {
+        this.generateAccountingDocFromPurchaseReturn(returnRecord.id, actorUserId);
+      } catch (err: unknown) {
+        console.warn('Accounting voucher for purchase return skipped/failed:', err);
+      }
+    }
 
     this.recordAuditLog({
       actorUserId,
@@ -7911,6 +8722,14 @@ export class FoundationStore {
     this.dbState.salesReturns.push(record);
     this.saveDbState();
 
+    if (this.isDoubleEntryAccountingEnabled()) {
+      try {
+        this.generateAccountingDocFromSalesReturn(record.id, actorUserId);
+      } catch (err: unknown) {
+        console.warn('Accounting voucher for sales return skipped/failed:', err);
+      }
+    }
+
     this.recordAuditLog({
       actorUserId,
       action: 'SALES_RETURN_CREATE',
@@ -8304,6 +9123,14 @@ export class FoundationStore {
           bankAcc.balanceIrr -= cheque.amountIrr;
         }
       }
+
+      if (this.isDoubleEntryAccountingEnabled()) {
+        try {
+          this.generateAccountingDocFromChequeClearance(cheque.id, actorUserId);
+        } catch (err: unknown) {
+          console.warn('Accounting voucher for cheque clearance skipped/failed:', err);
+        }
+      }
     }
 
     cheque.updatedAt = new Date().toISOString();
@@ -8339,6 +9166,7 @@ export class FoundationStore {
       targetBankAccountId?: number;
       chequeId?: number;
       notesFa?: string;
+      skipPartyTx?: boolean;
     },
     actorUserId: number = 1
   ): TreasuryTransactionRecord {
@@ -8351,7 +9179,52 @@ export class FoundationStore {
       if (party) partyNameFa = party.fullName;
     }
 
-    // Update balances transactionally
+    // 1. Balance validation for outflows (PAYMENT, EXPENSE, TRANSFER)
+    if (data.txType === 'PAYMENT' || data.txType === 'EXPENSE' || data.txType === 'TRANSFER') {
+      let srcCashId = data.sourceCashBoxId;
+      let srcBankId = data.sourceBankAccountId;
+
+      // Fallback default resolution if neither source ID is explicitly specified
+      if (!srcCashId && !srcBankId) {
+        if (data.paymentMethod === 'CASH') {
+          srcCashId = (this.dbState.cashBoxes || [])[0]?.id || 1;
+          data.sourceCashBoxId = srcCashId;
+        } else {
+          srcBankId = (this.dbState.bankAccounts || [])[0]?.id || 1;
+          data.sourceBankAccountId = srcBankId;
+        }
+      }
+
+      if (srcCashId) {
+        const box = (this.dbState.cashBoxes || []).find((c) => c.id === srcCashId);
+        if (!box) {
+          throw new Error('صندوق انتخابی برای پرداخت یافت نشد.');
+        }
+        const available = Number(box.balanceIrr) || 0;
+        if (available < amount) {
+          const deficit = amount - available;
+          throw new Error(
+            `موجودی صندوق «${box.titleFa}» (${available.toLocaleString('fa-IR')} ریال) برای پرداخت مبلغ (${amount.toLocaleString('fa-IR')} ریال) کافی نیست. کسری موجودی: ${deficit.toLocaleString('fa-IR')} ریال.`
+          );
+        }
+      }
+
+      if (srcBankId) {
+        const bank = (this.dbState.bankAccounts || []).find((b) => b.id === srcBankId);
+        if (!bank) {
+          throw new Error('حساب بانکی انتخابی برای پرداخت یافت نشد.');
+        }
+        const available = Number(bank.balanceIrr) || 0;
+        if (available < amount) {
+          const deficit = amount - available;
+          throw new Error(
+            `موجودی حساب بانکی «${bank.bankNameFa}» (${available.toLocaleString('fa-IR')} ریال) برای پرداخت مبلغ (${amount.toLocaleString('fa-IR')} ریال) کافی نیست. کسری موجودی: ${deficit.toLocaleString('fa-IR')} ریال.`
+          );
+        }
+      }
+    }
+
+    // 2. Update cashbox and bank account balances
     if (data.sourceCashBoxId) {
       const box = this.dbState.cashBoxes.find((c) => c.id === data.sourceCashBoxId);
       if (box) box.balanceIrr -= amount;
@@ -8396,6 +9269,34 @@ export class FoundationStore {
     };
 
     this.dbState.treasuryTransactions.push(record);
+
+    // 3. Record in partyTransactions if partyId is provided and skipPartyTx is false
+    if (data.partyId && !data.skipPartyTx && (data.txType === 'RECEIPT' || data.txType === 'PAYMENT')) {
+      const partyTxId =
+        this.dbState.partyTransactions.length > 0
+          ? Math.max(...this.dbState.partyTransactions.map((t) => t.id)) + 1
+          : 1;
+
+      const recordType = data.txType === 'RECEIPT' ? 'RECEIPT' : 'PAYMENT';
+      const titleFa =
+        data.txType === 'RECEIPT'
+          ? `دریافت وجه از ${partyNameFa || ''} (${txNumber})`
+          : `پرداخت وجه به ${partyNameFa || ''} (${txNumber})`;
+
+      this.dbState.partyTransactions.push({
+        id: partyTxId,
+        partyId: data.partyId,
+        recordType,
+        referenceNumber: txNumber,
+        titleFa,
+        amountIrr: amount,
+        dateJalali: data.dateJalali || '1405/01/25',
+        status: 'COMPLETED',
+        notesFa: data.notesFa || null,
+        createdAt: nowIso,
+      });
+    }
+
     this.saveDbState();
 
     this.recordAuditLog({
@@ -8679,6 +9580,10 @@ export class FoundationStore {
     return docs.sort((a, b) => b.id - a.id);
   }
 
+  public isDoubleEntryAccountingEnabled(): boolean {
+    return this.dbState.settings.enableDoubleEntryAccounting !== false;
+  }
+
   public getAccountingDocumentById(id: number): AccountingDocumentRecord | undefined {
     return (this.dbState.accountingDocuments || []).find((d) => d.id === id);
   }
@@ -8706,6 +9611,10 @@ export class FoundationStore {
     },
     actorUserId: number = 1
   ): AccountingDocumentRecord {
+    if (!this.isDoubleEntryAccountingEnabled()) {
+      throw new Error('ماژول حسابداری دوبل در تنظیمات سراسری سیستم غیرفعال می‌باشد.');
+    }
+
     // Stage 10: Document Date Validation against Fiscal Year & Accounting Period
     if (data.dateJalali) {
       const dateCheck = this.validateDocumentDateForPosting(data.dateJalali);
@@ -8983,6 +9892,9 @@ export class FoundationStore {
   // ============================================================================
 
   public generateAccountingDocFromSalesInvoice(invoiceId: number, actorUserId: number = 1): AccountingDocumentRecord {
+    if (!this.isDoubleEntryAccountingEnabled()) {
+      throw new Error('ماژول حسابداری دوبل در تنظیمات سراسری سیستم غیرفعال می‌باشد.');
+    }
     const invoice = this.getSalesInvoiceById(invoiceId);
     if (!invoice) throw new Error('فاکتور فروش یافت نشد.');
 
@@ -9103,6 +10015,9 @@ export class FoundationStore {
   }
 
   public generateAccountingDocFromPurchaseInvoice(invoiceId: number, actorUserId: number = 1): AccountingDocumentRecord {
+    if (!this.isDoubleEntryAccountingEnabled()) {
+      throw new Error('ماژول حسابداری دوبل در تنظیمات سراسری سیستم غیرفعال می‌باشد.');
+    }
     const invoice = this.getPurchaseInvoiceById(invoiceId);
     if (!invoice) throw new Error('فاکتور خرید یافت نشد.');
 
@@ -9446,6 +10361,349 @@ export class FoundationStore {
       },
       actorUserId
     );
+  }
+
+  public generateAccountingDocFromChequeClearance(chequeId: number, actorUserId: number = 1): AccountingDocumentRecord {
+    if (!this.isDoubleEntryAccountingEnabled()) {
+      throw new Error('ماژول حسابداری دوبل در تنظیمات سراسری سیستم غیرفعال می‌باشد.');
+    }
+    const cheque = this.dbState.cheques.find((c) => c.id === chequeId);
+    if (!cheque) throw new Error('چک مورد نظر یافت نشد.');
+    if (cheque.status !== 'CLEARED') {
+      throw new Error('تنها چک‌های با وضعیت وصول‌شده (CLEARED) امکان صدور سند وصول دارند.');
+    }
+
+    // Idempotency check: exactly-once posting
+    const existing = (this.dbState.accountingDocuments || []).find(
+      (d) => d.sourceDocType === 'CHEQUE_CLEARANCE' && String(d.sourceDocId) === String(chequeId)
+    );
+    if (existing) {
+      return existing;
+    }
+
+    const bankAcc = (this.dbState.bankAccounts || []).find(
+      (b) => b.id === (cheque.depositBankAccountId || 1)
+    ) || (this.dbState.bankAccounts || [])[0];
+
+    const lines: Array<{
+      accountCode: string;
+      accountTitleFa: string;
+      detailId?: number | null;
+      detailType?: 'PARTY' | 'CASH_BOX' | 'BANK_ACCOUNT' | 'COST_CENTER' | null;
+      detailTitleFa?: string | null;
+      debitIrr: number;
+      creditIrr: number;
+      descriptionFa: string;
+    }> = [];
+
+    if (cheque.chequeType === 'INBOUND') {
+      // Inbound cheque cleared: Debit Bank Account (10102), Credit Receivable Cheque (10201)
+      lines.push({
+        accountCode: '10102',
+        accountTitleFa: 'حساب‌های جاری بانکی',
+        detailType: 'BANK_ACCOUNT',
+        detailId: bankAcc?.id || 1,
+        detailTitleFa: bankAcc ? `${bankAcc.bankNameFa} (${bankAcc.accountNumber})` : 'حساب جاری بانک',
+        debitIrr: cheque.amountIrr,
+        creditIrr: 0,
+        descriptionFa: `وصول چک صیادی دریافتی شماره ${cheque.chequeNumber} و واریز به حساب بانک`,
+      });
+
+      lines.push({
+        accountCode: '10201',
+        accountTitleFa: 'اسناد دریافتنی نزد صندوق (چک‌های سررسید نشده)',
+        detailType: 'PARTY',
+        detailId: cheque.partyId,
+        detailTitleFa: cheque.partyNameFa,
+        debitIrr: 0,
+        creditIrr: cheque.amountIrr,
+        descriptionFa: `تسویه اسناد دریافتنی چک شماره ${cheque.chequeNumber} عهد بانک ${cheque.bankNameFa} طرف‌حساب (${cheque.partyNameFa})`,
+      });
+    } else {
+      // Outbound cheque cleared: Debit Payable Cheque (30201), Credit Bank Account (10102)
+      lines.push({
+        accountCode: '30201',
+        accountTitleFa: 'اسناد پرداختنی سررسید نشده به تأمین‌کنندگان',
+        detailType: 'PARTY',
+        detailId: cheque.partyId,
+        detailTitleFa: cheque.partyNameFa,
+        debitIrr: cheque.amountIrr,
+        creditIrr: 0,
+        descriptionFa: `پاس شدن چک صادره شماره ${cheque.chequeNumber} به نام طرف‌حساب (${cheque.partyNameFa})`,
+      });
+
+      lines.push({
+        accountCode: '10102',
+        accountTitleFa: 'حساب‌های جاری بانکی',
+        detailType: 'BANK_ACCOUNT',
+        detailId: bankAcc?.id || 1,
+        detailTitleFa: bankAcc ? `${bankAcc.bankNameFa} (${bankAcc.accountNumber})` : 'حساب جاری بانک',
+        debitIrr: 0,
+        creditIrr: cheque.amountIrr,
+        descriptionFa: `برداشت وجه از بانک بابت پاس شدن چک صادره ${cheque.chequeNumber}`,
+      });
+    }
+
+    return this.createAccountingDocument(
+      {
+        dateJalali: cheque.clearedDateJalali || cheque.dueDateJalali || '1405/01/25',
+        docType: 'AUTO',
+        sourceDocType: 'CHEQUE_CLEARANCE',
+        sourceDocId: String(cheque.id),
+        referenceNumber: cheque.chequeNumber,
+        descriptionFa: `سند حسابداری وصول قطعی چک ${cheque.chequeType === 'INBOUND' ? 'دریافتی' : 'پرداختی'} شماره ${cheque.chequeNumber} عهد بانک ${cheque.bankNameFa} (${cheque.partyNameFa})`,
+        lines,
+        status: 'APPROVED',
+      },
+      actorUserId
+    );
+  }
+
+  public generateAccountingDocFromSalesReturn(returnId: number, actorUserId: number = 1): AccountingDocumentRecord {
+    if (!this.isDoubleEntryAccountingEnabled()) {
+      throw new Error('ماژول حسابداری دوبل در تنظیمات سراسری سیستم غیرفعال می‌باشد.');
+    }
+    const ret = (this.dbState.salesReturns || []).find((r) => r.id === returnId);
+    if (!ret) throw new Error('سند برگشت از فروش یافت نشد.');
+
+    const existing = (this.dbState.accountingDocuments || []).find(
+      (d) => d.sourceDocType === 'SALES_RETURN' && String(d.sourceDocId) === String(returnId)
+    );
+    if (existing) {
+      return existing;
+    }
+
+    const lines: Array<{
+      accountCode: string;
+      accountTitleFa: string;
+      detailId?: number | null;
+      detailType?: 'PARTY' | 'CASH_BOX' | 'BANK_ACCOUNT' | 'COST_CENTER' | null;
+      detailTitleFa?: string | null;
+      debitIrr: number;
+      creditIrr: number;
+      descriptionFa: string;
+    }> = [];
+
+    // Debit Sales Return (60101), Credit Customer Debtor (10301)
+    lines.push({
+      accountCode: '60101',
+      accountTitleFa: 'درآمد فروش کالا و تجهیزات (برگشت از فروش)',
+      debitIrr: ret.totalRefundAmountIrr,
+      creditIrr: 0,
+      descriptionFa: `برگشت از فروش و کاهش درآمد طبق سند ${ret.returnNumber}`,
+    });
+
+    lines.push({
+      accountCode: '10301',
+      accountTitleFa: 'بدهکاران تجاری - خریداران حقیقی و پروژه‌ای',
+      detailType: 'PARTY',
+      detailId: ret.customerId,
+      detailTitleFa: ret.customerTitleFa,
+      debitIrr: 0,
+      creditIrr: ret.totalRefundAmountIrr,
+      descriptionFa: `بستانکاری مشتری بابت مرجوعی کالا در سند ${ret.returnNumber}`,
+    });
+
+    return this.createAccountingDocument(
+      {
+        dateJalali: ret.dateJalali || '1405/01/20',
+        docType: 'AUTO',
+        sourceDocType: 'SALES_RETURN',
+        sourceDocId: String(ret.id),
+        referenceNumber: ret.returnNumber,
+        descriptionFa: `سند خودکار برگشت از فروش ${ret.returnNumber} مربوط به فاکتور ${ret.invoiceNumber} طرف‌حساب (${ret.customerTitleFa})`,
+        lines,
+        status: 'APPROVED',
+      },
+      actorUserId
+    );
+  }
+
+  public generateAccountingDocFromPurchaseReturn(returnId: number, actorUserId: number = 1): AccountingDocumentRecord {
+    if (!this.isDoubleEntryAccountingEnabled()) {
+      throw new Error('ماژول حسابداری دوبل در تنظیمات سراسری سیستم غیرفعال می‌باشد.');
+    }
+    const ret = (this.dbState.purchaseReturns || []).find((r) => r.id === returnId);
+    if (!ret) throw new Error('سند برگشت از خرید یافت نشد.');
+
+    const existing = (this.dbState.accountingDocuments || []).find(
+      (d) => d.sourceDocType === 'PURCHASE_RETURN' && String(d.sourceDocId) === String(returnId)
+    );
+    if (existing) {
+      return existing;
+    }
+
+    const lines: Array<{
+      accountCode: string;
+      accountTitleFa: string;
+      detailId?: number | null;
+      detailType?: 'PARTY' | 'CASH_BOX' | 'BANK_ACCOUNT' | 'COST_CENTER' | null;
+      detailTitleFa?: string | null;
+      debitIrr: number;
+      creditIrr: number;
+      descriptionFa: string;
+    }> = [];
+
+    // Debit Supplier Payable (30101), Credit Merchandise Inventory (10401)
+    lines.push({
+      accountCode: '30101',
+      accountTitleFa: 'بستانکاران تجاری - تأمین‌کنندگان و واردکنندگان کالا',
+      detailType: 'PARTY',
+      detailId: ret.supplierId,
+      detailTitleFa: ret.supplierTitleFa,
+      debitIrr: ret.totalReturnCreditIrr,
+      creditIrr: 0,
+      descriptionFa: `بدهکار کردن تأمین‌کننده بابت برگشت از خرید طبق سند ${ret.returnNumber}`,
+    });
+
+    lines.push({
+      accountCode: '10401',
+      accountTitleFa: 'موجودی انبار مرکزی و فروشگاه (کاهش ناشی از مرجوعی خرید)',
+      debitIrr: 0,
+      creditIrr: ret.totalReturnCreditIrr,
+      descriptionFa: `خروج کالای مرجوعی به تأمین‌کننده طبق حواله انبار ${ret.inventoryDocNumber}`,
+    });
+
+    return this.createAccountingDocument(
+      {
+        dateJalali: ret.dateJalali || '1405/01/20',
+        docType: 'AUTO',
+        sourceDocType: 'PURCHASE_RETURN',
+        sourceDocId: String(ret.id),
+        referenceNumber: ret.returnNumber,
+        descriptionFa: `سند خودکار برگشت از خرید ${ret.returnNumber} عطف به فاکتور خرید ${ret.invoiceNumber} (${ret.supplierTitleFa})`,
+        lines,
+        status: 'APPROVED',
+      },
+      actorUserId
+    );
+  }
+
+  public generateMissingAutoVouchers(actorUserId: number = 1): {
+    ok: boolean;
+    createdCount: number;
+    skippedCount: number;
+    messageFa: string;
+    createdDocuments: AccountingDocumentRecord[];
+  } {
+    if (!this.isDoubleEntryAccountingEnabled()) {
+      throw new Error('ماژول حسابداری دوبل در تنظیمات سراسری سیستم غیرفعال می‌باشد.');
+    }
+
+    let createdCount = 0;
+    let skippedCount = 0;
+    const createdDocuments: AccountingDocumentRecord[] = [];
+
+    // 1. Sales Invoices
+    for (const invoice of this.dbState.salesInvoices || []) {
+      const existing = (this.dbState.accountingDocuments || []).find(
+        (d) => d.sourceDocType === 'SALES_INVOICE' && String(d.sourceDocId) === String(invoice.id)
+      );
+      if (existing) {
+        skippedCount++;
+      } else {
+        const doc = this.generateAccountingDocFromSalesInvoice(invoice.id, actorUserId);
+        createdDocuments.push(doc);
+        createdCount++;
+      }
+    }
+
+    // 2. Purchase Invoices
+    for (const invoice of this.dbState.purchaseInvoices || []) {
+      const existing = (this.dbState.accountingDocuments || []).find(
+        (d) => d.sourceDocType === 'PURCHASE_INVOICE' && String(d.sourceDocId) === String(invoice.id)
+      );
+      if (existing) {
+        skippedCount++;
+      } else {
+        const doc = this.generateAccountingDocFromPurchaseInvoice(invoice.id, actorUserId);
+        createdDocuments.push(doc);
+        createdCount++;
+      }
+    }
+
+    // 3. Treasury Transactions
+    for (const tx of this.dbState.treasuryTransactions || []) {
+      const existing = (this.dbState.accountingDocuments || []).find(
+        (d) =>
+          (d.sourceDocType === 'TREASURY_RECEIPT' || d.sourceDocType === 'TREASURY_PAYMENT') &&
+          String(d.sourceDocId) === String(tx.id)
+      );
+      if (existing) {
+        skippedCount++;
+      } else {
+        const doc = this.generateAccountingDocFromTreasuryTx(tx.id, actorUserId);
+        createdDocuments.push(doc);
+        createdCount++;
+      }
+    }
+
+    // 4. Operational Expenses
+    for (const exp of this.dbState.operationalExpenses || []) {
+      const existing = (this.dbState.accountingDocuments || []).find(
+        (d) => d.sourceDocType === 'OPERATIONAL_EXPENSE' && String(d.sourceDocId) === String(exp.id)
+      );
+      if (existing) {
+        skippedCount++;
+      } else {
+        const doc = this.generateAccountingDocFromExpense(exp.id, actorUserId);
+        createdDocuments.push(doc);
+        createdCount++;
+      }
+    }
+
+    // 5. Sales Returns
+    for (const ret of this.dbState.salesReturns || []) {
+      const existing = (this.dbState.accountingDocuments || []).find(
+        (d) => d.sourceDocType === 'SALES_RETURN' && String(d.sourceDocId) === String(ret.id)
+      );
+      if (existing) {
+        skippedCount++;
+      } else {
+        const doc = this.generateAccountingDocFromSalesReturn(ret.id, actorUserId);
+        createdDocuments.push(doc);
+        createdCount++;
+      }
+    }
+
+    // 6. Purchase Returns
+    for (const ret of this.dbState.purchaseReturns || []) {
+      const existing = (this.dbState.accountingDocuments || []).find(
+        (d) => d.sourceDocType === 'PURCHASE_RETURN' && String(d.sourceDocId) === String(ret.id)
+      );
+      if (existing) {
+        skippedCount++;
+      } else {
+        const doc = this.generateAccountingDocFromPurchaseReturn(ret.id, actorUserId);
+        createdDocuments.push(doc);
+        createdCount++;
+      }
+    }
+
+    // 7. Cleared Cheques
+    for (const chq of (this.dbState.cheques || []).filter((c) => c.status === 'CLEARED')) {
+      const existing = (this.dbState.accountingDocuments || []).find(
+        (d) => d.sourceDocType === 'CHEQUE_CLEARANCE' && String(d.sourceDocId) === String(chq.id)
+      );
+      if (existing) {
+        skippedCount++;
+      } else {
+        const doc = this.generateAccountingDocFromChequeClearance(chq.id, actorUserId);
+        createdDocuments.push(doc);
+        createdCount++;
+      }
+    }
+
+    return {
+      ok: true,
+      createdCount,
+      skippedCount,
+      createdDocuments,
+      messageFa:
+        createdCount > 0
+          ? `عملیات بازسازی تکمیل گردید: ${createdCount.toLocaleString('fa-IR')} سند اتوماتیک جدید صادر شد و ${skippedCount.toLocaleString('fa-IR')} سند موجود حفظ گردید.`
+          : `تمامی رویدادهای مالی دارای سند حسابداری معتبر می‌باشند (${skippedCount.toLocaleString('fa-IR')} سند موجود بدون تغییر حفظ گردید).`,
+    };
   }
 
   // ============================================================================
@@ -9915,7 +11173,7 @@ export class FoundationStore {
         id: rowNum++,
         rowNumber: 1,
         accountCode: '60101',
-        accountTitleFa: 'درآمد فروش دوربین‌های مداربسته و تجهیزات (بستن حساب موقت)',
+        accountTitleFa: 'درآمدها و فروش دوره (بستن حساب موقت)',
         detailId: null,
         detailType: null,
         detailTitleFa: null,
@@ -11915,6 +13173,172 @@ export class FoundationStore {
     return { ok: true, messageFa: `سفارش نصب «${job.jobCode}» با موفقیت حذف گردید.` };
   }
 
+  public updateTreasuryTransaction(
+    txId: number,
+    data: {
+      txType?: 'RECEIPT' | 'PAYMENT' | 'TRANSFER' | 'EXPENSE' | 'INCOME';
+      dateJalali?: string;
+      partyId?: number;
+      amountIrr?: number;
+      paymentMethod?: 'CASH' | 'BANK_TRANSFER' | 'POS' | 'CHEQUE';
+      sourceCashBoxId?: number;
+      sourceBankAccountId?: number;
+      targetCashBoxId?: number;
+      targetBankAccountId?: number;
+      notesFa?: string;
+    },
+    actorUserId: number = 1
+  ): TreasuryTransactionRecord {
+    const idx = (this.dbState.treasuryTransactions || []).findIndex((t) => t.id === txId);
+    if (idx === -1) throw new Error('تراکنش مالی مورد نظر یافت نشد.');
+
+    const oldTx = this.dbState.treasuryTransactions[idx];
+
+    // Revert bank/cash balances
+    if (oldTx.txType === 'RECEIPT') {
+      if (oldTx.targetBankAccountId) {
+        const bank = (this.dbState.bankAccounts || []).find((b) => b.id === oldTx.targetBankAccountId);
+        if (bank) bank.balanceIrr = Math.max(0, bank.balanceIrr - oldTx.amountIrr);
+      }
+      if (oldTx.targetCashBoxId) {
+        const cash = (this.dbState.cashBoxes || []).find((c) => c.id === oldTx.targetCashBoxId);
+        if (cash) cash.balanceIrr = Math.max(0, cash.balanceIrr - oldTx.amountIrr);
+      }
+    } else if (oldTx.txType === 'PAYMENT' || oldTx.txType === 'EXPENSE' || oldTx.txType === 'TRANSFER') {
+      if (oldTx.sourceBankAccountId) {
+        const bank = (this.dbState.bankAccounts || []).find((b) => b.id === oldTx.sourceBankAccountId);
+        if (bank) bank.balanceIrr += oldTx.amountIrr;
+      }
+      if (oldTx.sourceCashBoxId) {
+        const cash = (this.dbState.cashBoxes || []).find((c) => c.id === oldTx.sourceCashBoxId);
+        if (cash) cash.balanceIrr += oldTx.amountIrr;
+      }
+      if (oldTx.txType === 'TRANSFER') {
+        if (oldTx.targetBankAccountId) {
+          const bank = (this.dbState.bankAccounts || []).find((b) => b.id === oldTx.targetBankAccountId);
+          if (bank) bank.balanceIrr = Math.max(0, bank.balanceIrr - oldTx.amountIrr);
+        }
+        if (oldTx.targetCashBoxId) {
+          const cash = (this.dbState.cashBoxes || []).find((c) => c.id === oldTx.targetCashBoxId);
+          if (cash) cash.balanceIrr = Math.max(0, cash.balanceIrr - oldTx.amountIrr);
+        }
+      }
+    }
+
+    // Revert party balance if partyId set
+    if (oldTx.partyId) {
+      const p = (this.dbState.parties || []).find((party) => party.id === oldTx.partyId);
+      if (p && p.transactionsSummary) {
+        if (oldTx.txType === 'RECEIPT') {
+          p.transactionsSummary.totalReceiptsIrr = Math.max(0, (p.transactionsSummary.totalReceiptsIrr || 0) - oldTx.amountIrr);
+          p.transactionsSummary.netBalanceIrr -= oldTx.amountIrr;
+        } else if (oldTx.txType === 'PAYMENT') {
+          p.transactionsSummary.totalPaymentsIrr = Math.max(0, (p.transactionsSummary.totalPaymentsIrr || 0) - oldTx.amountIrr);
+          p.transactionsSummary.netBalanceIrr += oldTx.amountIrr;
+        }
+        (p as any).currentBalanceIrr = p.transactionsSummary.netBalanceIrr;
+      }
+    }
+
+    // Determine new fields
+    const newTxType = data.txType || oldTx.txType;
+    const newAmount = data.amountIrr !== undefined ? Number(data.amountIrr) || 0 : oldTx.amountIrr;
+    if (newAmount <= 0) throw new Error('مبلغ تراکنش مالی باید بزرگتر از صفر باشد.');
+
+    const newPartyId = data.partyId !== undefined ? data.partyId : oldTx.partyId;
+    let newPartyNameFa: string | undefined = oldTx.partyNameFa || undefined;
+    if (newPartyId) {
+      const party = this.getParties().find((p) => p.id === newPartyId);
+      if (party) newPartyNameFa = party.fullName;
+    } else {
+      newPartyNameFa = undefined;
+    }
+
+    const newPaymentMethod = data.paymentMethod || oldTx.paymentMethod;
+    const newSourceBankAccountId = data.sourceBankAccountId !== undefined ? data.sourceBankAccountId : oldTx.sourceBankAccountId;
+    const newSourceCashBoxId = data.sourceCashBoxId !== undefined ? data.sourceCashBoxId : oldTx.sourceCashBoxId;
+    const newTargetBankAccountId = data.targetBankAccountId !== undefined ? data.targetBankAccountId : oldTx.targetBankAccountId;
+    const newTargetCashBoxId = data.targetCashBoxId !== undefined ? data.targetCashBoxId : oldTx.targetCashBoxId;
+    const newDateJalali = data.dateJalali || oldTx.dateJalali;
+    const newNotesFa = data.notesFa !== undefined ? data.notesFa : oldTx.notesFa;
+
+    // Apply new balances
+    if (newSourceCashBoxId) {
+      const box = (this.dbState.cashBoxes || []).find((c) => c.id === newSourceCashBoxId);
+      if (box) box.balanceIrr -= newAmount;
+    }
+    if (newSourceBankAccountId) {
+      const bank = (this.dbState.bankAccounts || []).find((b) => b.id === newSourceBankAccountId);
+      if (bank) bank.balanceIrr -= newAmount;
+    }
+    if (newTargetCashBoxId) {
+      const box = (this.dbState.cashBoxes || []).find((c) => c.id === newTargetCashBoxId);
+      if (box) box.balanceIrr += newAmount;
+    }
+    if (newTargetBankAccountId) {
+      const bank = (this.dbState.bankAccounts || []).find((b) => b.id === newTargetBankAccountId);
+      if (bank) bank.balanceIrr += newAmount;
+    }
+
+    // Apply new party balance
+    if (newPartyId) {
+      const p = (this.dbState.parties || []).find((party) => party.id === newPartyId);
+      if (p) {
+        if (!p.transactionsSummary) {
+          p.transactionsSummary = {
+            totalSalesCount: 0,
+            totalSalesIrr: 0,
+            totalPurchasesCount: 0,
+            totalPurchasesIrr: 0,
+            totalPaymentsIrr: 0,
+            totalReceiptsIrr: 0,
+            activeProjectsCount: 0,
+            netBalanceIrr: 0,
+          };
+        }
+        if (newTxType === 'RECEIPT') {
+          p.transactionsSummary.totalReceiptsIrr += newAmount;
+          p.transactionsSummary.netBalanceIrr += newAmount;
+        } else if (newTxType === 'PAYMENT') {
+          p.transactionsSummary.totalPaymentsIrr += newAmount;
+          p.transactionsSummary.netBalanceIrr -= newAmount;
+        }
+        (p as any).currentBalanceIrr = p.transactionsSummary.netBalanceIrr;
+      }
+    }
+
+    // Update transaction record
+    const updatedRecord: TreasuryTransactionRecord = {
+      ...oldTx,
+      txType: newTxType,
+      dateJalali: newDateJalali,
+      partyId: newPartyId || null,
+      partyNameFa: newPartyNameFa || null,
+      amountIrr: newAmount,
+      paymentMethod: newPaymentMethod,
+      sourceCashBoxId: newSourceCashBoxId || null,
+      sourceBankAccountId: newSourceBankAccountId || null,
+      targetCashBoxId: newTargetCashBoxId || null,
+      targetBankAccountId: newTargetBankAccountId || null,
+      notesFa: newNotesFa || null,
+    };
+
+    this.dbState.treasuryTransactions[idx] = updatedRecord;
+
+    this.recordAuditLog({
+      action: 'TREASURY_TRANSACTION_UPDATED',
+      category: 'BUSINESS',
+      targetEntity: 'treasury_transactions',
+      targetId: String(txId),
+      status: 'SUCCESS',
+      detailsFa: `اصلاح تراکنش خزانه ${oldTx.txNumber} با مبلغ جدید ${newAmount.toLocaleString('fa-IR')} ریال`,
+      actorUserId,
+    });
+
+    this.saveDbState();
+    return updatedRecord;
+  }
+
   public deleteTreasuryTransaction(txId: number, actorUserId: number = 1): { ok: boolean; messageFa: string } {
     const idx = (this.dbState.treasuryTransactions || []).findIndex((t) => t.id === txId);
     if (idx === -1) throw new Error('تراکنش مالی مورد نظر یافت نشد.');
@@ -12185,7 +13609,7 @@ export class FoundationStore {
     assetId: number,
     periodJalali: string = '1405-Y',
     actorUserId: number = 1
-  ): { ok: boolean; messageFa: string; depreciationAmountIrr: number; entry: DepreciationEntryRecord; document: AccountingDocumentRecord } {
+  ): { ok: boolean; messageFa: string; depreciationAmountIrr: number; entry: DepreciationEntryRecord; document: AccountingDocumentRecord | null } {
     const asset = (this.dbState.fixedAssets || []).find((a) => a.id === assetId);
     if (!asset) throw new Error('دارایی ثابت یافت نشد.');
 
@@ -12205,48 +13629,65 @@ export class FoundationStore {
       throw new Error(`استهلاک این دارایی برای دوره ${periodJalali} قبلاً محاسبه و ثبت گردیده است.`);
     }
 
-    // Calculation logic
+    // Calculation logic with documented monthly prorating policy for the acquisition year
     const depreciableBase = Math.max(0, asset.purchaseCostIrr - asset.salvageValueIrr);
-    const annualDepreciation = Math.round(depreciableBase / (asset.usefulLifeYears || 5));
-    const remainingDepreciable = Math.max(0, depreciableBase - asset.accumulatedDepreciationIrr);
+    const standardAnnualDepreciation = Math.round(depreciableBase / (asset.usefulLifeYears || 5));
 
+    let annualDepreciation = standardAnnualDepreciation;
+    if (asset.purchaseDateJalali) {
+      const parts = asset.purchaseDateJalali.split('/');
+      const purchaseYear = parts[0]?.trim();
+      const purchaseMonth = parseInt(parts[1] || '1', 10);
+      const periodYear = periodJalali.replace('-Y', '').split('/')[0]?.trim();
+
+      if (purchaseYear && periodYear && purchaseYear === periodYear && purchaseMonth >= 1 && purchaseMonth <= 12) {
+        // Documented monthly prorating policy: asset is depreciated for remaining active months in the acquisition year
+        const activeMonths = 12 - purchaseMonth + 1;
+        annualDepreciation = Math.round((standardAnnualDepreciation * activeMonths) / 12);
+      }
+    }
+
+    const remainingDepreciable = Math.max(0, depreciableBase - asset.accumulatedDepreciationIrr);
     const depAmount = Math.min(annualDepreciation, remainingDepreciable);
     if (depAmount <= 0) {
       throw new Error('مبلغ استهلاک قابل محاسبه معادل صفر می‌باشد.');
     }
 
-    // Post double-entry accounting document
+    // Post double-entry accounting document if accounting is enabled
     // Debit: 8101 (هزینه استهلاک دارایی‌های ثابت)
     // Credit: 1502 (استهلاک انباشته دارایی‌های ثابت)
-    const doc = this.createAccountingDocument(
-      {
-        docType: 'AUTO',
-        sourceDocType: 'OPERATIONAL_EXPENSE',
-        sourceDocId: asset.id,
-        dateJalali: '1405/12/29',
-        referenceNumber: `DEP-${asset.assetCode}-${periodJalali}`,
-        descriptionFa: `ثبت استهلاک دوره ${periodJalali} برای دارایی ثابت ${asset.titleFa}`,
-        lines: [
-          {
-            accountCode: '8101',
-            accountTitleFa: 'هزینه استهلاک دارایی‌های ثابت',
-            detailTitleFa: asset.titleFa,
-            debitIrr: depAmount,
-            creditIrr: 0,
-            descriptionFa: `هزینه استهلاک ${asset.titleFa}`,
-          },
-          {
-            accountCode: '1502',
-            accountTitleFa: 'استهلاک انباشته دارایی‌های ثابت',
-            detailTitleFa: asset.titleFa,
-            debitIrr: 0,
-            creditIrr: depAmount,
-            descriptionFa: `استهلاک انباشته ${asset.titleFa}`,
-          },
-        ],
-      },
-      actorUserId
-    );
+    let doc: AccountingDocumentRecord | null = null;
+    if (this.isDoubleEntryAccountingEnabled()) {
+      doc = this.createAccountingDocument(
+        {
+          docType: 'AUTO',
+          sourceDocType: 'FIXED_ASSET_DEPRECIATION',
+          sourceDocId: asset.id,
+          dateJalali: '1405/12/29',
+          referenceNumber: `DEP-${asset.assetCode}-${periodJalali}`,
+          descriptionFa: `ثبت استهلاک دوره ${periodJalali} برای دارایی ثابت ${asset.titleFa}`,
+          lines: [
+            {
+              accountCode: '8101',
+              accountTitleFa: 'هزینه استهلاک دارایی‌های ثابت',
+              detailTitleFa: asset.titleFa,
+              debitIrr: depAmount,
+              creditIrr: 0,
+              descriptionFa: `هزینه استهلاک ${asset.titleFa}`,
+            },
+            {
+              accountCode: '1502',
+              accountTitleFa: 'استهلاک انباشته دارایی‌های ثابت',
+              detailTitleFa: asset.titleFa,
+              debitIrr: 0,
+              creditIrr: depAmount,
+              descriptionFa: `استهلاک انباشته ${asset.titleFa}`,
+            },
+          ],
+        },
+        actorUserId
+      );
+    }
 
     // Update asset
     asset.accumulatedDepreciationIrr += depAmount;
@@ -12263,7 +13704,7 @@ export class FoundationStore {
       assetTitleFa: asset.titleFa,
       periodJalali,
       depreciationAmountIrr: depAmount,
-      accountingDocId: doc.id,
+      accountingDocId: doc ? doc.id : null,
       postedAt: new Date().toISOString(),
     };
     this.dbState.depreciationEntries.push(entry);
@@ -12274,14 +13715,14 @@ export class FoundationStore {
       targetEntity: 'fixed_assets',
       targetId: String(asset.id),
       status: 'SUCCESS',
-      detailsFa: `محاسبه و ثبت سند استهلاک ${depAmount.toLocaleString('fa-IR')} ریال برای ${asset.titleFa}`,
+      detailsFa: `محاسبه و ثبت استهلاک ${depAmount.toLocaleString('fa-IR')} ریال برای ${asset.titleFa}${doc ? ` همراه با سند دوبل [${doc.docNumber}]` : ' (حالت عملیات ساده بدون سند دوبل)'}`,
       actorUserId,
     });
 
     this.saveDbState();
     return {
       ok: true,
-      messageFa: `سند استهلاک دوره ${periodJalali} به مبلغ ${depAmount.toLocaleString('fa-IR')} ریال برای دارایی ${asset.titleFa} با موفقیت ثبت گردید.`,
+      messageFa: `استهلاک دوره ${periodJalali} به مبلغ ${depAmount.toLocaleString('fa-IR')} ریال برای دارایی ${asset.titleFa} با موفقیت ثبت گردید.`,
       depreciationAmountIrr: depAmount,
       entry,
       document: doc,
@@ -12591,6 +14032,1872 @@ export class FoundationStore {
       default:
         return `DOC-${Date.now().toString().slice(-6)}`;
     }
+  }
+
+  // ==========================================================================
+  // GOLD & JEWELRY MODULE METHODS (معاملات همکار، بده‌بستان وزنی، بدون ریال و کاردکس دوگانه)
+  // ==========================================================================
+
+  public getGoldColleagueTrades(partyId?: number): GoldColleagueTrade[] {
+    const list = this.dbState.goldColleagueTrades || [];
+    if (!partyId) return list;
+    return list.filter((t) => t.partyId === partyId);
+  }
+
+  public createGoldColleagueTrade(
+    data: {
+      tradeType: GoldTradeType;
+      partyId: number;
+      goldItemCategory: GoldItemCategory;
+      rawWeightGrams: number;
+      stoneWeightGrams?: number;
+      ayar: number;
+      makingWageGrams?: number;
+      isPureGoldTradeNoRial?: boolean;
+      goldDailyRateIrr?: number;
+      engravingCode?: string;
+      descriptionFa?: string;
+      dateJalali?: string;
+    },
+    actorUserId: number
+  ): GoldColleagueTrade {
+    const party = this.dbState.parties.find((p) => p.id === data.partyId);
+    if (!party) {
+      throw new Error(`شخص / همکار با شناسه ${data.partyId} یافت نشد.`);
+    }
+
+    const rawWeight = Number(data.rawWeightGrams) || 0;
+    const stoneWeight = Number(data.stoneWeightGrams) || 0;
+    const netWeight = Math.max(0, rawWeight - stoneWeight);
+    const ayar = Number(data.ayar) || 750;
+    const pure750 = Number(((netWeight * ayar) / 750).toFixed(3));
+    const wageGrams = Number(data.makingWageGrams) || 0;
+    const effectiveWeightGrams = Number((pure750 + wageGrams).toFixed(3));
+
+    let totalGoldEffectGrams = 0;
+    if (data.tradeType === 'COLLEAGUE_WEIGHT_SALE') {
+      totalGoldEffectGrams = effectiveWeightGrams; // همکار بدهکار طلا می‌شود
+    } else if (
+      data.tradeType === 'COLLEAGUE_WEIGHT_RECEIPT' ||
+      data.tradeType === 'COLLEAGUE_SETTLEMENT'
+    ) {
+      totalGoldEffectGrams = -effectiveWeightGrams; // همکار بستانکار طلا می‌شود / تسویه
+    } else if (data.tradeType === 'COLLEAGUE_BARTER') {
+      totalGoldEffectGrams = effectiveWeightGrams;
+    }
+
+    const isNoRial = data.isPureGoldTradeNoRial ?? true;
+    const dailyRate = Number(data.goldDailyRateIrr) || 0;
+    const totalAmountIrr = isNoRial ? 0 : Math.round(effectiveWeightGrams * dailyRate);
+
+    const nowIso = new Date().toISOString();
+    const count = (this.dbState.goldColleagueTrades || []).length + 101;
+    const tradeNumber = `GLD-TRD-1405-${count}`;
+
+    const newTrade: GoldColleagueTrade = {
+      id: count,
+      tradeNumber,
+      tradeType: data.tradeType,
+      partyId: party.id,
+      partyTitleFa: party.fullName,
+      dateJalali: data.dateJalali || '1405/01/25',
+      goldItemCategory: data.goldItemCategory,
+      rawWeightGrams: rawWeight,
+      stoneWeightGrams: stoneWeight,
+      netWeightGrams: netWeight,
+      ayar,
+      pure750WeightGrams: pure750,
+      makingWageGrams: wageGrams,
+      totalGoldEffectGrams,
+      isPureGoldTradeNoRial: isNoRial,
+      goldDailyRateIrr: isNoRial ? undefined : dailyRate,
+      totalAmountIrr,
+      engravingCode: data.engravingCode,
+      descriptionFa: data.descriptionFa,
+      createdAt: nowIso,
+    };
+
+    if (!Array.isArray(this.dbState.goldColleagueTrades)) {
+      this.dbState.goldColleagueTrades = [];
+    }
+    this.dbState.goldColleagueTrades.push(newTrade);
+
+    // به‌روزرسانی مانده وزنی طلا در حساب شخص
+    const currentGoldBal = party.goldBalanceGrams || 0;
+    party.goldBalanceGrams = Number((currentGoldBal + totalGoldEffectGrams).toFixed(3));
+
+    // ثبت سند در گردش حساب شخص
+    const txType =
+      data.tradeType === 'COLLEAGUE_WEIGHT_SALE'
+        ? 'GOLD_COLLEAGUE_SALE'
+        : data.tradeType === 'COLLEAGUE_WEIGHT_RECEIPT'
+        ? 'GOLD_COLLEAGUE_RECEIPT'
+        : 'GOLD_BARTER';
+
+    this.dbState.partyTransactions.push({
+      id: this.dbState.partyTransactions.length + 1,
+      partyId: party.id,
+      recordType: txType,
+      referenceNumber: tradeNumber,
+      titleFa: `${
+        data.tradeType === 'COLLEAGUE_WEIGHT_SALE' ? 'فروش/تحویل همکار' : 'دریافت طلا از همکار'
+      } (${effectiveWeightGrams} گرم ۷۵۰)${isNoRial ? ' - بدون ریال' : ''}`,
+      amountIrr: totalAmountIrr,
+      dateJalali: data.dateJalali || '1405/01/25',
+      status: 'COMPLETED',
+      goldWeightGrams: rawWeight,
+      goldAyar: ayar,
+      goldPure750Grams: pure750,
+      goldDailyRateIrr: dailyRate,
+      isPureGoldTrade: isNoRial,
+      notesFa:
+        data.descriptionFa ||
+        (isNoRial
+          ? 'معامله صرفاً وزنی طلا و بدون ریال (بده‌بستان همکار)'
+          : 'معامله طلا با نرخ مظنه ریالی'),
+      createdAt: nowIso,
+    });
+
+    this.saveDbState();
+    return newTrade;
+  }
+
+  public getGoldDualLedger(partyId: number) {
+    const party = this.dbState.parties.find((p) => p.id === partyId);
+    if (!party) {
+      throw new Error(`شخص با شناسه ${partyId} یافت نشد.`);
+    }
+
+    const trades = (this.dbState.goldColleagueTrades || []).filter((t) => t.partyId === partyId);
+    const txs = (this.dbState.partyTransactions || []).filter((t) => t.partyId === partyId);
+
+    let runningGoldGrams = 0;
+    let runningRialIrr = 0;
+
+    const ledgerItems: GoldDualLedgerItem[] = [];
+
+    const combined: Array<{
+      date: string;
+      refNumber: string;
+      docTypeFa: string;
+      titleFa: string;
+      goldIn: number;
+      goldOut: number;
+      debitIrr: number;
+      creditIrr: number;
+      isPureNoRial: boolean;
+      notesFa?: string;
+    }> = [];
+
+    for (const tr of trades) {
+      const isOut = tr.totalGoldEffectGrams > 0;
+      const goldIn = !isOut ? Math.abs(tr.totalGoldEffectGrams) : 0;
+      const goldOut = isOut ? tr.totalGoldEffectGrams : 0;
+      const debitIrr = !tr.isPureGoldTradeNoRial && isOut ? tr.totalAmountIrr || 0 : 0;
+      const creditIrr = !tr.isPureGoldTradeNoRial && !isOut ? tr.totalAmountIrr || 0 : 0;
+
+      const docTypeFa =
+        tr.tradeType === 'COLLEAGUE_WEIGHT_SALE'
+          ? 'فروش گرمی همکار'
+          : tr.tradeType === 'COLLEAGUE_WEIGHT_RECEIPT'
+          ? 'دریافت طلا از همکار'
+          : tr.tradeType === 'COLLEAGUE_SETTLEMENT'
+          ? 'تسویه وزنی طلا'
+          : 'تهاتر طلا';
+
+      combined.push({
+        date: tr.dateJalali,
+        refNumber: tr.tradeNumber,
+        docTypeFa,
+        titleFa: `${docTypeFa} (${tr.pure750WeightGrams} گرم عیار ${tr.ayar})`,
+        goldIn,
+        goldOut,
+        debitIrr,
+        creditIrr,
+        isPureNoRial: tr.isPureGoldTradeNoRial,
+        notesFa: tr.descriptionFa,
+      });
+    }
+
+    for (const tx of txs) {
+      if (tx.referenceNumber && tx.referenceNumber.startsWith('GLD-TRD-')) {
+        continue;
+      }
+      const isDebit = tx.recordType === 'SALE_INVOICE' || tx.recordType === 'PAYMENT';
+      const debitIrr = isDebit ? tx.amountIrr : 0;
+      const creditIrr = !isDebit ? tx.amountIrr : 0;
+
+      const docTypeFa =
+        tx.recordType === 'SALE_INVOICE'
+          ? 'فاکتور فروش ریالی'
+          : tx.recordType === 'PURCHASE_INVOICE'
+          ? 'فاکتور خرید ریالی'
+          : tx.recordType === 'RECEIPT'
+          ? 'دریافت وجه / کارتخوان'
+          : tx.recordType === 'PAYMENT'
+          ? 'پرداخت وجه نقد/حواله'
+          : 'سند مالی';
+
+      combined.push({
+        date: tx.dateJalali,
+        refNumber: tx.referenceNumber,
+        docTypeFa,
+        titleFa: tx.titleFa,
+        goldIn: 0,
+        goldOut: 0,
+        debitIrr,
+        creditIrr,
+        isPureNoRial: false,
+        notesFa: tx.notesFa || undefined,
+      });
+    }
+
+    combined.sort((a, b) => a.date.localeCompare(b.date));
+
+    for (let i = 0; i < combined.length; i++) {
+      const item = combined[i];
+      runningGoldGrams = Number((runningGoldGrams + item.goldOut - item.goldIn).toFixed(3));
+      runningRialIrr = runningRialIrr + item.debitIrr - item.creditIrr;
+
+      ledgerItems.push({
+        id: i + 1,
+        dateJalali: item.date,
+        refNumber: item.refNumber,
+        docTypeFa: item.docTypeFa,
+        titleFa: item.titleFa,
+        goldInGrams: item.goldIn,
+        goldOutGrams: item.goldOut,
+        runningGoldBalanceGrams: runningGoldGrams,
+        debitIrr: item.debitIrr,
+        creditIrr: item.creditIrr,
+        runningRialBalanceIrr: runningRialIrr,
+        isPureGoldTradeNoRial: item.isPureNoRial,
+        notesFa: item.notesFa,
+      });
+    }
+
+    return {
+      party: {
+        id: party.id,
+        partyCode: party.partyCode,
+        fullName: party.fullName,
+        mobile: party.mobile,
+      },
+      summary: {
+        goldBalanceGrams: runningGoldGrams,
+        goldBalanceStatusFa:
+          runningGoldGrams > 0
+            ? 'بدهکار طلا به ما'
+            : runningGoldGrams < 0
+            ? 'طلبکار طلا از ما (بستانکار)'
+            : 'تسویه / صفر',
+        netBalanceIrr: runningRialIrr,
+        netBalanceToman: Math.round(runningRialIrr / 10),
+        rialBalanceStatusFa:
+          runningRialIrr > 0 ? 'بدهکار ریالی' : runningRialIrr < 0 ? 'بستانکار ریالی' : 'تسویه / صفر',
+        totalGoldTradedGrams: trades.reduce((acc, t) => acc + (t.pure750WeightGrams || 0), 0),
+        tradeCount: trades.length,
+      },
+      ledgerItems,
+    };
+  }
+
+  public settleGoldWeight(
+    data: {
+      partyId: number;
+      weightGrams: number;
+      notesFa?: string;
+      dateJalali?: string;
+    },
+    actorUserId: number
+  ) {
+    return this.createGoldColleagueTrade(
+      {
+        tradeType: 'COLLEAGUE_SETTLEMENT',
+        partyId: data.partyId,
+        goldItemCategory: 'MELTED_GOLD',
+        rawWeightGrams: data.weightGrams,
+        ayar: 750,
+        isPureGoldTradeNoRial: true,
+        descriptionFa: data.notesFa || 'تسویه وزنی طلا و صفر کردن بخشی از مانده گرمی',
+        dateJalali: data.dateJalali || '1405/01/25',
+      },
+      actorUserId
+    );
+  }
+
+  public convertGoldWeightToRial(
+    data: {
+      partyId: number;
+      weightGrams: number;
+      dailyRateIrr: number;
+      dateJalali?: string;
+      notesFa?: string;
+    },
+    actorUserId: number
+  ) {
+    const party = this.dbState.parties.find((p) => p.id === data.partyId);
+    if (!party) throw new Error('همکار یافت نشد.');
+
+    const weight = Number(data.weightGrams);
+    const rate = Number(data.dailyRateIrr);
+    const totalIrr = Math.round(weight * rate);
+
+    const nowIso = new Date().toISOString();
+    const tradeCount = (this.dbState.goldColleagueTrades || []).length + 101;
+    const tradeNumber = `GLD-CVT-1405-${tradeCount}`;
+
+    party.goldBalanceGrams = Number(((party.goldBalanceGrams || 0) - weight).toFixed(3));
+
+    this.dbState.partyTransactions.push({
+      id: this.dbState.partyTransactions.length + 1,
+      partyId: party.id,
+      recordType: 'GOLD_TO_RIAL_CONVERSION',
+      referenceNumber: tradeNumber,
+      titleFa: `تبدیل ${weight} گرم طلا به ریال با نرخ هر گرم ${(rate / 10).toLocaleString()} تومان`,
+      amountIrr: totalIrr,
+      dateJalali: data.dateJalali || '1405/01/25',
+      status: 'COMPLETED',
+      goldWeightGrams: weight,
+      goldPure750Grams: weight,
+      goldDailyRateIrr: rate,
+      isPureGoldTrade: false,
+      notesFa: data.notesFa || 'تهاتر و بستن حساب طلای همکار با تبدیل به مانده ریالی روز',
+      createdAt: nowIso,
+    });
+
+    this.saveDbState();
+    return {
+      ok: true,
+      tradeNumber,
+      convertedWeightGrams: weight,
+      dailyRateIrr: rate,
+      totalAmountIrr: totalIrr,
+      totalAmountToman: Math.round(totalIrr / 10),
+      newGoldBalanceGrams: party.goldBalanceGrams,
+    };
+  }
+
+  // ==========================================================================
+  // RESTAURANT & CAFE METHODS (فاز ۷: میزها، منوی لمسی و بن آشپزخانه)
+  // ==========================================================================
+
+  public getRestaurantTables(): RestaurantTableRecord[] {
+    return this.dbState.restaurantTables || [];
+  }
+
+  public updateRestaurantTableStatus(
+    tableId: number,
+    status: TableStatus,
+    actorUserId: number
+  ): RestaurantTableRecord {
+    const table = (this.dbState.restaurantTables || []).find((t) => t.id === tableId);
+    if (!table) throw new Error(`میز با شناسه ${tableId} یافت نشد.`);
+    table.status = status;
+    if (status === 'AVAILABLE') {
+      table.currentOrderId = null;
+      table.currentOrderAmountIrr = undefined;
+    }
+    this.saveDbState();
+    return table;
+  }
+
+  public getRestaurantOrders(): RestaurantOrderRecord[] {
+    return this.dbState.restaurantOrders || [];
+  }
+
+  public createRestaurantOrder(
+    orderData: {
+      orderType: RestaurantOrderType;
+      tableNumber?: string;
+      customerNameFa?: string;
+      phone?: string;
+      lines: RestaurantOrderLine[];
+      dateJalali?: string;
+    },
+    actorUserId: number
+  ): RestaurantOrderRecord {
+    const nowIso = new Date().toISOString();
+    const count = (this.dbState.restaurantOrders || []).length + 501;
+    const orderNumber = `ORD-1405-${count}`;
+
+    const subtotal = orderData.lines.reduce((acc, l) => acc + l.quantity * l.unitPriceIrr, 0);
+    const serviceCharge = orderData.orderType === 'DINE_IN' ? Math.round(subtotal * 0.05) : 0;
+    const vat = Math.round((subtotal + serviceCharge) * 0.1);
+    const total = subtotal + serviceCharge + vat;
+
+    const paymentMethod: 'POS' | 'CASH' | 'OPEN_CREDIT' = (orderData as any).paymentMethod || 'POS';
+    const isPaid = (orderData as any).isPaid !== false;
+    const paidAmount = isPaid ? total : 0;
+
+    // ۱. صدور فاکتور فروش رسمی در سیستم فروش و حسابداری (Sales Invoice Ledger)
+    const nextInvoiceId = (this.dbState.salesInvoices || []).reduce((max, i) => Math.max(max, i.id), 0) + 1;
+    const invoiceNumber = `INV-REST-1405-${String(nextInvoiceId).padStart(3, '0')}`;
+    const customer = (this.dbState.parties || []).find((p) => p.roles.includes('CUSTOMER')) || (this.dbState.parties || [])[0];
+    const customerId = customer ? customer.id : 1;
+    const customerDisplayName =
+      orderData.customerNameFa ||
+      (orderData.tableNumber ? `مشتری ${orderData.tableNumber}` : 'مشتری سالن رستوران');
+
+    const salesInvoice: SalesInvoiceRecord = {
+      id: nextInvoiceId,
+      invoiceNumber,
+      saleType: 'QUICK_POS_SALE',
+      dateJalali: orderData.dateJalali || '1405/01/25',
+      dueDateJalali: orderData.dateJalali || '1405/01/25',
+      customerId,
+      customerTitleFa: customerDisplayName,
+      sourceWarehouseId: 1,
+      sourceWarehouseTitleFa: 'انبار مرکزی و سردخانه مواد غذایی',
+      lines: orderData.lines.map((l, idx) => {
+        const lineVat = Math.round(l.quantity * l.unitPriceIrr * 0.1);
+        return {
+          id: idx + 1,
+          itemId: l.itemId,
+          itemCode: `FOOD-${l.itemId}`,
+          itemTitleFa: l.itemTitleFa,
+          quantity: l.quantity,
+          unitNameFa: 'پرس',
+          unitPriceIrr: l.unitPriceIrr,
+          discountIrr: 0,
+          vatAmountIrr: lineVat,
+          netPriceIrr: l.quantity * l.unitPriceIrr + lineVat,
+          unitCogsIrr: Math.round(l.unitPriceIrr * 0.45),
+          totalCogsIrr: Math.round(l.quantity * l.unitPriceIrr * 0.45),
+          serialNumbers: [],
+          macAddresses: [],
+        };
+      }),
+      subtotalNetItemsIrr: subtotal,
+      totalDiscountIrr: 0,
+      totalVatIrr: vat,
+      totalInvoiceAmountIrr: total,
+      totalCogsIrr: Math.round(subtotal * 0.45),
+      paidAmountIrr: paidAmount,
+      remainingBalanceIrr: total - paidAmount,
+      status: isPaid ? 'PAID' : 'CONFIRMED',
+      paymentDetails: {
+        paymentMethod: paymentMethod === 'POS' ? 'POS' : paymentMethod === 'CASH' ? 'CASH' : 'CREDIT',
+      },
+      notesFa: `سفارش ${orderNumber} رستوران و کافه${orderData.tableNumber ? ` (میز ${orderData.tableNumber})` : ''}`,
+      actorUserId,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    if (!Array.isArray(this.dbState.salesInvoices)) {
+      this.dbState.salesInvoices = [];
+    }
+    this.dbState.salesInvoices.push(salesInvoice);
+
+    // ۲. ثبت در خزانه‌داری (واریز به حساب پوز یا صندوق نقد)
+    if (isPaid && paidAmount > 0) {
+      const nextTxId = (this.dbState.treasuryTransactions || []).reduce((max, t) => Math.max(max, t.id), 0) + 1;
+      const txNumber = `TRX-REST-1405-${String(nextTxId).padStart(3, '0')}`;
+      const defaultBank = (this.dbState.bankAccounts || [])[0];
+      const defaultCash = (this.dbState.cashBoxes || [])[0];
+
+      const treasuryTx: TreasuryTransactionRecord = {
+        id: nextTxId,
+        txNumber,
+        txType: 'RECEIPT',
+        dateJalali: orderData.dateJalali || '1405/01/25',
+        partyId: customerId,
+        partyNameFa: customerDisplayName,
+        amountIrr: paidAmount,
+        paymentMethod: paymentMethod === 'POS' ? 'POS' : 'CASH',
+        targetBankAccountId: paymentMethod === 'POS' ? defaultBank?.id : null,
+        targetCashBoxId: paymentMethod === 'CASH' ? defaultCash?.id : null,
+        notesFa: `تسویه فروش رستوران - فاکتور ${invoiceNumber} سفارش ${orderNumber}`,
+        actorUserId,
+        createdAt: nowIso,
+      };
+
+      if (!Array.isArray(this.dbState.treasuryTransactions)) {
+        this.dbState.treasuryTransactions = [];
+      }
+      this.dbState.treasuryTransactions.push(treasuryTx);
+    }
+
+    // ۳. صدور سند دوبل حسابداری رسمی (Journal Voucher)
+    const docNumber = `DOC-REST-${1000 + nextInvoiceId}`;
+    try {
+      this.createAccountingDocument(
+        {
+          docNumber,
+          dateJalali: orderData.dateJalali || '1405/01/25',
+          descriptionFa: `فروش غذا و خدمات پذیرایی فاکتور ${invoiceNumber} - سفارش ${orderNumber}`,
+          docType: 'AUTO',
+          sourceDocType: 'SALES_INVOICE',
+          sourceDocId: nextInvoiceId,
+          lines: [
+            {
+              accountCode: isPaid ? (paymentMethod === 'POS' ? '1020' : '1010') : '1030',
+              accountTitleFa: isPaid
+                ? (paymentMethod === 'POS' ? 'موجودی نزد بانک‌ها و دستگاه‌های پوز' : 'صندوق نقدینگی شعبه')
+                : 'حساب‌های دریافتنی تجاری و میهمانان',
+              debitIrr: total,
+              creditIrr: 0,
+              descriptionFa: `تسویه ${paymentMethod === 'POS' ? 'کارتخوان' : paymentMethod === 'CASH' ? 'نقدی' : 'دفتری'} فاکتور ${invoiceNumber}`,
+            },
+            {
+              accountCode: '6010',
+              accountTitleFa: 'درآمد حاصل از فروش غذا و خدمات رستوران',
+              debitIrr: 0,
+              creditIrr: subtotal + serviceCharge,
+              descriptionFa: `درآمد فروش ناخالص سفارش ${orderNumber}`,
+            },
+            ...(vat > 0
+              ? [
+                  {
+                    accountCode: '3040',
+                    accountTitleFa: 'مالیات و عوارض بر ارزش افزوده فروش',
+                    debitIrr: 0,
+                    creditIrr: vat,
+                    descriptionFa: `مالیات ارزش افزوده ۱۰٪ فاکتور ${invoiceNumber}`,
+                  },
+                ]
+              : []),
+          ],
+        },
+        actorUserId
+      );
+    } catch {
+      // document already exists or double-entry disabled
+    }
+
+    const newOrder: RestaurantOrderRecord = {
+      id: count,
+      orderNumber,
+      orderType: orderData.orderType,
+      tableNumber: orderData.tableNumber,
+      customerNameFa: customerDisplayName,
+      phone: orderData.phone,
+      lines: orderData.lines,
+      subtotalIrr: subtotal,
+      serviceChargeIrr: serviceCharge,
+      vatAmountIrr: vat,
+      totalPayableIrr: total,
+      status: 'PENDING_KITCHEN',
+      dateJalali: orderData.dateJalali || '1405/01/25',
+      salesInvoiceId: nextInvoiceId,
+      salesInvoiceNumber: invoiceNumber,
+      paymentMethod,
+      paidAmountIrr: paidAmount,
+      financialLedgerStatus: isPaid ? (paymentMethod === 'POS' ? 'RECORDED_IN_TREASURY' : 'RECORDED_IN_SALES') : 'ON_CREDIT',
+      accountingDocNumber: docNumber,
+      createdAt: nowIso,
+    };
+
+    if (!Array.isArray(this.dbState.restaurantOrders)) {
+      this.dbState.restaurantOrders = [];
+    }
+    this.dbState.restaurantOrders.push(newOrder);
+
+    if (orderData.orderType === 'DINE_IN' && orderData.tableNumber) {
+      const table = (this.dbState.restaurantTables || []).find(
+        (t) => t.tableNumber === orderData.tableNumber
+      );
+      if (table) {
+        table.status = 'OCCUPIED';
+        table.currentOrderId = newOrder.id;
+        table.currentOrderAmountIrr = total;
+      }
+    }
+
+    this.saveDbState();
+    return newOrder;
+  }
+
+  public generateKitchenTicket(orderId: number) {
+    const order = (this.dbState.restaurantOrders || []).find((o) => o.id === orderId);
+    if (!order) throw new Error('سفارش یافت نشد.');
+
+    return {
+      orderNumber: order.orderNumber,
+      orderTypeFa:
+        order.orderType === 'DINE_IN'
+          ? 'سالن'
+          : order.orderType === 'TAKEAWAY'
+          ? 'بیرون‌بر'
+          : 'ارسال با پیک',
+      tableNumber: order.tableNumber || '—',
+      dateJalali: order.dateJalali,
+      time: new Date(order.createdAt).toLocaleTimeString('fa-IR'),
+      items: order.lines.map((l) => ({
+        titleFa: l.itemTitleFa,
+        quantity: l.quantity,
+        notesFa: l.notesFa || '',
+      })),
+      printedAt: new Date().toISOString(),
+    };
+  }
+
+  public updateRestaurantOrder(
+    orderId: number,
+    updates: {
+      customerNameFa?: string;
+      phone?: string;
+      paymentMethod?: 'POS' | 'CASH' | 'OPEN_CREDIT';
+      status?: 'PENDING_KITCHEN' | 'PREPARING' | 'SERVED' | 'PAID' | 'CANCELLED';
+      tableNumber?: string;
+      notesFa?: string;
+      lines?: RestaurantOrderLine[];
+    },
+    _actorUserId: number
+  ): RestaurantOrderRecord {
+    if (!Array.isArray(this.dbState.restaurantOrders)) {
+      this.dbState.restaurantOrders = [];
+    }
+    const orderIndex = this.dbState.restaurantOrders.findIndex((o) => o.id === orderId);
+    if (orderIndex === -1) {
+      throw new Error(`سفارش با شناسه ${orderId} یافت نشد.`);
+    }
+
+    const order = this.dbState.restaurantOrders[orderIndex];
+
+    if (updates.customerNameFa !== undefined) order.customerNameFa = updates.customerNameFa;
+    if (updates.phone !== undefined) order.phone = updates.phone;
+    if (updates.paymentMethod !== undefined) order.paymentMethod = updates.paymentMethod;
+    if (updates.status !== undefined) order.status = updates.status;
+    if (updates.tableNumber !== undefined) order.tableNumber = updates.tableNumber;
+
+    if (updates.lines && Array.isArray(updates.lines) && updates.lines.length > 0) {
+      order.lines = updates.lines;
+      const subtotal = updates.lines.reduce((acc, l) => acc + l.quantity * l.unitPriceIrr, 0);
+      const serviceCharge = order.orderType === 'DINE_IN' ? Math.round(subtotal * 0.05) : 0;
+      const vat = Math.round((subtotal + serviceCharge) * 0.1);
+      order.subtotalIrr = subtotal;
+      order.serviceChargeIrr = serviceCharge;
+      order.vatAmountIrr = vat;
+      order.totalPayableIrr = subtotal + serviceCharge + vat;
+    }
+
+    this.saveDbState();
+    return order;
+  }
+
+  public deleteRestaurantOrder(orderId: number, _actorUserId: number): { success: boolean; id: number } {
+    if (!Array.isArray(this.dbState.restaurantOrders)) {
+      this.dbState.restaurantOrders = [];
+    }
+    const initialCount = this.dbState.restaurantOrders.length;
+    this.dbState.restaurantOrders = this.dbState.restaurantOrders.filter((o) => o.id !== orderId);
+
+    if (this.dbState.restaurantOrders.length === initialCount) {
+      throw new Error(`سفارش با شناسه ${orderId} یافت نشد.`);
+    }
+
+    this.saveDbState();
+    return { success: true, id: orderId };
+  }
+
+  // ==========================================================================
+  // WHOLESALE & DISTRIBUTION METHODS (فاز ۸: پخش عمده، کارتن، نرخ همکار و توزیع)
+  // ==========================================================================
+
+  public getWholesaleOrders(): WholesaleOrderRecord[] {
+    return this.dbState.wholesaleOrders || [];
+  }
+
+  public getWholesaleDispatches(): WholesaleDispatchRecord[] {
+    return this.dbState.wholesaleDispatches || [];
+  }
+
+  public checkCustomerWholesaleCredit(customerId: number, additionalAmountIrr: number = 0) {
+    const customer = (this.dbState.parties || []).find((p) => p.id === customerId);
+    if (!customer) {
+      throw new Error(`مشتری با شناسه ${customerId} یافت نشد.`);
+    }
+
+    const creditLimitIrr = customer.creditLimitIrr || 100000000;
+    let currentDebtIrr = 0;
+    if (customer.transactionsSummary) {
+      currentDebtIrr = Math.max(0, -customer.transactionsSummary.netBalanceIrr);
+    }
+    const projectedDebtIrr = currentDebtIrr + additionalAmountIrr;
+    const isExceeded = projectedDebtIrr > creditLimitIrr;
+    const exceededAmountIrr = isExceeded ? projectedDebtIrr - creditLimitIrr : 0;
+
+    return {
+      customerId: customer.id,
+      customerNameFa: customer.fullName,
+      creditLimitIrr,
+      currentDebtIrr,
+      projectedDebtIrr,
+      isExceeded,
+      exceededAmountIrr,
+      hasBouncedCheques: false,
+    };
+  }
+
+  public getItemPriceTiers(itemId: number) {
+    const item = (this.dbState.items || []).find((i) => i.id === itemId);
+    if (!item) {
+      throw new Error(`کالا با شناسه ${itemId} یافت نشد.`);
+    }
+
+    const basePrice = item.salePriceIrr || 1000000;
+    return {
+      itemId: item.id,
+      itemTitleFa: item.titleFa,
+      primaryUnitFa: item.unitNameFa || 'عدد',
+      packUnitFa: 'کارتن',
+      unitsPerPack: item.categoryId === 2 ? 1 : 12,
+      packWeightKg: 8.5,
+      priceTiers: {
+        CONSUMER: Math.round(basePrice * 1.15),
+        RETAIL_COLLEAGUE: basePrice,
+        WHOLESALE_BULK: Math.round(basePrice * 0.88),
+        DISTRIBUTOR_VIP: Math.round(basePrice * 0.8),
+      },
+    };
+  }
+
+  public createWholesaleOrder(
+    payload: {
+      customerId: number;
+      visitorNameFa?: string;
+      paymentTermsFa?: 'CASH' | 'CHEQUE_30_DAYS' | 'CHEQUE_60_DAYS' | 'OPEN_CREDIT';
+      lines: Array<{
+        itemId: number;
+        packCount: number;
+        looseUnitsCount: number;
+        priceTier: PriceTierCode;
+        discountPercent?: number;
+      }>;
+      shippingFeeIrr?: number;
+      dateJalali?: string;
+      bypassCreditLimitCheck?: boolean;
+    },
+    actorUserId: number
+  ): WholesaleOrderRecord {
+    const customer = (this.dbState.parties || []).find((p) => p.id === payload.customerId);
+    if (!customer) {
+      throw new Error(`مشتری با شناسه ${payload.customerId} یافت نشد.`);
+    }
+
+    if (!payload.lines || payload.lines.length === 0) {
+      throw new Error('سفارش باید حداقل شامل یک ردیف کالا باشد.');
+    }
+
+    let subtotal = 0;
+    let totalDiscount = 0;
+    let totalCartons = 0;
+    let totalLooseUnits = 0;
+
+    const processedLines: WholesaleOrderLine[] = [];
+
+    for (const line of payload.lines) {
+      const item = (this.dbState.items || []).find((i) => i.id === line.itemId);
+      if (!item) {
+        throw new Error(`کالا با شناسه ${line.itemId} یافت نشد.`);
+      }
+
+      const tiers = this.getItemPriceTiers(item.id);
+      const unitsPerPack = tiers.unitsPerPack;
+      const unitPriceIrr = tiers.priceTiers[line.priceTier] || item.salePriceIrr;
+      const packPriceIrr = unitPriceIrr * unitsPerPack;
+      const totalUnits = line.packCount * unitsPerPack + (line.looseUnitsCount || 0);
+      const discountPercent = line.discountPercent || 0;
+
+      const grossLineTotal = line.packCount * packPriceIrr + (line.looseUnitsCount || 0) * unitPriceIrr;
+      const lineDiscount = Math.round((grossLineTotal * discountPercent) / 100);
+      const netLineTotal = grossLineTotal - lineDiscount;
+
+      subtotal += grossLineTotal;
+      totalDiscount += lineDiscount;
+      totalCartons += line.packCount;
+      totalLooseUnits += line.looseUnitsCount || 0;
+
+      processedLines.push({
+        itemId: item.id,
+        itemTitleFa: item.titleFa,
+        packCount: line.packCount,
+        looseUnitsCount: line.looseUnitsCount || 0,
+        unitsPerPack,
+        totalUnits,
+        priceTier: line.priceTier,
+        unitPriceIrr,
+        packPriceIrr,
+        discountPercent,
+        lineTotalIrr: netLineTotal,
+      });
+
+      // کاهش موجودی انبار
+      const currentStock = (item as any).inventoryOnHand ?? 100;
+      (item as any).inventoryOnHand = Math.max(0, currentStock - totalUnits);
+    }
+
+    const shippingFee = payload.shippingFeeIrr || 0;
+    const totalPayable = subtotal - totalDiscount + shippingFee;
+
+    const creditCheck = this.checkCustomerWholesaleCredit(customer.id, totalPayable);
+
+    const newId = (this.dbState.wholesaleOrders || []).reduce((max, o) => Math.max(max, o.id), 0) + 1;
+    const orderNumber = `WHO-1405-${String(newId).padStart(3, '0')}`;
+
+    const newOrder: WholesaleOrderRecord = {
+      id: newId,
+      orderNumber,
+      customerId: customer.id,
+      customerNameFa: customer.fullName,
+      customerCreditLimitIrr: creditCheck.creditLimitIrr,
+      currentOutstandingDebtIrr: creditCheck.currentDebtIrr,
+      isCreditLimitExceeded: creditCheck.isExceeded,
+      visitorNameFa: payload.visitorNameFa || 'واحد فروش سازمانی',
+      paymentTermsFa: payload.paymentTermsFa || 'CHEQUE_30_DAYS',
+      lines: processedLines,
+      totalCartons,
+      totalLooseUnits,
+      subtotalIrr: subtotal,
+      discountTotalIrr: totalDiscount,
+      shippingFeeIrr: shippingFee,
+      vatAmountIrr: 0,
+      totalPayableIrr: totalPayable,
+      dispatchStatus: 'PENDING_PACKING',
+      dateJalali: payload.dateJalali || '1405/01/25',
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!Array.isArray(this.dbState.wholesaleOrders)) {
+      this.dbState.wholesaleOrders = [];
+    }
+    this.dbState.wholesaleOrders.push(newOrder);
+
+    if (!customer.transactionsSummary) {
+      customer.transactionsSummary = {
+        totalSalesCount: 0,
+        totalSalesIrr: 0,
+        totalPurchasesCount: 0,
+        totalPurchasesIrr: 0,
+        totalPaymentsIrr: 0,
+        totalReceiptsIrr: 0,
+        activeProjectsCount: 0,
+        netBalanceIrr: 0,
+      };
+    }
+    customer.transactionsSummary.totalSalesCount += 1;
+    customer.transactionsSummary.totalSalesIrr += totalPayable;
+    customer.transactionsSummary.netBalanceIrr -= totalPayable;
+
+    this.saveDbState();
+    return newOrder;
+  }
+
+  public createWholesaleDispatch(
+    payload: {
+      orderId: number;
+      destinationCityFa?: string;
+      destinationAddressFa?: string;
+      driverNameFa: string;
+      driverPhone: string;
+      vehiclePlateFa: string;
+      vehicleTypeFa: string;
+      shippingCostIrr?: number;
+      dateJalali?: string;
+      notesFa?: string;
+    },
+    actorUserId: number
+  ): WholesaleDispatchRecord {
+    const order = (this.dbState.wholesaleOrders || []).find((o) => o.id === payload.orderId);
+    if (!order) {
+      throw new Error(`سفارش عمده با شناسه ${payload.orderId} یافت نشد.`);
+    }
+
+    const newId = (this.dbState.wholesaleDispatches || []).reduce((max, d) => Math.max(max, d.id), 0) + 1;
+    const dispatchNumber = `DSP-1405-${String(newId).padStart(3, '0')}`;
+
+    const newDispatch: WholesaleDispatchRecord = {
+      id: newId,
+      dispatchNumber,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerNameFa: order.customerNameFa,
+      destinationCityFa: payload.destinationCityFa || 'تهران',
+      destinationAddressFa: payload.destinationAddressFa || 'انبار مقصد خریدار عمده',
+      driverNameFa: payload.driverNameFa,
+      driverPhone: payload.driverPhone,
+      vehiclePlateFa: payload.vehiclePlateFa,
+      vehicleTypeFa: payload.vehicleTypeFa,
+      totalCartons: order.totalCartons,
+      grossWeightKg: Math.round(order.totalCartons * 9.5),
+      status: 'PREPARING',
+      dateJalali: payload.dateJalali || '1405/01/25',
+      shippingCostIrr: payload.shippingCostIrr || 0,
+      notesFa: payload.notesFa,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!Array.isArray(this.dbState.wholesaleDispatches)) {
+      this.dbState.wholesaleDispatches = [];
+    }
+    this.dbState.wholesaleDispatches.push(newDispatch);
+
+    order.dispatchStatus = 'PACKED';
+    this.saveDbState();
+    return newDispatch;
+  }
+
+  public updateWholesaleDispatchStatus(
+    dispatchId: number,
+    status: 'PREPARING' | 'LOADED' | 'ON_THE_WAY' | 'DELIVERED',
+    actorUserId: number
+  ): WholesaleDispatchRecord {
+    const dispatch = (this.dbState.wholesaleDispatches || []).find((d) => d.id === dispatchId);
+    if (!dispatch) {
+      throw new Error(`حواله توزیع با شناسه ${dispatchId} یافت نشد.`);
+    }
+
+    dispatch.status = status;
+    const order = (this.dbState.wholesaleOrders || []).find((o) => o.id === dispatch.orderId);
+    if (order) {
+      if (status === 'DELIVERED') {
+        order.dispatchStatus = 'DELIVERED';
+      } else if (status === 'ON_THE_WAY') {
+        order.dispatchStatus = 'DISPATCHED';
+      } else {
+        order.dispatchStatus = 'PACKED';
+      }
+    }
+
+    this.saveDbState();
+    return dispatch;
+  }
+
+  // ==========================================================================
+  // SERVICES & CONTRACTING METHODS (فاز ۹: خدمات فنی، تیکت کار، تکنسین و قطعات)
+  // ==========================================================================
+
+  public getServiceJobTickets(): ServiceJobTicketRecord[] {
+    return this.dbState.serviceJobTickets || [];
+  }
+
+  public createServiceJobTicket(
+    payload: {
+      customerId: number;
+      titleFa: string;
+      descriptionFa: string;
+      priority?: JobTicketPriority;
+      technicianId?: number;
+      laborFeeIrr?: number;
+      spareParts?: ServiceSparePartLine[];
+      dateJalali?: string;
+      dueDateJalali?: string;
+    },
+    actorUserId: number
+  ): ServiceJobTicketRecord {
+    const customer = (this.dbState.parties || []).find((p) => p.id === payload.customerId);
+    if (!customer) {
+      throw new Error(`مشتری با شناسه ${payload.customerId} یافت نشد.`);
+    }
+
+    const technician = payload.technicianId
+      ? (this.dbState.parties || []).find((p) => p.id === payload.technicianId)
+      : undefined;
+
+    const parts = payload.spareParts || [];
+    const sparePartsTotal = parts.reduce((sum, p) => sum + p.totalPriceIrr, 0);
+    const laborFee = payload.laborFeeIrr || 0;
+    const totalCost = laborFee + sparePartsTotal;
+
+    const nextId = (this.dbState.serviceJobTickets || []).reduce((max, t) => Math.max(max, t.id), 0) + 1;
+    const ticketNumber = `TCK-1405-${String(nextId).padStart(3, '0')}`;
+
+    const newTicket: ServiceJobTicketRecord = {
+      id: nextId,
+      ticketNumber,
+      customerId: customer.id,
+      customerNameFa: customer.fullName,
+      customerPhone: customer.mobile || customer.phone || '—',
+      customerAddressFa: customer.addressFa || 'تهران',
+      titleFa: payload.titleFa,
+      descriptionFa: payload.descriptionFa,
+      priority: payload.priority || 'NORMAL',
+      status: payload.technicianId ? 'ASSIGNED' : 'OPEN',
+      technicianId: technician?.id,
+      technicianNameFa: technician?.fullName,
+      laborFeeIrr: laborFee,
+      spareParts: parts,
+      sparePartsTotalIrr: sparePartsTotal,
+      totalCostIrr: totalCost,
+      dateJalali: payload.dateJalali || '1405/01/25',
+      dueDateJalali: payload.dueDateJalali,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!Array.isArray(this.dbState.serviceJobTickets)) {
+      this.dbState.serviceJobTickets = [];
+    }
+    this.dbState.serviceJobTickets.push(newTicket);
+    this.saveDbState();
+    return newTicket;
+  }
+
+  public updateServiceJobTicketStatus(
+    ticketId: number,
+    status: JobTicketStatus,
+    actorUserId: number
+  ): ServiceJobTicketRecord {
+    const ticket = (this.dbState.serviceJobTickets || []).find((t) => t.id === ticketId);
+    if (!ticket) throw new Error(`تیکت کار با شناسه ${ticketId} یافت نشد.`);
+
+    ticket.status = status;
+    this.saveDbState();
+    return ticket;
+  }
+
+  public assignTechnicianToJobTicket(
+    ticketId: number,
+    technicianId: number,
+    actorUserId: number
+  ): ServiceJobTicketRecord {
+    const ticket = (this.dbState.serviceJobTickets || []).find((t) => t.id === ticketId);
+    if (!ticket) throw new Error(`تیکت کار با شناسه ${ticketId} یافت نشد.`);
+
+    const tech = (this.dbState.parties || []).find((p) => p.id === technicianId);
+    if (!tech) throw new Error(`تکنسین با شناسه ${technicianId} یافت نشد.`);
+
+    ticket.technicianId = tech.id;
+    ticket.technicianNameFa = tech.fullName;
+    if (ticket.status === 'OPEN') {
+      ticket.status = 'ASSIGNED';
+    }
+
+    this.saveDbState();
+    return ticket;
+  }
+
+  public addSparePartsToJobTicket(
+    ticketId: number,
+    spareParts: ServiceSparePartLine[],
+    actorUserId: number
+  ): ServiceJobTicketRecord {
+    const ticket = (this.dbState.serviceJobTickets || []).find((t) => t.id === ticketId);
+    if (!ticket) throw new Error(`تیکت کار با شناسه ${ticketId} یافت نشد.`);
+
+    ticket.spareParts.push(...spareParts);
+    ticket.sparePartsTotalIrr = ticket.spareParts.reduce((s, p) => s + p.totalPriceIrr, 0);
+    ticket.totalCostIrr = ticket.laborFeeIrr + ticket.sparePartsTotalIrr;
+    ticket.status = 'PARTS_CONSUMED';
+
+    this.saveDbState();
+    return ticket;
+  }
+
+  public invoiceJobTicket(
+    ticketId: number,
+    actorUserId: number
+  ): { ticket: ServiceJobTicketRecord; salesInvoice: SalesInvoiceRecord } {
+    const ticket = (this.dbState.serviceJobTickets || []).find((t) => t.id === ticketId);
+    if (!ticket) throw new Error(`تیکت کار با شناسه ${ticketId} یافت نشد.`);
+
+    const nextInvoiceId = (this.dbState.salesInvoices || []).reduce((max, i) => Math.max(max, i.id), 0) + 1;
+    const invoiceNumber = `INV-SVC-1405-${String(nextInvoiceId).padStart(3, '0')}`;
+
+    const salesInvoice: SalesInvoiceRecord = {
+      id: nextInvoiceId,
+      invoiceNumber,
+      saleType: 'STANDARD_SALE',
+      dateJalali: ticket.dateJalali || '1405/01/25',
+      dueDateJalali: ticket.dueDateJalali || ticket.dateJalali || '1405/01/25',
+      customerId: ticket.customerId,
+      customerTitleFa: ticket.customerNameFa,
+      sourceWarehouseId: 1,
+      sourceWarehouseTitleFa: 'انبار قطعات و خدمات فنی',
+      lines: [
+        {
+          id: 1,
+          itemId: 1,
+          itemCode: 'SVC-LABOR',
+          itemTitleFa: `اجرت و دستمزد اجرای خدمات فنی: ${ticket.titleFa}`,
+          quantity: 1,
+          unitNameFa: 'مورد',
+          unitPriceIrr: ticket.laborFeeIrr,
+          discountIrr: 0,
+          vatAmountIrr: Math.round(ticket.laborFeeIrr * 0.1),
+          netPriceIrr: ticket.laborFeeIrr + Math.round(ticket.laborFeeIrr * 0.1),
+          unitCogsIrr: 0,
+          totalCogsIrr: 0,
+          serialNumbers: [],
+          macAddresses: [],
+        },
+        ...ticket.spareParts.map((part, idx) => ({
+          id: idx + 2,
+          itemId: part.itemId,
+          itemCode: `PART-${part.itemId}`,
+          itemTitleFa: part.itemTitleFa,
+          quantity: part.quantity,
+          unitNameFa: 'عدد',
+          unitPriceIrr: part.unitPriceIrr,
+          discountIrr: 0,
+          vatAmountIrr: Math.round(part.totalPriceIrr * 0.1),
+          netPriceIrr: part.totalPriceIrr + Math.round(part.totalPriceIrr * 0.1),
+          unitCogsIrr: Math.round(part.unitPriceIrr * 0.7),
+          totalCogsIrr: Math.round(part.totalPriceIrr * 0.7),
+          serialNumbers: [],
+          macAddresses: [],
+        })),
+      ],
+      subtotalNetItemsIrr: ticket.totalCostIrr,
+      totalDiscountIrr: 0,
+      totalVatIrr: Math.round(ticket.totalCostIrr * 0.1),
+      totalInvoiceAmountIrr: Math.round(ticket.totalCostIrr * 1.1),
+      totalCogsIrr: Math.round(ticket.sparePartsTotalIrr * 0.7),
+      paidAmountIrr: 0,
+      remainingBalanceIrr: Math.round(ticket.totalCostIrr * 1.1),
+      status: 'CONFIRMED',
+      paymentDetails: {
+        paymentMethod: 'CHEQUE',
+      },
+      notesFa: `صورت‌حساب قطعی خدمات فنی و تیکت ${ticket.ticketNumber}`,
+      actorUserId: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (!Array.isArray(this.dbState.salesInvoices)) {
+      this.dbState.salesInvoices = [];
+    }
+    this.dbState.salesInvoices.push(salesInvoice);
+
+    ticket.status = 'COMPLETED';
+    ticket.invoiceId = salesInvoice.id;
+
+    this.saveDbState();
+    return { ticket, salesInvoice };
+  }
+
+  // ==========================================================================
+  // MOBILE & ELECTRONICS METHODS (فاز ۹: صنف موبایل، رایانه، رجیستری و تعمیرات)
+  // ==========================================================================
+
+  public getMobileDevices(filter?: {
+    brandFa?: string;
+    condition?: MobileDeviceCondition;
+    stockStatus?: string;
+    search?: string;
+  }): MobileDeviceRecord[] {
+    let list = [...(this.dbState.mobileDevices || [])];
+    if (filter?.brandFa && filter.brandFa !== 'ALL') {
+      list = list.filter((d) => d.brandFa.includes(filter.brandFa!));
+    }
+    if (filter?.condition) {
+      list = list.filter((d) => d.condition === filter.condition);
+    }
+    if (filter?.stockStatus && filter.stockStatus !== 'ALL') {
+      list = list.filter((d) => d.stockStatus === filter.stockStatus);
+    }
+    if (filter?.search) {
+      const q = filter.search.trim().toLowerCase();
+      list = list.filter(
+        (d) =>
+          d.modelFa.toLowerCase().includes(q) ||
+          d.imei1.includes(q) ||
+          (d.imei2 && d.imei2.includes(q)) ||
+          (d.serialNumber && d.serialNumber.toLowerCase().includes(q)) ||
+          d.colorFa.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }
+
+  public addMobileDevice(
+    deviceData: Omit<MobileDeviceRecord, 'id' | 'createdAt'>,
+    actorUserId: number
+  ): MobileDeviceRecord {
+    const list = this.dbState.mobileDevices || [];
+    const duplicate = list.find((d) => d.imei1 === deviceData.imei1);
+    if (duplicate) {
+      throw new Error(`دستگاهی با کد IMEI 1 برابر «${deviceData.imei1}» قبلاً در سیستم ثبت شده است.`);
+    }
+
+    const nextId = list.reduce((max, d) => Math.max(max, d.id), 0) + 1;
+    const nowIso = new Date().toISOString();
+
+    const newDevice: MobileDeviceRecord = {
+      ...deviceData,
+      id: nextId,
+      createdAt: nowIso,
+    };
+
+    if (!Array.isArray(this.dbState.mobileDevices)) {
+      this.dbState.mobileDevices = [];
+    }
+    this.dbState.mobileDevices.push(newDevice);
+
+    if (deviceData.imei1) {
+      const serialId = (this.dbState.itemSerials || []).reduce((max, s) => Math.max(max, s.id), 0) + 1;
+      this.dbState.itemSerials.push({
+        id: serialId,
+        itemId: deviceData.itemId,
+        serialNumber: deviceData.imei1,
+        macAddress: deviceData.imei2 || undefined,
+        currentWarehouseId: deviceData.warehouseId || 1,
+        status: deviceData.stockStatus === 'IN_STOCK' ? 'IN_STOCK' : 'DISPATCHED',
+        purchaseInvoiceId: 1,
+        notesFa: `${deviceData.modelFa} - ${deviceData.colorFa} - گارانتی: ${deviceData.warrantyCompanyFa || 'ندارد'}`,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      });
+    }
+
+    this.saveDbState();
+    return newDevice;
+  }
+
+  public lookupDeviceByImeiOrSerial(query: string): {
+    device?: MobileDeviceRecord;
+    repairTickets: MobileRepairTicketRecord[];
+    matchedField: 'IMEI1' | 'IMEI2' | 'SERIAL' | 'NONE';
+  } {
+    const q = query.trim().toLowerCase();
+    const devices = this.dbState.mobileDevices || [];
+    const tickets = this.dbState.mobileRepairTickets || [];
+
+    let matchedField: 'IMEI1' | 'IMEI2' | 'SERIAL' | 'NONE' = 'NONE';
+    const foundDevice = devices.find((d) => {
+      if (d.imei1.toLowerCase() === q) {
+        matchedField = 'IMEI1';
+        return true;
+      }
+      if (d.imei2 && d.imei2.toLowerCase() === q) {
+        matchedField = 'IMEI2';
+        return true;
+      }
+      if (d.serialNumber && d.serialNumber.toLowerCase() === q) {
+        matchedField = 'SERIAL';
+        return true;
+      }
+      return false;
+    });
+
+    const relatedTickets = tickets.filter(
+      (t) =>
+        t.imeiOrSerial.toLowerCase().includes(q) ||
+        (foundDevice &&
+          (t.imeiOrSerial.includes(foundDevice.imei1) ||
+            (foundDevice.serialNumber && t.imeiOrSerial.includes(foundDevice.serialNumber))))
+    );
+
+    return {
+      device: foundDevice,
+      repairTickets: relatedTickets,
+      matchedField,
+    };
+  }
+
+  public getMobileRepairTickets(filter?: {
+    status?: MobileRepairStatus;
+    search?: string;
+  }): MobileRepairTicketRecord[] {
+    let list = [...(this.dbState.mobileRepairTickets || [])];
+    if (filter?.status) {
+      list = list.filter((t) => t.status === filter.status);
+    }
+    if (filter?.search) {
+      const q = filter.search.trim().toLowerCase();
+      list = list.filter(
+        (t) =>
+          t.ticketNumber.toLowerCase().includes(q) ||
+          t.customerNameFa.toLowerCase().includes(q) ||
+          t.customerPhone.includes(q) ||
+          t.deviceModelFa.toLowerCase().includes(q) ||
+          t.imeiOrSerial.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }
+
+  public createMobileRepairTicket(
+    data: {
+      customerId: number;
+      customerNameFa?: string;
+      customerPhone: string;
+      deviceModelFa: string;
+      colorFa?: string;
+      imeiOrSerial: string;
+      securityPasscodeOrPattern?: string;
+      accompaniedAccessoriesFa?: string;
+      reportedFaultsFa: string;
+      physicalConditionNotesFa?: string;
+      assignedTechnicianId?: number;
+      assignedTechnicianNameFa?: string;
+      estimatedCostIrr: number;
+      depositPaidIrr?: number;
+      receptionDateJalali?: string;
+      estimatedDeliveryDateJalali?: string;
+      notesFa?: string;
+    },
+    actorUserId: number
+  ): MobileRepairTicketRecord {
+    const list = this.dbState.mobileRepairTickets || [];
+    const nextId = list.reduce((max, t) => Math.max(max, t.id), 0) + 1;
+    const count = list.length + 101;
+    const ticketNumber = `REP-1405-${count}`;
+    const nowIso = new Date().toISOString();
+
+    const deposit = Number(data.depositPaidIrr) || 0;
+    const estCost = Number(data.estimatedCostIrr) || 0;
+
+    const newTicket: MobileRepairTicketRecord = {
+      id: nextId,
+      ticketNumber,
+      customerId: data.customerId,
+      customerNameFa: data.customerNameFa || 'مشتری تعمیرات',
+      customerPhone: data.customerPhone,
+      deviceModelFa: data.deviceModelFa,
+      colorFa: data.colorFa,
+      imeiOrSerial: data.imeiOrSerial,
+      securityPasscodeOrPattern: data.securityPasscodeOrPattern,
+      accompaniedAccessoriesFa: data.accompaniedAccessoriesFa,
+      reportedFaultsFa: data.reportedFaultsFa,
+      physicalConditionNotesFa: data.physicalConditionNotesFa,
+      assignedTechnicianId: data.assignedTechnicianId || 3,
+      assignedTechnicianNameFa: data.assignedTechnicianNameFa || 'مهندس علی میرزایی',
+      estimatedCostIrr: estCost,
+      depositPaidIrr: deposit,
+      parts: [],
+      partsTotalIrr: 0,
+      laborFeeIrr: estCost,
+      discountIrr: 0,
+      finalTotalIrr: estCost,
+      remainingPayableIrr: Math.max(0, estCost - deposit),
+      status: 'RECEIVED',
+      receptionDateJalali: data.receptionDateJalali || '1405/01/25',
+      estimatedDeliveryDateJalali: data.estimatedDeliveryDateJalali || '1405/01/27',
+      notesFa: data.notesFa,
+      createdAt: nowIso,
+    };
+
+    if (!Array.isArray(this.dbState.mobileRepairTickets)) {
+      this.dbState.mobileRepairTickets = [];
+    }
+    this.dbState.mobileRepairTickets.push(newTicket);
+
+    if (deposit > 0) {
+      const nextTxId = (this.dbState.treasuryTransactions || []).reduce((max, t) => Math.max(max, t.id), 0) + 1;
+      const txNumber = `TRX-REP-DEP-${String(nextTxId).padStart(3, '0')}`;
+      const defaultCash = (this.dbState.cashBoxes || [])[0];
+
+      const treasuryTx: TreasuryTransactionRecord = {
+        id: nextTxId,
+        txNumber,
+        txType: 'RECEIPT',
+        dateJalali: data.receptionDateJalali || '1405/01/25',
+        partyId: data.customerId,
+        partyNameFa: newTicket.customerNameFa,
+        amountIrr: deposit,
+        paymentMethod: 'CASH',
+        targetCashBoxId: defaultCash?.id || 1,
+        notesFa: `دریافت بیعانه پذیرش تعمیرات دستگاه ${data.deviceModelFa} (قبض ${ticketNumber})`,
+        actorUserId,
+        createdAt: nowIso,
+      };
+
+      if (!Array.isArray(this.dbState.treasuryTransactions)) {
+        this.dbState.treasuryTransactions = [];
+      }
+      this.dbState.treasuryTransactions.push(treasuryTx);
+    }
+
+    this.saveDbState();
+    return newTicket;
+  }
+
+  public updateMobileRepairStatus(
+    ticketId: number,
+    status: MobileRepairStatus,
+    notesFa?: string,
+    actorUserId?: number
+  ): MobileRepairTicketRecord {
+    const ticket = (this.dbState.mobileRepairTickets || []).find((t) => t.id === ticketId);
+    if (!ticket) throw new Error(`قبض تعمیر با شناسه ${ticketId} یافت نشد.`);
+
+    ticket.status = status;
+    if (notesFa) {
+      ticket.notesFa = ticket.notesFa ? `${ticket.notesFa} | ${notesFa}` : notesFa;
+    }
+    if (status === 'DELIVERED') {
+      ticket.deliveredDateJalali = '1405/01/25';
+    }
+
+    this.saveDbState();
+    return ticket;
+  }
+
+  public addPartToRepairTicket(
+    ticketId: number,
+    partData: { partNameFa: string; partCostIrr: number; quantity: number },
+    actorUserId: number
+  ): MobileRepairTicketRecord {
+    const ticket = (this.dbState.mobileRepairTickets || []).find((t) => t.id === ticketId);
+    if (!ticket) throw new Error(`قبض تعمیر با شناسه ${ticketId} یافت نشد.`);
+
+    const partId = ticket.parts.length + 1;
+    const totalCost = partData.partCostIrr * partData.quantity;
+
+    ticket.parts.push({
+      id: partId,
+      partNameFa: partData.partNameFa,
+      partCostIrr: partData.partCostIrr,
+      quantity: partData.quantity,
+      totalCostIrr: totalCost,
+    });
+
+    ticket.partsTotalIrr = ticket.parts.reduce((sum, p) => sum + p.totalCostIrr, 0);
+    ticket.finalTotalIrr = ticket.partsTotalIrr + ticket.laborFeeIrr - ticket.discountIrr;
+    ticket.remainingPayableIrr = Math.max(0, ticket.finalTotalIrr - ticket.depositPaidIrr);
+
+    this.saveDbState();
+    return ticket;
+  }
+
+  public completeAndInvoiceRepairTicket(
+    ticketId: number,
+    paymentMethod: 'POS' | 'CASH' | 'OPEN_CREDIT',
+    actorUserId: number
+  ): { ticket: MobileRepairTicketRecord; salesInvoice: SalesInvoiceRecord } {
+    const ticket = (this.dbState.mobileRepairTickets || []).find((t) => t.id === ticketId);
+    if (!ticket) throw new Error(`قبض تعمیر با شناسه ${ticketId} یافت نشد.`);
+
+    const nextInvoiceId = (this.dbState.salesInvoices || []).reduce((max, i) => Math.max(max, i.id), 0) + 1;
+    const invoiceNumber = `INV-REP-1405-${String(nextInvoiceId).padStart(3, '0')}`;
+    const nowIso = new Date().toISOString();
+
+    const finalAmount = ticket.finalTotalIrr;
+    const paidAmount = paymentMethod !== 'OPEN_CREDIT' ? ticket.remainingPayableIrr : 0;
+
+    const salesInvoice: SalesInvoiceRecord = {
+      id: nextInvoiceId,
+      invoiceNumber,
+      saleType: 'STANDARD_SALE',
+      dateJalali: '1405/01/25',
+      dueDateJalali: '1405/01/25',
+      customerId: ticket.customerId,
+      customerTitleFa: ticket.customerNameFa,
+      sourceWarehouseId: 1,
+      sourceWarehouseTitleFa: 'انبار قطعات و خدمات موبایل',
+      lines: [
+        {
+          id: 1,
+          itemId: 1,
+          itemCode: 'SVC-REPAIR-LABOR',
+          itemTitleFa: `اجرت و دستمزد تخصصی تعمیر: ${ticket.deviceModelFa} (${ticket.reportedFaultsFa})`,
+          quantity: 1,
+          unitNameFa: 'مورد',
+          unitPriceIrr: ticket.laborFeeIrr,
+          discountIrr: ticket.discountIrr,
+          vatAmountIrr: Math.round(ticket.laborFeeIrr * 0.1),
+          netPriceIrr: ticket.laborFeeIrr + Math.round(ticket.laborFeeIrr * 0.1),
+          unitCogsIrr: 0,
+          totalCogsIrr: 0,
+          serialNumbers: [ticket.imeiOrSerial],
+          macAddresses: [],
+        },
+        ...ticket.parts.map((p, idx) => ({
+          id: idx + 2,
+          itemId: 10 + idx,
+          itemCode: `PART-${idx + 1}`,
+          itemTitleFa: p.partNameFa,
+          quantity: p.quantity,
+          unitNameFa: 'عدد',
+          unitPriceIrr: p.partCostIrr,
+          discountIrr: 0,
+          vatAmountIrr: Math.round(p.totalCostIrr * 0.1),
+          netPriceIrr: p.totalCostIrr + Math.round(p.totalCostIrr * 0.1),
+          unitCogsIrr: Math.round(p.partCostIrr * 0.7),
+          totalCogsIrr: Math.round(p.totalCostIrr * 0.7),
+          serialNumbers: [],
+          macAddresses: [],
+        })),
+      ],
+      subtotalNetItemsIrr: finalAmount,
+      totalDiscountIrr: ticket.discountIrr,
+      totalVatIrr: Math.round(finalAmount * 0.1),
+      totalInvoiceAmountIrr: Math.round(finalAmount * 1.1),
+      totalCogsIrr: Math.round(ticket.partsTotalIrr * 0.7),
+      paidAmountIrr: paidAmount + ticket.depositPaidIrr,
+      remainingBalanceIrr: Math.max(0, Math.round(finalAmount * 1.1) - (paidAmount + ticket.depositPaidIrr)),
+      status: 'PAID',
+      paymentDetails: {
+        paymentMethod: paymentMethod === 'POS' ? 'POS' : paymentMethod === 'CASH' ? 'CASH' : 'CREDIT',
+      },
+      notesFa: `تسویه و تحویل دستگاه ${ticket.deviceModelFa} - قبض تعمیر ${ticket.ticketNumber}`,
+      actorUserId,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    if (!Array.isArray(this.dbState.salesInvoices)) {
+      this.dbState.salesInvoices = [];
+    }
+    this.dbState.salesInvoices.push(salesInvoice);
+
+    const docNumber = `DOC-REP-${1000 + nextInvoiceId}`;
+    try {
+      this.createAccountingDocument(
+        {
+          docNumber,
+          dateJalali: '1405/01/25',
+          descriptionFa: `درآمد خدمات و تعمیرات دستگاه ${ticket.deviceModelFa} - قبض ${ticket.ticketNumber}`,
+          docType: 'AUTO',
+          sourceDocType: 'SALES_INVOICE',
+          sourceDocId: nextInvoiceId,
+          lines: [
+            {
+              accountCode: paymentMethod === 'POS' ? '1020' : '1010',
+              accountTitleFa: paymentMethod === 'POS' ? 'موجودی نزد بانک‌ها و کارتخوان' : 'صندوق نقدینگی فروشگاه',
+              debitIrr: Math.round(finalAmount * 1.1),
+              creditIrr: 0,
+              descriptionFa: `دریافت وجه تعمیرات ${ticket.ticketNumber}`,
+            },
+            {
+              accountCode: '6010',
+              accountTitleFa: 'درآمد حاصل از فروش قطعات و خدمات فنی',
+              debitIrr: 0,
+              creditIrr: finalAmount,
+              descriptionFa: `درآمد خدمات تعمیر ${ticket.ticketNumber}`,
+            },
+            {
+              accountCode: '3040',
+              accountTitleFa: 'مالیات و عوارض بر ارزش افزوده فروش',
+              debitIrr: 0,
+              creditIrr: Math.round(finalAmount * 0.1),
+              descriptionFa: `ارزش افزوده خدمات تعمیر`,
+            },
+          ],
+        },
+        actorUserId
+      );
+    } catch {
+      // ignore
+    }
+
+    ticket.status = 'DELIVERED';
+    ticket.invoiceId = salesInvoice.id;
+    ticket.invoiceNumber = invoiceNumber;
+    ticket.deliveredDateJalali = '1405/01/25';
+
+    this.saveDbState();
+    return { ticket, salesInvoice };
+  }
+
+  public generateMobileRepairSlip(ticketId: number) {
+    const ticket = (this.dbState.mobileRepairTickets || []).find((t) => t.id === ticketId);
+    if (!ticket) throw new Error(`قبض با شناسه ${ticketId} یافت نشد.`);
+
+    return {
+      ticketNumber: ticket.ticketNumber,
+      customerNameFa: ticket.customerNameFa,
+      customerPhone: ticket.customerPhone,
+      deviceModelFa: ticket.deviceModelFa,
+      imeiOrSerial: ticket.imeiOrSerial,
+      accompaniedAccessoriesFa: ticket.accompaniedAccessoriesFa || 'ندارد',
+      reportedFaultsFa: ticket.reportedFaultsFa,
+      physicalConditionNotesFa: ticket.physicalConditionNotesFa || 'سالم و بدون شکستگی ظاهری',
+      estimatedCostIrr: ticket.estimatedCostIrr,
+      depositPaidIrr: ticket.depositPaidIrr,
+      receptionDateJalali: ticket.receptionDateJalali,
+      estimatedDeliveryDateJalali: ticket.estimatedDeliveryDateJalali,
+      technicianNameFa: ticket.assignedTechnicianNameFa || 'کارگاه فنی مهرگان',
+      printedAt: new Date().toISOString(),
+    };
+  }
+
+  // ============================================================================
+  // PHASE 11 & 12: MULTI-BRANCH TRANSFERS & EXECUTIVE BI METRICS
+  // ============================================================================
+
+  public getWarehouseById(id: number): WarehouseRecord | null {
+    return (this.dbState.warehouses || []).find((w) => w.id === id) || null;
+  }
+
+  public getInventoryTransfers(): InventoryTransferRecord[] {
+    const whMap = new Map((this.dbState.warehouses || []).map((w) => [w.id, w.titleFa]));
+    return (this.dbState.inventoryTransfers || []).map((tr) => ({
+      ...tr,
+      sourceWarehouseTitleFa:
+        whMap.get(tr.sourceWarehouseId) || tr.sourceWarehouseTitleFa || `انبار #${tr.sourceWarehouseId}`,
+      targetWarehouseTitleFa:
+        whMap.get(tr.targetWarehouseId) || tr.targetWarehouseTitleFa || `انبار #${tr.targetWarehouseId}`,
+    }));
+  }
+
+  public createInventoryTransferRequisition(
+    data: {
+      sourceWarehouseId: number;
+      targetWarehouseId: number;
+      dateJalali?: string;
+      driverNameFa?: string;
+      vehiclePlateFa?: string;
+      notesFa?: string;
+      descriptionFa?: string;
+      lines: Array<{ itemId: number; quantity: number; notesFa?: string }>;
+    },
+    actorUserId: number = 1
+  ): InventoryTransferRecord {
+    if (!data.sourceWarehouseId || !data.targetWarehouseId) {
+      throw new Error('انبار مبدأ و مقصد برای انتقال کالا الزامی است.');
+    }
+    if (data.sourceWarehouseId === data.targetWarehouseId) {
+      throw new Error('انبار مبدأ و مقصد نمی‌توانند یکسان باشند.');
+    }
+    if (!Array.isArray(data.lines) || data.lines.length === 0) {
+      throw new Error('حواله انتقال باید حداقل دارای یک ردیف کالا باشد.');
+    }
+
+    if (!Array.isArray(this.dbState.inventoryTransfers)) {
+      this.dbState.inventoryTransfers = [];
+    }
+
+    const nextId =
+      this.dbState.inventoryTransfers.length > 0
+        ? Math.max(...this.dbState.inventoryTransfers.map((t) => t.id)) + 1
+        : 1;
+
+    const sourceWh = this.getWarehouseById(data.sourceWarehouseId);
+    const targetWh = this.getWarehouseById(data.targetWarehouseId);
+    const transferNumber = `TRN-1405-${String(nextId).padStart(4, '0')}`;
+
+    let outgoingDocId: number | null = null;
+    try {
+      const outDoc = this.createInventoryDocument(
+        {
+          docType: 'TRANSFER',
+          sourceWarehouseId: data.sourceWarehouseId,
+          targetWarehouseId: data.targetWarehouseId,
+          dateJalali: data.dateJalali || '1405/01/27',
+          lines: data.lines.map((l) => ({
+            itemId: l.itemId,
+            quantity: l.quantity,
+            notesFa: l.notesFa || data.notesFa,
+          })),
+          notesFa: `حواله ترانزیت کالا ${transferNumber} از ${sourceWh?.titleFa || 'انبار مبدأ'} به ${targetWh?.titleFa || 'انبار مقصد'}`,
+        },
+        actorUserId
+      );
+      outgoingDocId = outDoc.id;
+    } catch {
+      // Fallback in case of inventory constraint rules
+    }
+
+    const newTransfer: InventoryTransferRecord = {
+      id: nextId,
+      transferNumber,
+      sourceWarehouseId: data.sourceWarehouseId,
+      sourceWarehouseTitleFa: sourceWh?.titleFa || `انبار #${data.sourceWarehouseId}`,
+      targetWarehouseId: data.targetWarehouseId,
+      targetWarehouseTitleFa: targetWh?.titleFa || `انبار #${data.targetWarehouseId}`,
+      dateJalali: data.dateJalali || '1405/01/27',
+      driverNameFa: data.driverNameFa,
+      vehiclePlateFa: data.vehiclePlateFa,
+      notesFa: data.notesFa,
+      descriptionFa: data.descriptionFa || data.notesFa,
+      status: 'IN_TRANSIT',
+      lines: data.lines.map((l) => {
+        const itm = this.getItemById(l.itemId);
+        return {
+          itemId: l.itemId,
+          itemCode: itm?.itemCode,
+          itemTitleFa: itm?.titleFa,
+          quantity: l.quantity,
+          unitCostIrr: itm?.purchasePriceIrr || 0,
+          notesFa: l.notesFa,
+        };
+      }),
+      outgoingInventoryDocId: outgoingDocId,
+      actorUserId,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.dbState.inventoryTransfers.push(newTransfer);
+    this.saveDbState();
+
+    this.recordAuditLog({
+      actorUserId,
+      actorUsername: this.getUserById(actorUserId)?.username || 'SYSTEM',
+      action: 'INVENTORY_TRANSFER_CREATED',
+      category: 'INVENTORY',
+      targetEntity: 'inventory_transfers',
+      targetId: transferNumber,
+      status: 'SUCCESS',
+      detailsFa: `حواله ترانزیت بین‌انبار ${transferNumber} از «${newTransfer.sourceWarehouseTitleFa}» به «${newTransfer.targetWarehouseTitleFa}» صادر گردید.`,
+      metadata: { transferId: nextId, transferNumber },
+    });
+
+    return newTransfer;
+  }
+
+  public receiveInventoryTransferRequisition(
+    id: number,
+    actorUserId: number = 1
+  ): InventoryTransferRecord {
+    const list = this.dbState.inventoryTransfers || [];
+    const transfer = list.find((t) => t.id === id);
+    if (!transfer) {
+      throw new Error(`حواله ترانزیت با شناسه ${id} یافت نشد.`);
+    }
+
+    if (transfer.status === 'COMPLETED') {
+      return transfer;
+    }
+
+    let incomingDocId: number | null = null;
+    try {
+      const inDoc = this.createInventoryDocument(
+        {
+          docType: 'TRANSFER',
+          sourceWarehouseId: transfer.sourceWarehouseId,
+          targetWarehouseId: transfer.targetWarehouseId,
+          dateJalali: transfer.dateJalali || '1405/01/27',
+          lines: transfer.lines.map((l) => ({
+            itemId: l.itemId,
+            quantity: l.quantity,
+            unitCostIrr: l.unitCostIrr,
+            notesFa: l.notesFa,
+          })),
+          notesFa: `رسید ورود ترانزیت کالا ${transfer.transferNumber} به انبار مقصد`,
+        },
+        actorUserId
+      );
+      incomingDocId = inDoc.id;
+    } catch {
+      // Fallback
+    }
+
+    transfer.incomingInventoryDocId = incomingDocId;
+    transfer.status = 'COMPLETED';
+    transfer.receivedAt = new Date().toISOString();
+    transfer.receivedByUserId = actorUserId;
+
+    this.saveDbState();
+
+    this.recordAuditLog({
+      actorUserId,
+      actorUsername: this.getUserById(actorUserId)?.username || 'SYSTEM',
+      action: 'INVENTORY_TRANSFER_RECEIVED',
+      category: 'INVENTORY',
+      targetEntity: 'inventory_transfers',
+      targetId: transfer.transferNumber,
+      status: 'SUCCESS',
+      detailsFa: `محموله ترانزیت کالا ${transfer.transferNumber} در انبار مقصد تحویل و تسویه انبارداری گردید.`,
+      metadata: { transferId: transfer.id },
+    });
+
+    return transfer;
+  }
+
+  public getExecutiveBiMetrics(): ExecutiveBiMetrics {
+    const sales = this.dbState.salesInvoices || [];
+    const purchases = this.dbState.purchaseInvoices || [];
+    const expenses = this.dbState.operationalExpenses || [];
+    const cashBoxes = this.dbState.cashBoxes || [];
+    const bankAccounts = this.dbState.bankAccounts || [];
+    const parties = this.dbState.parties || [];
+    const warehouses = this.dbState.warehouses || [];
+    const projects = this.dbState.projects || [];
+    const items = this.dbState.items || [];
+
+    const totalRevenueIrr = sales
+      .filter((s) => s.status !== 'CANCELLED')
+      .reduce((sum, s) => sum + (s.totalInvoiceAmountIrr || 0), 0);
+
+    const totalCogsIrr = sales
+      .filter((s) => s.status !== 'CANCELLED')
+      .reduce((sum, s) => sum + (s.totalCogsIrr || 0), 0);
+
+    const totalGrossProfitIrr = Math.max(0, totalRevenueIrr - totalCogsIrr);
+    const totalOperatingExpensesIrr = expenses.reduce((sum, e) => sum + (e.amountIrr || 0), 0);
+    const totalNetProfitIrr = totalGrossProfitIrr - totalOperatingExpensesIrr;
+
+    const kardexSummary = this.getInventorySummary();
+    const inventoryValuationIrr = kardexSummary.totalValuationIrr || 0;
+
+    const totalCashAndBankIrr =
+      cashBoxes.reduce((sum, c) => sum + (c.balanceIrr || 0), 0) +
+      bankAccounts.reduce((sum, b) => sum + (b.balanceIrr || 0), 0);
+
+    const accountsReceivableIrr = sales
+      .filter((s) => s.status !== 'CANCELLED')
+      .reduce((sum, s) => sum + (s.remainingBalanceIrr || 0), 0);
+
+    const accountsPayableIrr = purchases
+      .filter((p) => p.status !== 'CANCELLED')
+      .reduce((sum, p) => sum + (p.remainingDebtIrr || 0), 0);
+
+    const totalCustomersCount = parties.filter(
+      (p) => p.roles?.includes('CUSTOMER') || p.primaryType === 'CUSTOMER'
+    ).length;
+    const totalSuppliersCount = parties.filter(
+      (p) => p.roles?.includes('SUPPLIER') || p.primaryType === 'SUPPLIER'
+    ).length;
+    const activeWarehousesCount = warehouses.filter((w) => w.status === 'ACTIVE').length;
+    const activeProjectsCount = projects.filter(
+      (pr) => pr.status !== 'COMPLETED' && pr.status !== 'CANCELLED'
+    ).length;
+
+    const workingCapitalRatio =
+      accountsPayableIrr > 0
+        ? Number(
+            (
+              (totalCashAndBankIrr + accountsReceivableIrr + inventoryValuationIrr) /
+              accountsPayableIrr
+            ).toFixed(2)
+          )
+        : 2.5;
+
+    let cashFlowStatus: 'POSITIVE' | 'NEUTRAL' | 'CRITICAL' = 'POSITIVE';
+    if (totalCashAndBankIrr < 100000000) cashFlowStatus = 'CRITICAL';
+    else if (totalCashAndBankIrr < 500000000) cashFlowStatus = 'NEUTRAL';
+
+    const itemSalesMap = new Map<number, { qty: number; rev: number }>();
+    for (const inv of sales) {
+      if (inv.status === 'CANCELLED') continue;
+      for (const line of inv.lines || []) {
+        const prev = itemSalesMap.get(line.itemId) || { qty: 0, rev: 0 };
+        itemSalesMap.set(line.itemId, {
+          qty: prev.qty + (line.quantity || 0),
+          rev: prev.rev + (line.netPriceIrr || 0),
+        });
+      }
+    }
+
+    const topSellingItems = Array.from(itemSalesMap.entries())
+      .map(([itemId, stat]) => {
+        const itm = items.find((i) => i.id === itemId);
+        return {
+          itemId,
+          itemCode: itm?.itemCode || `ITM-${itemId}`,
+          titleFa: itm?.titleFa || 'کالای بازرگانی',
+          quantity: stat.qty,
+          revenueIrr: stat.rev,
+        };
+      })
+      .sort((a, b) => b.revenueIrr - a.revenueIrr)
+      .slice(0, 5);
+
+    const recentAuditEvents = (this.dbState.auditLogs || []).slice(0, 8);
+
+    return {
+      totalRevenueIrr,
+      totalGrossProfitIrr,
+      totalOperatingExpensesIrr,
+      totalNetProfitIrr,
+      inventoryValuationIrr,
+      totalCashAndBankIrr,
+      accountsReceivableIrr,
+      accountsPayableIrr,
+      totalCustomersCount,
+      totalSuppliersCount,
+      activeWarehousesCount,
+      activeProjectsCount,
+      workingCapitalRatio,
+      cashFlowStatus,
+      topSellingItems,
+      recentAuditEvents,
+      generatedAt: new Date().toISOString(),
+    };
   }
 }
 

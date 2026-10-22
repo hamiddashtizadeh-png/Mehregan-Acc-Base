@@ -52,6 +52,8 @@ import {
   ItemKardexEntry,
   InventoryDocType,
   SerialStatus,
+  InventoryTransferRecord,
+  InventoryTransferLine,
 } from '../types/foundation';
 
 interface InventoryManagementViewProps {
@@ -59,7 +61,7 @@ interface InventoryManagementViewProps {
   onRefresh: () => Promise<void>;
 }
 
-type SubTab = 'ITEMS' | 'KARDEX' | 'SERIALS' | 'DOCUMENTS' | 'WAREHOUSES';
+type SubTab = 'ITEMS' | 'KARDEX' | 'SERIALS' | 'DOCUMENTS' | 'WAREHOUSES' | 'TRANSFERS';
 
 const DOC_TYPE_META: Record<
   InventoryDocType,
@@ -219,6 +221,99 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
     addressFa: '',
     isDefault: false,
   });
+
+  // Transfers State
+  const [transfers, setTransfers] = useState<InventoryTransferRecord[]>(
+    foundationData.inventoryTransfers || []
+  );
+  const [transfersLoading, setTransfersLoading] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [transferReceivingId, setTransferReceivingId] = useState<number | null>(null);
+
+  const [transferFormData, setTransferFormData] = useState({
+    sourceWarehouseId: 1,
+    targetWarehouseId: 2,
+    dateJalali: '1405/01/27',
+    driverNameFa: '',
+    vehiclePlateFa: '',
+    notesFa: '',
+    lines: [{ itemId: 1, quantity: 1, notesFa: '' }],
+  });
+
+  const loadTransfers = async () => {
+    try {
+      setTransfersLoading(true);
+      const res = await fetch('/api/inventory/transfers');
+      const data = await res.json();
+      if (data.ok) {
+        setTransfers(data.transfers || []);
+      }
+    } catch {
+      // transient
+    } finally {
+      setTransfersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (subTab === 'TRANSFERS') {
+      loadTransfers();
+    }
+  }, [subTab]);
+
+  const handleSaveTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (transferFormData.sourceWarehouseId === transferFormData.targetWarehouseId) {
+      setFeedback({ type: 'error', message: 'انبار مبدأ و انبار مقصد نمی‌توانند یکسان باشند.' });
+      return;
+    }
+    const invalidLine = transferFormData.lines.find((l) => !l.itemId || l.quantity <= 0);
+    if (invalidLine) {
+      setFeedback({ type: 'error', message: 'لطفاً کالا و تعداد معتبر را برای همه ردیف‌ها وارد کنید.' });
+      return;
+    }
+    try {
+      const res = await fetch('/api/inventory/transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transferFormData),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setFeedback({ type: 'success', message: data.messageFa });
+        setIsTransferModalOpen(false);
+        await loadTransfers();
+        await loadAllInventoryData();
+        await onRefresh();
+      } else {
+        setFeedback({ type: 'error', message: data.messageFa || 'خطا در ثبت حواله ترانزیت کالا.' });
+      }
+    } catch (err: unknown) {
+      setFeedback({ type: 'error', message: err instanceof Error ? err.message : 'خطای ارتباط با سرور.' });
+    }
+  };
+
+  const handleReceiveTransfer = async (transferId: number) => {
+    try {
+      setTransferReceivingId(transferId);
+      const res = await fetch(`/api/inventory/transfers/${transferId}/receive`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setFeedback({ type: 'success', message: data.messageFa });
+        await loadTransfers();
+        await loadAllInventoryData();
+        await onRefresh();
+      } else {
+        setFeedback({ type: 'error', message: data.messageFa || 'خطا در تحویل محموله ترانزیت.' });
+      }
+    } catch (err: unknown) {
+      setFeedback({ type: 'error', message: err instanceof Error ? err.message : 'خطای ارتباط با سرور.' });
+    } finally {
+      setTransferReceivingId(null);
+    }
+  };
 
   // Fetch all inventory data
   const loadAllInventoryData = async () => {
@@ -786,6 +881,19 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
         >
           <Warehouse className="h-4 w-4" />
           <span>مدیریت انبارها ({warehouses.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSubTab('TRANSFERS')}
+          className={`inline-flex items-center gap-1.5 px-4 py-2.5 border-b-2 transition-colors ${
+            subTab === 'TRANSFERS'
+              ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50'
+              : 'border-transparent hover:text-slate-900'
+          }`}
+        >
+          <ArrowRightLeft className="h-4 w-4" />
+          <span>ترانزیت و انتقال بین شعب ({transfers.length})</span>
         </button>
       </div>
 
@@ -1710,6 +1818,327 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: INTER-WAREHOUSE TRANSFERS MANAGEMENT */}
+      {subTab === 'TRANSFERS' && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap justify-between items-center bg-white p-3.5 rounded-xl border border-slate-200 gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
+                <span>حواله‌های ترانزیت و جابجایی کالا بین شعب و انبارها</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                ثبت حواله انتقال از انبار مبدأ، صدور سند ترانزیت و تایید تحویل در انبار مقصد با کسر/افزایش قطعی موجودی
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={loadTransfers}
+                disabled={transfersLoading}
+                className="p-2 text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                title="بروزرسانی لیست حواله‌ها"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${transfersLoading ? 'animate-spin text-indigo-600' : ''}`} />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTransferFormData({
+                    sourceWarehouseId: warehouses[0]?.id || 1,
+                    targetWarehouseId: warehouses[1]?.id || (warehouses[0]?.id === 1 ? 2 : 1),
+                    dateJalali: '1405/01/27',
+                    driverNameFa: '',
+                    vehiclePlateFa: '',
+                    notesFa: '',
+                    lines: [{ itemId: items[0]?.id || 1, quantity: 1, notesFa: '' }],
+                  });
+                  setIsTransferModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>ثبت حواله ترانزیت جدید</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-700 font-extrabold border-b border-slate-200">
+                    <th className="p-3">شماره حواله</th>
+                    <th className="p-3">تاریخ</th>
+                    <th className="p-3">انبار مبدأ (فرستنده)</th>
+                    <th className="p-3">انبار مقصد (گیرنده)</th>
+                    <th className="p-3">راننده و پلاک ناوگان</th>
+                    <th className="p-3">اقلام و مقادیر</th>
+                    <th className="p-3">وضعیت ترانزیت</th>
+                    <th className="p-3 text-center">عملیات تحویل</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {transfers.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-slate-400">
+                        {transfersLoading ? 'در حال بارگذاری حواله‌های ترانزیت...' : 'هیچ حواله ترانزیتی تاکنون ثبت نشده است.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    transfers.map((tr) => (
+                      <tr key={tr.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3 font-mono font-bold text-indigo-700">{tr.transferNumber}</td>
+                        <td className="p-3 font-mono tabular-nums">{tr.dateJalali}</td>
+                        <td className="p-3 font-semibold text-slate-800">
+                          {tr.sourceWarehouseTitleFa || `انبار #${tr.sourceWarehouseId}`}
+                        </td>
+                        <td className="p-3 font-semibold text-slate-800">
+                          {tr.targetWarehouseTitleFa || `انبار #${tr.targetWarehouseId}`}
+                        </td>
+                        <td className="p-3 text-slate-600">
+                          {tr.driverNameFa || tr.vehiclePlateFa ? (
+                            <span>
+                              {tr.driverNameFa}
+                              {tr.vehiclePlateFa && <span className="font-mono text-[11px] text-slate-500 mr-1 font-semibold">({tr.vehiclePlateFa})</span>}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <div className="space-y-0.5">
+                            {tr.lines?.map((l, lIdx) => (
+                              <div key={lIdx} className="text-[11px] text-slate-700">
+                                <strong>{l.quantity}</strong> عدد {l.itemTitleFa || `کالا #${l.itemId}`}
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                              tr.status === 'COMPLETED'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-amber-50 text-amber-800 border-amber-200'
+                            }`}
+                          >
+                            {tr.status === 'COMPLETED' ? 'تحویل قطعی در مقصد' : 'در حال انتقال و ترانزیت'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-center">
+                          {tr.status !== 'COMPLETED' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleReceiveTransfer(tr.id)}
+                              disabled={transferReceivingId === tr.id}
+                              className="px-2.5 py-1 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {transferReceivingId === tr.id ? 'در حال ثبت...' : 'تأیید تحویل در مقصد'}
+                            </button>
+                          ) : (
+                            <span className="text-slate-400 text-[11px] font-bold">تسویه شده</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CREATE INTER-WAREHOUSE TRANSFER */}
+      {isTransferModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4 border border-slate-200 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
+                <span>ثبت حواله ترانزیت بین شعب و انبارها</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsTransferModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTransfer} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">انبار مبدأ (فرستنده) *</label>
+                  <select
+                    value={transferFormData.sourceWarehouseId}
+                    onChange={(e) =>
+                      setTransferFormData({ ...transferFormData, sourceWarehouseId: Number(e.target.value) })
+                    }
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold"
+                  >
+                    {warehouses.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.titleFa} ({w.warehouseCode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">انبار مقصد (گیرنده) *</label>
+                  <select
+                    value={transferFormData.targetWarehouseId}
+                    onChange={(e) =>
+                      setTransferFormData({ ...transferFormData, targetWarehouseId: Number(e.target.value) })
+                    }
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold"
+                  >
+                    {warehouses.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.titleFa} ({w.warehouseCode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">تاریخ شمسی ترانزیت *</label>
+                  <input
+                    type="text"
+                    required
+                    value={transferFormData.dateJalali}
+                    onChange={(e) => setTransferFormData({ ...transferFormData, dateJalali: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">نام راننده / متصدی حمل</label>
+                  <input
+                    type="text"
+                    value={transferFormData.driverNameFa}
+                    onChange={(e) => setTransferFormData({ ...transferFormData, driverNameFa: e.target.value })}
+                    placeholder="نام و نام خانوادگی راننده"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="font-bold text-slate-700">شماره پلاک خودرو ترانزیت</label>
+                  <input
+                    type="text"
+                    value={transferFormData.vehiclePlateFa}
+                    onChange={(e) => setTransferFormData({ ...transferFormData, vehiclePlateFa: e.target.value })}
+                    placeholder="مثال: ۲۲ ب ۱۲۳ ایران ۱۱"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Items in transfer */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800">اقلام محموله ترانزیت:</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setTransferFormData({
+                        ...transferFormData,
+                        lines: [...transferFormData.lines, { itemId: items[0]?.id || 1, quantity: 1, notesFa: '' }],
+                      })
+                    }
+                    className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>افزودن ردیف کالا</span>
+                  </button>
+                </div>
+
+                {transferFormData.lines.map((line, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    <div className="flex-1">
+                      <select
+                        value={line.itemId}
+                        onChange={(e) => {
+                          const updated = [...transferFormData.lines];
+                          updated[idx].itemId = Number(e.target.value);
+                          setTransferFormData({ ...transferFormData, lines: updated });
+                        }}
+                        className="w-full p-1.5 bg-white border border-slate-200 rounded-lg font-bold"
+                      >
+                        {items.map((itm) => (
+                          <option key={itm.id} value={itm.id}>
+                            {itm.titleFa} ({itm.itemCode})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="w-24">
+                      <input
+                        type="number"
+                        min="1"
+                        value={line.quantity}
+                        onChange={(e) => {
+                          const updated = [...transferFormData.lines];
+                          updated[idx].quantity = Math.max(1, Number(e.target.value));
+                          setTransferFormData({ ...transferFormData, lines: updated });
+                        }}
+                        placeholder="تعداد"
+                        className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-center font-mono font-bold"
+                      />
+                    </div>
+
+                    {transferFormData.lines.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = transferFormData.lines.filter((_, i) => i !== idx);
+                          setTransferFormData({ ...transferFormData, lines: updated });
+                        }}
+                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700">توضیحات و یادداشت ترانزیت</label>
+                <textarea
+                  rows={2}
+                  value={transferFormData.notesFa}
+                  onChange={(e) => setTransferFormData({ ...transferFormData, notesFa: e.target.value })}
+                  placeholder="توضیحات مربوط به محموله و مقصد"
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsTransferModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 cursor-pointer"
+                >
+                  انصراف
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm cursor-pointer"
+                >
+                  صدور حواله ترانزیت
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

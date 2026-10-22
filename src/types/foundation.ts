@@ -57,6 +57,63 @@ export interface UserPermissionOverrideRecord {
   createdAt: string;
 }
 
+export interface InventoryTransferLine {
+  itemId: number;
+  itemCode?: string;
+  itemTitleFa?: string;
+  quantity: number;
+  unitCostIrr?: number;
+  notesFa?: string;
+}
+
+export interface InventoryTransferRecord {
+  id: number;
+  transferNumber: string;
+  sourceWarehouseId: number;
+  sourceWarehouseTitleFa?: string;
+  targetWarehouseId: number;
+  targetWarehouseTitleFa?: string;
+  dateJalali: string;
+  driverNameFa?: string;
+  vehiclePlateFa?: string;
+  descriptionFa?: string;
+  notesFa?: string;
+  status: TransferStatus;
+  lines: InventoryTransferLine[];
+  outgoingInventoryDocId?: number | null;
+  incomingInventoryDocId?: number | null;
+  actorUserId: number;
+  createdAt: string;
+  receivedAt?: string | null;
+  receivedByUserId?: number | null;
+}
+
+export interface ExecutiveBiMetrics {
+  totalRevenueIrr: number;
+  totalGrossProfitIrr: number;
+  totalOperatingExpensesIrr: number;
+  totalNetProfitIrr: number;
+  inventoryValuationIrr: number;
+  totalCashAndBankIrr: number;
+  accountsReceivableIrr: number;
+  accountsPayableIrr: number;
+  totalCustomersCount: number;
+  totalSuppliersCount: number;
+  activeWarehousesCount: number;
+  activeProjectsCount: number;
+  workingCapitalRatio: number;
+  cashFlowStatus: 'POSITIVE' | 'NEUTRAL' | 'CRITICAL';
+  topSellingItems: Array<{
+    itemId: number;
+    itemCode: string;
+    titleFa: string;
+    quantity: number;
+    revenueIrr: number;
+  }>;
+  recentAuditEvents: AuditLogRecord[];
+  generatedAt: string;
+}
+
 export interface AuditLogRecord {
   id: number;
   traceId: string;
@@ -91,7 +148,48 @@ export type IndustryProfileCode =
   | 'CCTV_SECURITY'
   | 'RETAIL_GENERAL'
   | 'SUPERMARKET_GROCERY'
+  | 'MOBILE_ELECTRONICS'
+  | 'WHOLESALE_DISTRIBUTION'
+  | 'SERVICES_CONTRACTING'
+  | 'GOLD_JEWELRY'
+  | 'RESTAURANT_CAFE'
   | (string & {});
+
+export type IndustryThemeId =
+  | 'cctv'
+  | 'retail'
+  | 'grocery'
+  | 'mobile'
+  | 'wholesale'
+  | 'services'
+  | 'gold'
+  | 'restaurant'
+  | (string & {});
+
+export type IndustryLayoutPreset =
+  | 'ENGINEERING_PROJECTS'
+  | 'RETAIL_FAST_POS'
+  | 'GROCERY_BARCODE'
+  | 'GOLD_JEWELRY_CALC'
+  | 'RESTAURANT_TOUCH_TABLES'
+  | 'WHOLESALE_TIERS_MATRIX'
+  | 'SERVICES_JOB_TICKETS'
+  | (string & {});
+
+export interface IndustryThemeConfig {
+  id: IndustryThemeId;
+  primaryColor: string;
+  badgeBg: string;
+  badgeText: string;
+  headerBrandTitleFa: string;
+}
+
+export interface IndustryLayoutConfig {
+  preset: IndustryLayoutPreset;
+  defaultSalesMode?: 'STANDARD' | 'TOUCH_POS' | 'JEWELRY_CALC' | 'WHOLESALE_MATRIX';
+  showInstallationTab?: boolean;
+  showProjectsTab?: boolean;
+}
 
 export interface IndustryProfileFeatures {
   enableInstallationServices: boolean;
@@ -106,7 +204,47 @@ export interface IndustryProfileUiLabels {
   inventoryTabTitleFa?: string;
   serialTrackerTitleFa?: string;
   partiesInstallerRoleTitleFa?: string;
+  salesTabTitleFa?: string;
+  salesTabDescFa?: string;
+  purchasesTabTitleFa?: string;
+  purchasesTabDescFa?: string;
+  treasuryTabTitleFa?: string;
+  treasuryTabDescFa?: string;
+  partiesTabTitleFa?: string;
+  partiesTabDescFa?: string;
+  installationTabTitleFa?: string;
+  quickPosButtonLabelFa?: string;
+  quickSalesSubmenuTitleFa?: string;
+  quickPurchasesSubmenuTitleFa?: string;
+  quickTreasurySubmenuTitleFa?: string;
+  quickPartiesSubmenuTitleFa?: string;
+  quickInventorySubmenuTitleFa?: string;
   [customLabel: string]: string | undefined;
+}
+
+export function resolveIndustryUiLabels(profile?: { uiLabels?: IndustryProfileUiLabels } | null): Required<Omit<IndustryProfileUiLabels, string>> & Record<string, string | undefined> {
+  const custom = profile?.uiLabels || {};
+  return {
+    inventoryTabTitleFa: custom.inventoryTabTitleFa || 'کالا و انبارداری',
+    serialTrackerTitleFa: custom.serialTrackerTitleFa || 'رهگیری شماره سریال کالا',
+    partiesInstallerRoleTitleFa: custom.partiesInstallerRoleTitleFa || 'نصابان و تکنسین‌ها',
+    salesTabTitleFa: custom.salesTabTitleFa || 'فروش و POS',
+    salesTabDescFa: custom.salesTabDescFa || 'فروش، پیش‌فاکتور، صندوق POS و مرجوعی',
+    purchasesTabTitleFa: custom.purchasesTabTitleFa || 'خرید و تدارکات',
+    purchasesTabDescFa: custom.purchasesTabDescFa || 'فاکتورهای خرید، تأمین کالا و بهای تمام‌شده',
+    treasuryTabTitleFa: custom.treasuryTabTitleFa || 'دریافت و پرداخت',
+    treasuryTabDescFa: custom.treasuryTabDescFa || 'صندوق‌ها، حساب‌های بانکی، چک‌ها و تسویه',
+    partiesTabTitleFa: custom.partiesTabTitleFa || 'اشخاص و طرفین',
+    partiesTabDescFa: custom.partiesTabDescFa || 'مشتریان، تأمین‌کنندگان و مانده‌حساب اشخاص',
+    installationTabTitleFa: custom.installationTabTitleFa || 'خدمات و نصب CCTV',
+    quickPosButtonLabelFa: custom.quickPosButtonLabelFa || 'فاکتور فروش POS',
+    quickSalesSubmenuTitleFa: custom.quickSalesSubmenuTitleFa || 'فروش، POS و پیش‌فاکتور',
+    quickPurchasesSubmenuTitleFa: custom.quickPurchasesSubmenuTitleFa || 'فاکتور خرید و بهای تمام‌شده',
+    quickTreasurySubmenuTitleFa: custom.quickTreasurySubmenuTitleFa || 'دریافت، پرداخت و چک صیادی',
+    quickPartiesSubmenuTitleFa: custom.quickPartiesSubmenuTitleFa || 'صورت‌حساب مشتریان و اشخاص',
+    quickInventorySubmenuTitleFa: custom.quickInventorySubmenuTitleFa || `${custom.inventoryTabTitleFa || 'کالا و انبارداری'} و کاردکس`,
+    ...custom,
+  };
 }
 
 export interface IndustryProfileConfig {
@@ -116,6 +254,8 @@ export interface IndustryProfileConfig {
   badgeLabelFa: string;
   features: IndustryProfileFeatures;
   uiLabels?: IndustryProfileUiLabels;
+  theme?: IndustryThemeConfig;
+  layout?: IndustryLayoutConfig;
 }
 
 export interface SystemSettingsRecord {
@@ -130,6 +270,7 @@ export interface SystemSettingsRecord {
   landedCostAllocationDefault: 'BY_VALUE' | 'BY_WEIGHT' | 'BY_QUANTITY';
   activeFiscalYearCode: string;
   allowNegativeInventory: boolean;
+  enableDoubleEntryAccounting?: boolean;
   industryProfileCode?: IndustryProfileCode;
   documentNumbering?: DocumentNumberingConfig;
   defaultWarehouseId?: number;
@@ -245,6 +386,16 @@ export interface FoundationDataResponse {
   fixedAssets?: FixedAssetRecord[];
   depreciationEntries?: DepreciationEntryRecord[];
   openingBalanceDoc?: AccountingDocumentRecord | null;
+  goldColleagueTrades?: GoldColleagueTrade[];
+  restaurantTables?: RestaurantTableRecord[];
+  restaurantOrders?: RestaurantOrderRecord[];
+  wholesaleOrders?: WholesaleOrderRecord[];
+  wholesaleDispatches?: WholesaleDispatchRecord[];
+  serviceJobTickets?: ServiceJobTicketRecord[];
+  mobileDevices?: MobileDeviceRecord[];
+  mobileRepairTickets?: MobileRepairTicketRecord[];
+  inventoryTransfers?: InventoryTransferRecord[];
+  executiveBi?: ExecutiveBiMetrics;
 }
 
 export type PartyPrimaryType = 'CUSTOMER' | 'SUPPLIER' | 'INSTALLER' | 'PARTNER_OTHER';
@@ -255,7 +406,12 @@ export type PartyTransactionType =
   | 'PURCHASE_INVOICE'
   | 'PAYMENT'
   | 'RECEIPT'
-  | 'CCTV_PROJECT';
+  | 'CCTV_PROJECT'
+  | 'GOLD_COLLEAGUE_SALE'
+  | 'GOLD_COLLEAGUE_RECEIPT'
+  | 'GOLD_BARTER'
+  | 'GOLD_WEIGHT_SETTLEMENT'
+  | 'GOLD_TO_RIAL_CONVERSION';
 
 export interface PartyRecord {
   id: number;
@@ -281,6 +437,7 @@ export interface PartyRecord {
   installerSkills?: string | null;
   notes?: string | null;
   isDemo?: boolean;
+  goldBalanceGrams?: number; // تراز وزنی طلا به گرم ۷۵۰ (مثبت = طلبکار طلا، منفی = بدهکار طلا)
   createdAt: string;
   updatedAt: string;
   transactionsSummary?: {
@@ -292,6 +449,7 @@ export interface PartyRecord {
     totalReceiptsIrr: number;
     activeProjectsCount: number;
     netBalanceIrr: number; // positive = creditor (بستانکار), negative = debtor (بدهکار)
+    netGoldBalanceGrams?: number; // مانده وزنی خالص طلا به گرم استاندارد ۷۵۰
     lastTransactionDateJalali?: string;
   };
 }
@@ -305,6 +463,11 @@ export interface PartyTransactionRecord {
   amountIrr: number;
   dateJalali: string;
   status: 'COMPLETED' | 'PENDING' | 'IN_PROGRESS' | 'SETTLED';
+  goldWeightGrams?: number; // وزن طلا به گرم و سوت
+  goldAyar?: number; // عیار مثلاً 750 (18 عیار)
+  goldPure750Grams?: number; // وزن استاندارد عیار ۷۵۰
+  goldDailyRateIrr?: number; // مظنه روز طلا به ازای هر گرم
+  isPureGoldTrade?: boolean; // آیا معامله کاملاً بدون ریال و صرفاً وزنی است؟
   notesFa?: string | null;
   isDemo?: boolean;
   createdAt: string;
@@ -398,6 +561,7 @@ export interface ItemRecord {
   warehouseStocks?: Record<number, number>;
   activeSerialsCount?: number;
   isLowStock?: boolean;
+  inventoryOnHand?: number;
 }
 
 export interface WarehouseRecord {
@@ -440,6 +604,8 @@ export interface ItemSerialRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+export type TransferStatus = 'PENDING' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED';
 
 export type InventoryDocType =
   | 'INBOUND_PURCHASE' // رسید ورود از خرید (افزایش موجودی)
@@ -1005,7 +1171,9 @@ export type AccountingSourceDocType =
   | 'SALES_RETURN'
   | 'PURCHASE_RETURN'
   | 'PROJECT_CONSUMPTION'
-  | 'CLOSING_PERIOD';
+  | 'INVENTORY_TRANSFER'
+  | 'CLOSING_PERIOD'
+  | 'FIXED_ASSET_DEPRECIATION';
 
 export interface AccountingDocumentLine {
   id: number;
@@ -1387,4 +1555,330 @@ export interface OpeningBalanceBatchPayload {
   items: OpeningBalanceImportItem[];
 }
 
+// ============================================================================
+// GOLD & JEWELRY MODULE TYPES (معاملات همکار، فروش گرمی بدون ریال و کاردکس دوگانه)
+// ============================================================================
+export type GoldTradeType =
+  | 'COLLEAGUE_WEIGHT_SALE' // فروش همکار (تحویل طلای ساخته یا آبشده به همکار - بدهکار وزنی طلا)
+  | 'COLLEAGUE_WEIGHT_RECEIPT' // دریافت طلا از همکار (بستانکار وزنی طلا)
+  | 'COLLEAGUE_BARTER' // بده‌بستان و تهاتر همکار (تبادل طلا به طلا با کسر/اضافه سوت و اجرت)
+  | 'COLLEAGUE_SETTLEMENT' // تسویه وزنی طلا
+  | 'GOLD_TO_RIAL_CONVERSION'; // تبدیل مانده وزنی به ریالی با مظنه روز
 
+export type GoldItemCategory =
+  | 'GOLD_18K_MADE' // طلای ساخته ۱۸ عیار
+  | 'MELTED_GOLD' // طلای آبشده (با شماره انگ)
+  | 'SCRAP_GOLD' // طلای کهنه / متفرقه
+  | 'COIN' // سکه بهار آزادی
+  | 'BAR_INGOT'; // شمش طلا
+
+export interface GoldColleagueTrade {
+  id: number;
+  tradeNumber: string; // e.g. GLD-TRD-1405-101
+  tradeType: GoldTradeType;
+  partyId: number;
+  partyTitleFa: string;
+  dateJalali: string;
+  goldItemCategory: GoldItemCategory;
+  rawWeightGrams: number; // وزن ناخالص (گرم و سوت)
+  stoneWeightGrams: number; // وزن نگین/سنگ
+  netWeightGrams: number; // وزن خالص طلا
+  ayar: number; // عیار مثلاً 750 (18 عیار) یا عیار انگ
+  pure750WeightGrams: number; // وزن معادل طلای استاندارد ۷۵۰: (وزن × عیار) / 750
+  makingWageGrams: number; // اجرت وزنی به ازای هر گرم یا جمع وزنی
+  totalGoldEffectGrams: number; // تأثیر نهایی بر مانده طلا (+ یا -)
+  isPureGoldTradeNoRial: boolean; // آیا معامله کاملاً بدون ریال و صرفاً بده‌بستان گرمی طلا است؟
+  goldDailyRateIrr?: number; // مظنه روز هر گرم طلا (در صورت معامله ریالی)
+  totalAmountIrr?: number; // مبلغ ریالی معامله
+  engravingCode?: string; // شماره انگ آزمایشگاه یا کد کالا
+  descriptionFa?: string;
+  createdAt: string;
+}
+
+export interface GoldDualLedgerItem {
+  id: number;
+  dateJalali: string;
+  refNumber: string;
+  docTypeFa: string;
+  titleFa: string;
+  goldInGrams: number; // ورودی طلا (بستانکار وزنی ما)
+  goldOutGrams: number; // خروجی طلا (بدهکار وزنی ما)
+  runningGoldBalanceGrams: number; // مانده وزنی لحظه‌ای طلا (گرم ۷۵۰)
+  debitIrr: number; // بدهکار ریالی
+  creditIrr: number; // بستانکار ریالی
+  runningRialBalanceIrr: number; // مانده لحظه‌ای ریالی
+  isPureGoldTradeNoRial: boolean;
+  notesFa?: string;
+}
+
+// ============================================================================
+// RESTAURANT & CAFE MODULE TYPES (فاز ۷: میزها، منوی لمسی و بن آشپزخانه)
+// ============================================================================
+export type RestaurantOrderType = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
+export type TableStatus = 'AVAILABLE' | 'OCCUPIED' | 'RESERVED';
+
+export interface RestaurantTableRecord {
+  id: number;
+  tableNumber: string;
+  titleFa: string;
+  capacity: number;
+  sectionFa: string; // e.g. سالن اصلی، تراس، VIP
+  status: TableStatus;
+  currentOrderId?: number | null;
+  currentOrderAmountIrr?: number;
+}
+
+export interface RestaurantOrderLine {
+  itemId: number;
+  itemTitleFa: string;
+  quantity: number;
+  unitPriceIrr: number;
+  notesFa?: string;
+}
+
+export interface RestaurantOrderRecord {
+  id: number;
+  orderNumber: string;
+  orderType: RestaurantOrderType;
+  tableNumber?: string | null;
+  customerNameFa?: string;
+  phone?: string;
+  lines: RestaurantOrderLine[];
+  subtotalIrr: number;
+  serviceChargeIrr: number;
+  vatAmountIrr: number;
+  totalPayableIrr: number;
+  status: 'PENDING_KITCHEN' | 'PREPARING' | 'SERVED' | 'PAID' | 'CANCELLED';
+  dateJalali: string;
+  salesInvoiceId?: number;
+  salesInvoiceNumber?: string;
+  paymentMethod?: 'POS' | 'CASH' | 'OPEN_CREDIT';
+  paidAmountIrr?: number;
+  financialLedgerStatus?: 'RECORDED_IN_SALES' | 'RECORDED_IN_TREASURY' | 'ON_CREDIT';
+  accountingDocNumber?: string;
+  createdAt: string;
+}
+
+export interface RestaurantMenuItemRecord {
+  id: number;
+  category: 'IRANIAN' | 'FAST_FOOD' | 'PASTA_BURGER' | 'APPETIZER' | 'CAFE_BAR' | 'DESSERT';
+  categoryFa: string;
+  titleFa: string;
+  descriptionFa: string;
+  priceIrr: number;
+  prepTimeMinutes: number;
+  iconText: string;
+  imageUrl: string;
+  badgeFa?: string;
+  calories?: number;
+  isAvailable: boolean;
+  createdAt?: string;
+}
+
+// ============================================================================
+// WHOLESALE & DISTRIBUTION MODULE TYPES (فاز ۸: پخش عمده، کارتن، نرخ همکار و توزیع)
+// ============================================================================
+export type PriceTierCode =
+  | 'CONSUMER'          // مصرف‌کننده نهایی
+  | 'RETAIL_COLLEAGUE'  // خرده‌فروش / همکار
+  | 'WHOLESALE_BULK'    // عمده‌فروشی / بنکدار
+  | 'DISTRIBUTOR_VIP';  // نمایندگی انحصاری / تیراژ ویژه
+
+export interface WholesalePackagingConfig {
+  primaryUnitFa: string;   // واحد جزء (عدد، قوطی، شیشه، کیلو)
+  packUnitFa: string;      // واحد بسته‌بندی کل (کارتن، بسته، جعبه، شیرینک)
+  unitsPerPack: number;    // ضریب بسته به جزء (مثلا ۲۴ عدد در هر کارتن)
+  packWeightKg?: number;   // وزن تقریبی هر کارتن به کیلوگرم
+}
+
+export interface WholesaleItemPriceTiers {
+  consumerIrr: number;
+  retailColleagueIrr: number;
+  wholesaleBulkIrr: number;
+  distributorVipIrr: number;
+}
+
+export interface WholesaleOrderLine {
+  itemId: number;
+  itemTitleFa: string;
+  packCount: number;         // تعداد کارتن
+  looseUnitsCount: number;   // تعداد تک (جزء)
+  unitsPerPack: number;      // ضریب کارتن
+  totalUnits: number;        // کل تعداد جزء = (packCount * unitsPerPack) + looseUnitsCount
+  priceTier: PriceTierCode;
+  unitPriceIrr: number;      // قیمت هر واحد جزء در رده انتخابی
+  packPriceIrr: number;      // قیمت هر کارتن در رده انتخابی = unitPriceIrr * unitsPerPack
+  discountPercent: number;   // تخفیف تیراژ یا همکار
+  lineTotalIrr: number;      // جمع ردیف
+}
+
+export interface WholesaleOrderRecord {
+  id: number;
+  orderNumber: string; // e.g. WHO-1405-001
+  customerId: number;
+  customerNameFa: string;
+  customerCreditLimitIrr: number;
+  currentOutstandingDebtIrr: number;
+  isCreditLimitExceeded: boolean;
+  visitorNameFa?: string;
+  paymentTermsFa: 'CASH' | 'CHEQUE_30_DAYS' | 'CHEQUE_60_DAYS' | 'OPEN_CREDIT';
+  lines: WholesaleOrderLine[];
+  totalCartons: number;
+  totalLooseUnits: number;
+  subtotalIrr: number;
+  discountTotalIrr: number;
+  shippingFeeIrr: number;
+  vatAmountIrr: number;
+  totalPayableIrr: number;
+  dispatchStatus: 'PENDING_PACKING' | 'PACKED' | 'DISPATCHED' | 'DELIVERED';
+  dateJalali: string;
+  createdAt: string;
+}
+
+export interface WholesaleDispatchRecord {
+  id: number;
+  dispatchNumber: string; // e.g. DSP-1405-001
+  orderId: number;
+  orderNumber: string;
+  customerNameFa: string;
+  destinationCityFa: string;
+  destinationAddressFa: string;
+  driverNameFa: string;
+  driverPhone: string;
+  vehiclePlateFa: string;
+  vehicleTypeFa: string; // نیسان، خاور ۶ تن، ایسوزو، وانت مزدا
+  totalCartons: number;
+  grossWeightKg: number;
+  status: 'PREPARING' | 'LOADED' | 'ON_THE_WAY' | 'DELIVERED';
+  dateJalali: string;
+  shippingCostIrr: number;
+  notesFa?: string;
+  createdAt: string;
+}
+
+// ============================================================================
+// SERVICES & CONTRACTING MODULE TYPES (فاز ۹: خدمات فنی، تیکت کار، تکنسین و قطعات)
+// ============================================================================
+export type JobTicketPriority = 'NORMAL' | 'URGENT' | 'EMERGENCY';
+export type JobTicketStatus =
+  | 'OPEN'
+  | 'ASSIGNED'
+  | 'IN_PROGRESS'
+  | 'PARTS_CONSUMED'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export interface ServiceSparePartLine {
+  itemId: number;
+  itemTitleFa: string;
+  quantity: number;
+  unitPriceIrr: number;
+  totalPriceIrr: number;
+}
+
+export interface ServiceJobTicketRecord {
+  id: number;
+  ticketNumber: string; // e.g. TCK-1405-001
+  customerId: number;
+  customerNameFa: string;
+  customerPhone: string;
+  customerAddressFa: string;
+  titleFa: string;
+  descriptionFa: string;
+  priority: JobTicketPriority;
+  status: JobTicketStatus;
+  technicianId?: number;
+  technicianNameFa?: string;
+  laborFeeIrr: number;
+  spareParts: ServiceSparePartLine[];
+  sparePartsTotalIrr: number;
+  totalCostIrr: number;
+  dateJalali: string;
+  dueDateJalali?: string;
+  completionNotesFa?: string;
+  invoiceId?: number;
+  createdAt: string;
+}
+
+// ============================================================================
+// STAGE 16 / PHASE 9: MOBILE, LAPTOP & DIGITAL ELECTRONICS (صنف موبایل، رایانه و دیجیتال)
+// ============================================================================
+
+export type MobileDeviceCondition = 'NEW' | 'USED_LIKE_NEW' | 'USED_GOOD' | 'STOCK_REFURBISHED';
+export type MobileRegistryStatus = 'REGISTERED' | 'NOT_REGISTERED' | 'TRAVELLER_PASSPORT' | 'COMMERCIAL_CUSTOMS';
+export type MobileWarrantyStatus = 'UNDER_WARRANTY' | 'EXPIRED' | 'NO_WARRANTY' | 'CORPORATE_REPRESENTATIVE';
+
+export interface MobileDeviceRecord {
+  id: number;
+  itemId: number;
+  modelFa: string; // e.g. سامسونگ Galaxy S24 Ultra یا آیفون ۱۳ نرمال
+  brandFa: string; // اپل، سامسونگ، شیائومی، ایسوس
+  imei1: string; // کد IMEI 1 (۱۵ رقمی)
+  imei2?: string | null; // کد IMEI 2 (دو سیم‌کارت)
+  serialNumber?: string | null;
+  storageGb: number; // 128, 256, 512, 1024
+  ramGb?: number; // 8, 12, 16
+  colorFa: string;
+  condition: MobileDeviceCondition;
+  registryStatus: MobileRegistryStatus;
+  warrantyStatus: MobileWarrantyStatus;
+  warrantyCompanyFa?: string | null;
+  warrantyExpiresJalali?: string | null;
+  batteryHealthPercent?: number | null; // درصد سلامت باتری
+  purchasePriceIrr: number;
+  salePriceIrr: number;
+  stockStatus: 'IN_STOCK' | 'SOLD' | 'UNDER_REPAIR' | 'RETURNED';
+  warehouseId: number;
+  createdAt: string;
+}
+
+export type MobileRepairStatus =
+  | 'RECEIVED' // پذیرش اولیه در نوبت بررسی
+  | 'DIAGNOSING' // در حال عیب‌یابی فنی
+  | 'WAITING_PARTS' // در انتظار قطعه یدکی
+  | 'IN_REPAIR' // در حال تعمیر روی میز کار
+  | 'REPAIRED' // تعمیر شده و آماده تست/تحویل
+  | 'DELIVERED' // تحویل به مشتری و تسویه شد
+  | 'UNREPAIRABLE' // غیرقابل تعمیر
+  | 'CANCELLED'; // انصراف مشتری
+
+export interface MobileRepairPartLine {
+  id: number;
+  partNameFa: string; // e.g. تاچ و ال‌سی‌دی اورجینال، باتری تقویت شده
+  partCostIrr: number;
+  quantity: number;
+  totalCostIrr: number;
+}
+
+export interface MobileRepairTicketRecord {
+  id: number;
+  ticketNumber: string; // e.g. REP-1405-101
+  customerId: number;
+  customerNameFa: string;
+  customerPhone: string;
+  deviceModelFa: string;
+  colorFa?: string;
+  imeiOrSerial: string;
+  securityPasscodeOrPattern?: string; // رمز ورود یا الگوی پترن جهت تست قطعات
+  accompaniedAccessoriesFa?: string; // شارژر، قاب، سیم‌کارت، کارتن
+  reportedFaultsFa: string; // شرح ایراد (خاموشی، شکستگی صفحه، تعویض باتری)
+  physicalConditionNotesFa?: string; // خط و خش بدنه یا ضربه‌خوردگی در زمان ورود
+  assignedTechnicianId?: number;
+  assignedTechnicianNameFa?: string;
+  estimatedCostIrr: number; // برآورد اولیه هزینه
+  depositPaidIrr: number; // بیعانه دریافتی
+  parts: MobileRepairPartLine[];
+  partsTotalIrr: number;
+  laborFeeIrr: number; // اجرت خدمات و دستمزد
+  discountIrr: number;
+  finalTotalIrr: number; // جمع نهایی (قطعات + اجرت - تخفیف)
+  remainingPayableIrr: number; // باقیمانده قابل پرداخت
+  status: MobileRepairStatus;
+  receptionDateJalali: string;
+  estimatedDeliveryDateJalali?: string;
+  deliveredDateJalali?: string;
+  invoiceId?: number;
+  invoiceNumber?: string;
+  notesFa?: string;
+  createdAt: string;
+}

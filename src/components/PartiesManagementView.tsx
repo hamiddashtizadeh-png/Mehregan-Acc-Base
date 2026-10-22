@@ -31,6 +31,8 @@ import {
   Printer,
   Download,
   FileSpreadsheet,
+  Scale,
+  Coins,
 } from 'lucide-react';
 import {
   PartyRecord,
@@ -43,6 +45,7 @@ import {
 } from '../types/foundation';
 import { printHtmlContent } from '../utils/printUtils';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { GoldColleagueTradeModal } from './GoldColleagueTradeModal';
 
 interface PartiesManagementViewProps {
   foundationData: FoundationDataResponse;
@@ -95,6 +98,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
     (PartyRecord & { transactions: PartyTransactionRecord[] }) | null
   >(null);
   const [isAttachRecordOpen, setIsAttachRecordOpen] = useState(false);
+  const [isGoldTradeModalOpen, setIsGoldTradeModalOpen] = useState(false);
   const [settlingParty, setSettlingParty] = useState<PartyRecord | null>(null);
   const [settleForm, setSettleForm] = useState<{
     txType: 'RECEIPT' | 'PAYMENT';
@@ -1500,8 +1504,17 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => setIsGoldTradeModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 cursor-pointer shadow-xs"
+                  title="ثبت معامله گرمی همکار، فروش بدون ریال یا بده‌بستان طلا"
+                >
+                  <Scale className="h-3.5 w-3.5" />
+                  <span>معامله گرمی طلا</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setIsAttachRecordOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800 cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>اتصال سند جدید</span>
@@ -1509,7 +1522,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setViewingPartyDetail(null)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1517,7 +1530,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
             </div>
 
             {/* Quick Profile Summary Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
               <div>
                 <span className="text-slate-500 block">شماره همراه:</span>
                 <span className="font-mono font-bold text-slate-900" dir="ltr">
@@ -1537,7 +1550,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 block">مانده خالص حساب:</span>
+                <span className="text-slate-500 block">مانده ریالی حساب:</span>
                 <span className="font-mono font-bold text-slate-900" dir="ltr">
                   {(viewingPartyDetail.transactionsSummary?.netBalanceIrr || 0).toLocaleString(
                     'fa-IR'
@@ -1545,7 +1558,13 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                   ریال
                 </span>
               </div>
-              <div className="col-span-2 md:col-span-4 pt-1 border-t border-slate-200 text-slate-600">
+              <div className="bg-amber-50/80 p-2 rounded-lg border border-amber-200">
+                <span className="text-amber-800 font-bold block text-[11px]">🪙 مانده طلا (۷۵۰):</span>
+                <span className="font-mono font-black text-amber-950 text-xs" dir="ltr">
+                  {(viewingPartyDetail.goldBalanceGrams || 0).toFixed(3)} گرم
+                </span>
+              </div>
+              <div className="col-span-2 md:col-span-5 pt-1 border-t border-slate-200 text-slate-600">
                 <span className="font-semibold text-slate-900">نشانی: </span>
                 <span>
                   {viewingPartyDetail.province}، {viewingPartyDetail.city}،{' '}
@@ -1894,6 +1913,23 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* GOLD COLLEAGUE TRADE MODAL */}
+      {viewingPartyDetail && (
+        <GoldColleagueTradeModal
+          isOpen={isGoldTradeModalOpen}
+          onClose={() => setIsGoldTradeModalOpen(false)}
+          foundationData={foundationData}
+          initialPartyId={viewingPartyDetail.id}
+          onSuccess={async () => {
+            setIsGoldTradeModalOpen(false);
+            if (viewingPartyDetail) {
+              await handleViewPartyDetail(viewingPartyDetail.id);
+            }
+            await onRefresh();
+          }}
+        />
       )}
 
       {/* QUICK SETTLEMENT MODAL (تسویه حساب فوری طرف تجاری: پوز، چک، سند بانکی، اقساط، نقد) */}

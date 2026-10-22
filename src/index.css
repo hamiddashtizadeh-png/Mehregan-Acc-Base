@@ -2,26 +2,151 @@
 
 @layer base {
   :root {
-    font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    /* Typography Tokens */
+    --font-sans: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-display: 'B Titr', 'BTitr', 'Titr', 'Vazirmatn', Tahoma, sans-serif;
+
+    /* Color Tokens - Light Mode */
+    --color-bg-canvas: #f8fafc;
+    --color-bg-surface: #ffffff;
+    --color-bg-muted: #f1f5f9;
+    --color-border-subtle: rgba(226, 232, 240, 0.85);
+    --color-border-strong: #cbd5e1;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-text-muted: #64748b;
+    --color-brand-primary: #2563eb;
+    --color-brand-hover: #1d4ed8;
+    --color-semantic-success: #059669;
+    --color-semantic-warning: #d97706;
+    --color-semantic-danger: #e11d48;
+
+    /* Spacing & Radius Tokens */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --space-unit: 0.25rem;
+
+    /* Elevation & Shadow Tokens */
+    --shadow-card: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+    --shadow-elevated: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+    --focus-ring-color: rgba(37, 99, 235, 0.8);
+
+    font-family: var(--font-sans);
+  }
+
+  .dark {
+    --color-bg-canvas: #020617;
+    --color-bg-surface: #0f172a;
+    --color-bg-muted: #1e293b;
+    --color-border-subtle: rgba(30, 41, 59, 0.85);
+    --color-border-strong: #334155;
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #94a3b8;
   }
 
   body {
-    font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--font-sans);
     direction: rtl;
     text-align: right;
+    background-color: var(--color-bg-canvas);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
   }
 
   code,
   pre,
   .font-mono {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
 }
 
+/* ==========================================================================
+   Industry Themes & Design Tokens (Phase 1)
+   ========================================================================== */
+:root {
+  --theme-primary: #0284c7;
+  --theme-primary-hover: #0369a1;
+  --theme-accent-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --theme-top-bar: #0284c7;
+}
+
+[data-industry-theme="cctv"] {
+  --theme-primary: #0284c7;
+  --theme-primary-hover: #0369a1;
+  --theme-accent-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --theme-top-bar: #0284c7;
+}
+
+[data-industry-theme="retail"] {
+  --theme-primary: #2563eb;
+  --theme-primary-hover: #1d4ed8;
+  --theme-accent-gradient: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  --theme-top-bar: #2563eb;
+}
+
+[data-industry-theme="grocery"] {
+  --theme-primary: #059669;
+  --theme-primary-hover: #047857;
+  --theme-accent-gradient: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  --theme-top-bar: #059669;
+}
+
+[data-industry-theme="gold"] {
+  --theme-primary: #d97706;
+  --theme-primary-hover: #b45309;
+  --theme-accent-gradient: linear-gradient(135deg, #18181b 0%, #27272a 100%);
+  --theme-top-bar: #d97706;
+}
+
+[data-industry-theme="restaurant"] {
+  --theme-primary: #ea580c;
+  --theme-primary-hover: #c2410c;
+  --theme-accent-gradient: linear-gradient(135deg, #431407 0%, #7c2d12 100%);
+  --theme-top-bar: #ea580c;
+}
+
+[data-industry-theme="wholesale"] {
+  --theme-primary: #0f766e;
+  --theme-primary-hover: #115e59;
+  --theme-accent-gradient: linear-gradient(135deg, #042f2e 0%, #134e4a 100%);
+  --theme-top-bar: #0f766e;
+}
+
+[data-industry-theme="services"] {
+  --theme-primary: #4f46e5;
+  --theme-primary-hover: #4338ca;
+  --theme-accent-gradient: linear-gradient(135deg, #172554 0%, #1e3a8a 100%);
+  --theme-top-bar: #4f46e5;
+}
+
+[data-industry-theme="mobile"] {
+  --theme-primary: #0284c7;
+  --theme-primary-hover: #0369a1;
+  --theme-accent-gradient: linear-gradient(135deg, #082f49 0%, #0c4a6e 100%);
+  --theme-top-bar: #0284c7;
+}
+
+/* Mehregan Design System Tokens & Utilities */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/80 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 transition-shadow;
+}
+
+.border-subtle {
+  @apply border border-slate-200/80 dark:border-slate-800/80;
+}
+
+.surface-card {
+  @apply bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs transition-all;
+}
+
 /* Persian Beautiful Typography: Titr and Zar */
 .font-titr {
-  font-family: 'B Titr', 'BTitr', 'Titr', 'Vazirmatn', Tahoma, sans-serif;
+  font-family: var(--font-display);
   font-weight: 800;
   letter-spacing: -0.01em;
 }

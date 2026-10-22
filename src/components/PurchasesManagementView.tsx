@@ -8,6 +8,7 @@ import {
   ForeignCurrencyCode,
   CostAllocationMethod,
   PurchasePaymentMethod,
+  resolveIndustryUiLabels,
 } from '../types/foundation';
 import {
   ShoppingBag,
@@ -50,6 +51,7 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
   const industryProfile = foundationData.industryProfile;
   const profileCode = industryProfile?.code || 'CCTV_SECURITY';
   const enableInstallersRole = industryProfile?.features?.enableInstallersRole ?? true;
+  const uiLabels = resolveIndustryUiLabels(industryProfile);
 
   const [activeTab, setActiveTab] = useState<TabType>('INVOICES');
   const [searchQuery, setSearchQuery] = useState('');
@@ -347,16 +349,10 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
             </div>
             <div>
               <h1 className="text-lg font-bold text-slate-900">
-                {profileCode === 'SUPERMARKET_GROCERY'
-                  ? 'مدیریت خرید اقلام و ورود کالا به انبار'
-                  : profileCode === 'RETAIL_GENERAL'
-                  ? 'مدیریت خرید، بهای تمام‌شده و بدهی تأمین‌کنندگان'
-                  : 'ماژول جامع خرید، ارز، بهای تمام‌شده و بدهی تأمین‌کنندگان (مرحله ۵)'}
+                {uiLabels.purchasesTabTitleFa}
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
-                {profileCode === 'SUPERMARKET_GROCERY'
-                  ? 'ثبت فاکتورهای خرید، شارژ موجودی انبار، تسویه حساب تأمین‌کنندگان و مرجوعی کالا'
-                  : 'مدیریت پیش‌فاکتور ارزی، فاکتور خرید قطعی، تخصیص هزینه‌های سربار (Landed Cost)، تسویه بدهی و مرجوعی کالا'}
+                {uiLabels.purchasesTabDescFa}
               </p>
             </div>
           </div>
@@ -875,28 +871,28 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                <span>انتخاب تأمین‌کننده (فروشنده):</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            <div className="min-w-0 space-y-1.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+              <label className="block font-bold text-slate-700 flex items-center justify-between gap-1 flex-wrap">
+                <span className="truncate">انتخاب تأمین‌کننده (فروشنده):</span>
                 <button
                   type="button"
                   onClick={() => {
                     setQuickMasterRole('SUPPLIER');
                     setQuickMasterType('PARTY');
                   }}
-                  className="text-[10px] text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-0.5 cursor-pointer"
+                  className="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
                   title="افزودن سریع تأمین‌کننده جدید"
                 >
                   <Plus className="w-3 h-3" />
                   <span>تأمین‌کننده جدید</span>
                 </button>
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 min-w-0 w-full">
                 <select
                   value={formSupplierId}
                   onChange={(e) => setFormSupplierId(Number(e.target.value))}
-                  className="flex-1 rounded-lg border border-slate-300 p-2 font-semibold text-slate-800"
+                  className="w-full min-w-0 flex-1 truncate rounded-lg border border-slate-300 bg-white p-2 font-semibold text-slate-800 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                   required
                 >
                   {suppliers.map((s) => (
@@ -905,34 +901,36 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
                     </option>
                   ))}
                 </select>
-                <QuickAddButton
-                  onClick={() => {
-                    setQuickMasterRole('SUPPLIER');
-                    setQuickMasterType('PARTY');
-                  }}
-                  title="افزودن سریع تأمین‌کننده جدید"
-                />
+                <div className="shrink-0">
+                  <QuickAddButton
+                    onClick={() => {
+                      setQuickMasterRole('SUPPLIER');
+                      setQuickMasterType('PARTY');
+                    }}
+                    title="افزودن سریع تأمین‌کننده جدید"
+                  />
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                <span>انبار مقصد جهت ورود کالا:</span>
+            <div className="min-w-0 space-y-1.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+              <label className="block font-bold text-slate-700 flex items-center justify-between gap-1 flex-wrap">
+                <span className="truncate">انبار مقصد جهت ورود کالا:</span>
                 <button
                   type="button"
                   onClick={() => setQuickMasterType('WAREHOUSE')}
-                  className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5 cursor-pointer"
+                  className="text-[10px] text-blue-700 hover:text-blue-900 font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
                   title="افزودن سریع انبار جدید"
                 >
                   <Plus className="w-3 h-3" />
                   <span>انبار جدید</span>
                 </button>
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 min-w-0 w-full">
                 <select
                   value={formWarehouseId}
                   onChange={(e) => setFormWarehouseId(Number(e.target.value))}
-                  className="flex-1 rounded-lg border border-slate-300 p-2 font-semibold text-slate-800"
+                  className="w-full min-w-0 flex-1 truncate rounded-lg border border-slate-300 bg-white p-2 font-semibold text-slate-800 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                   required
                 >
                   {foundationData.warehouses?.map((w) => (
@@ -941,21 +939,23 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
                     </option>
                   ))}
                 </select>
-                <QuickAddButton
-                  onClick={() => setQuickMasterType('WAREHOUSE')}
-                  title="افزودن سریع انبار جدید"
-                />
+                <div className="shrink-0">
+                  <QuickAddButton
+                    onClick={() => setQuickMasterType('WAREHOUSE')}
+                    title="افزودن سریع انبار جدید"
+                  />
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">شماره فاکتور فروشنده:</label>
+            <div className="min-w-0 space-y-1.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+              <label className="block font-bold text-slate-700 truncate">شماره فاکتور فروشنده:</label>
               <input
                 type="text"
                 value={formSupplierInvNum}
                 onChange={(e) => setFormSupplierInvNum(e.target.value)}
                 placeholder="مثلاً INV-PARS-9912"
-                className="w-full rounded-lg border border-slate-300 p-2 font-mono"
+                className="w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
               />
             </div>
 

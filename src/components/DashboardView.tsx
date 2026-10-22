@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   TrendingUp,
   ShoppingCart,
@@ -40,7 +40,19 @@ import {
   LayoutGrid,
   X,
 } from 'lucide-react';
-import { FoundationDataResponse, SalesInvoiceRecord } from '../types/foundation';
+import { FoundationDataResponse, resolveIndustryUiLabels, ExecutiveBiMetrics } from '../types/foundation';
+import {
+  Button,
+  Card,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableEmptyState,
+  Input,
+} from './ui';
 
 interface DashboardViewProps {
   foundationData: FoundationDataResponse;
@@ -86,11 +98,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     enableWarrantyTracking: true,
     enableBarcodeScanQuickPos: true,
   };
-  const uiLabels = industryProfile?.uiLabels || {
-    inventoryTabTitleFa: 'کالا و انبارداری',
-    serialTrackerTitleFa: 'رهگیری شماره سریال کالا',
-    partiesInstallerRoleTitleFa: 'نصابان و تکنسین‌ها',
-  };
+  const uiLabels = resolveIndustryUiLabels(industryProfile);
 
   const [activePerspective, setActivePerspective] = useState<DashboardPerspective>('ALL');
 
@@ -130,6 +138,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     });
   };
 
+  // Executive BI Dashboard State (from server-side /api/system/executive-bi)
+  const [executiveBi, setExecutiveBi] = useState<ExecutiveBiMetrics | null>(
+    foundationData.executiveBi || null
+  );
+  const [biLoading, setBiLoading] = useState(false);
+  const [biError, setBiError] = useState<string | null>(null);
+
+  const fetchExecutiveBi = useCallback(async () => {
+    try {
+      setBiLoading(true);
+      setBiError(null);
+      const res = await fetch('/api/system/executive-bi');
+      if (res.status === 403) {
+        setBiError('دسترسی به شاخص‌های کلان مدیریتی (BI) برای سطح کاربری شما محدود شده است.');
+        return;
+      }
+      const data = await res.json();
+      if (data.ok) {
+        setExecutiveBi(data.metrics);
+      } else {
+        setBiError(data.messageFa || 'خطا در دریافت شاخص‌های هوش تجاری.');
+      }
+    } catch (err: unknown) {
+      setBiError(err instanceof Error ? err.message : 'عدم دسترسی به سرویس هوش تجاری.');
+    } finally {
+      setBiLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchExecutiveBi();
+  }, [fetchExecutiveBi]);
+
   // Live Iranian clock
   useEffect(() => {
     const updateTime = () => {
@@ -146,6 +187,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const handleManualRefresh = () => {
     setIsRefreshing(true);
     onRefresh();
+    fetchExecutiveBi();
     setTimeout(() => setIsRefreshing(false), 800);
   };
 
@@ -192,9 +234,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     let recv = 0;
     let pay = 0;
     parties.forEach((p) => {
-      const bal = Number((p as any).currentBalanceIrr) || 0;
-      if (bal > 0) recv += bal;
-      else if (bal < 0) pay += Math.abs(bal);
+      const bal = p.transactionsSummary?.netBalanceIrr ?? Number((p as any).currentBalanceIrr) ?? 0;
+      // Negative netBalanceIrr indicates customer debt (مطالبات ما از مشتری)
+      // Positive netBalanceIrr indicates supplier credit (بدهی ما به تأمین‌کننده)
+      if (bal < 0) recv += Math.abs(bal);
+      else if (bal > 0) pay += bal;
     });
     return { totalReceivablesIrr: recv, totalPayablesIrr: pay };
   }, [parties]);
@@ -275,142 +319,157 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const bankPct = Math.round((totalBankBalanceIrr / totalAssets) * 100);
   const cashPct = Math.round((totalCashBalanceIrr / totalAssets) * 100);
   const chequePct = Math.round((totalInHandChequesIrr / totalAssets) * 100);
+  const enableDoubleEntryAccounting = foundationData.settings?.enableDoubleEntryAccounting !== false;
 
   return (
     <div className="space-y-6 text-slate-800 pb-12">
       {/* 1. EXECUTIVE HERO COMMAND HEADER */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white shadow-2xl border border-slate-800/80">
-        {/* Ambient background glow elements */}
-        <div className="pointer-events-none absolute -top-32 -left-32 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl animate-pulse-glow" />
-        <div className="pointer-events-none absolute -bottom-32 -right-32 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px] opacity-20" />
-
+      <Card
+        variant="default"
+        padding="lg"
+        className="relative overflow-hidden bg-slate-900 border-slate-800 text-white shadow-sm"
+      >
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           {/* Brand & Greeting */}
-          <div className="space-y-2.5 max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black shadow-xs">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+              <span className="inline-flex items-center gap-1.5 font-extrabold text-emerald-400">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
                 {foundationData.settings?.companyName || 'حسابداری یکپارچه مهرگان'}
               </span>
-              <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
-                <Clock className="w-3 h-3 text-slate-400" />
+              <span aria-hidden="true">·</span>
+              <span className="text-slate-400 flex items-center gap-1 font-mono tabular-nums">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
                 {currentTimeStr}
+              </span>
+              <span aria-hidden="true">·</span>
+              <span className="text-slate-300 font-medium">
+                {foundationData.activeUser?.jobTitle || 'مدیریت ارشد'}
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
-              <span>خوش آمدید، {foundationData.activeUser?.fullName || 'مدیر سیستم'}</span>
-              <span className="text-xs font-normal px-2.5 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700">
-                {foundationData.activeUser?.jobTitle || 'مدیریت ارشد'}
-              </span>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+              خوش آمدید، {foundationData.activeUser?.fullName || 'مدیر سیستم'}
             </h1>
 
-            <p className="text-xs sm:text-sm text-slate-300 font-light leading-relaxed">
-              مرکز پایش هوشمند شاخص‌های مالی، جریان نقدینگی، فروشگاه POS، انبارداری و پروژه‌های نصب دوربین مداربسته در یک نگاه.
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              {industryProfile?.descriptionFa || 'مرکز پایش هوشمند شاخص‌های مالی، جریان نقدینگی، فروشگاه POS، انبارداری و پروژه‌های کاری در یک نگاه.'}
             </p>
           </div>
 
           {/* Quick Actions & Sync */}
           <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="md"
               onClick={() => onNavigateTab('SALES')}
-              className="flex-1 sm:flex-initial px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-950/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              leftIcon={<ShoppingCart className="w-4 h-4" />}
+              className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800"
             >
-              <ShoppingCart className="w-4 h-4" />
-              <span>فاکتور فروش POS</span>
-            </button>
+              {uiLabels.quickPosButtonLabelFa}
+            </Button>
 
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="md"
               onClick={() => onNavigateTab('TREASURY')}
-              className="flex-1 sm:flex-initial px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl shadow-lg shadow-teal-950/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              leftIcon={<ArrowDownLeft className="w-4 h-4 text-teal-400" />}
+              className="bg-slate-800 hover:bg-slate-700 border border-slate-700"
             >
-              <ArrowDownLeft className="w-4 h-4" />
-              <span>دریافت / پرداخت</span>
-            </button>
+              دریافت / پرداخت
+            </Button>
 
-            <button
-              type="button"
-              onClick={() => onNavigateTab('INSTALLATION')}
-              className="flex-1 sm:flex-initial px-4 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-black text-xs rounded-xl shadow-lg shadow-cyan-950/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Wrench className="w-4 h-4" />
-              <span>پروژه و نصب جدید</span>
-            </button>
+            {features.enableInstallationServices ? (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => onNavigateTab('INSTALLATION')}
+                leftIcon={<Wrench className="w-4 h-4 text-cyan-400" />}
+                className="bg-slate-800 hover:bg-slate-700 border border-slate-700"
+              >
+                {uiLabels.installationTabTitleFa}
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => onNavigateTab('PURCHASES')}
+                leftIcon={<ShoppingBag className="w-4 h-4 text-amber-400" />}
+                className="bg-slate-800 hover:bg-slate-700 border border-slate-700"
+              >
+                {uiLabels.purchasesTabTitleFa}
+              </Button>
+            )}
 
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="md"
               onClick={handleManualRefresh}
               title="بروزرسانی داده‌های داشبورد"
-              className="p-2.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition-all cursor-pointer hover:text-white"
+              className="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3"
+              leftIcon={<RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />}
+            />
+          </div>
+        </div>
+
+        {/* Summary Metrics Strip inside Hero */}
+        <div className="mt-6 pt-5 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+          <div className="space-y-1">
+            <span className="text-slate-400 block text-[11px]">موجودی نقد و بانک در دسترس</span>
+            <span className="font-mono font-black text-white text-sm sm:text-base tabular-nums block">
+              {(totalLiquidityIrr / 10).toLocaleString('fa-IR')}
+              <span className="text-[11px] text-slate-400 font-normal mr-1.5">تومان</span>
+            </span>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-slate-400 block text-[11px]">فاکتورهای فروش ثبت‌شده</span>
+            <span className="font-mono font-black text-white text-sm sm:text-base tabular-nums block">
+              {salesInvoices.length.toLocaleString('fa-IR')}{' '}
+              <span className="text-[11px] text-slate-400 font-normal">سند</span>
+            </span>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-slate-400 block text-[11px]">
+              {features.enableInstallationServices ? 'پروژه‌ها و سفارشات نصب فعال' : 'فاکتورهای خرید دوره'}
+            </span>
+            <span className="font-mono font-black text-white text-sm sm:text-base tabular-nums block">
+              {features.enableInstallationServices
+                ? (activeProjects.length + activeJobs.length).toLocaleString('fa-IR')
+                : purchaseInvoices.length.toLocaleString('fa-IR')}{' '}
+              <span className="text-[11px] text-slate-400 font-normal">
+                {features.enableInstallationServices ? 'پروژه' : 'سند خرید'}
+              </span>
+            </span>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-slate-400 block text-[11px]">وضعیت موجودی بحرانی انبار</span>
+            <span
+              className={`font-mono font-black text-sm sm:text-base tabular-nums block ${
+                lowStockItems.length > 0 ? 'text-amber-300' : 'text-emerald-300'
+              }`}
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
-            </button>
+              {lowStockItems.length.toLocaleString('fa-IR')}{' '}
+              <span className="text-[11px] text-slate-400 font-normal">قلم کالا</span>
+            </span>
           </div>
         </div>
-
-        {/* Live Mini-Ticker Ribbon inside Header */}
-        <div className="mt-6 pt-5 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <div>
-              <span className="text-slate-400 block text-[11px]">موجودی در دسترس:</span>
-              <span className="font-mono font-black text-white text-sm">
-                {(totalLiquidityIrr / 10).toLocaleString('fa-IR')}
-                <span className="text-[10px] text-slate-400 font-normal mr-1">تومان</span>
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-            <div>
-              <span className="text-slate-400 block text-[11px]">فاکتورهای ثبت‌شده:</span>
-              <span className="font-mono font-black text-white text-sm">
-                {salesInvoices.length}{' '}
-                <span className="text-[10px] text-slate-400 font-normal">سند</span>
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
-            <div>
-              <span className="text-slate-400 block text-[11px]">پروژه‌های فعال نصب:</span>
-              <span className="font-mono font-black text-white text-sm">
-                {activeProjects.length + activeJobs.length}{' '}
-                <span className="text-[10px] text-slate-400 font-normal">پروژه</span>
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className={`w-2.5 h-2.5 rounded-full ${lowStockItems.length > 0 ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
-            <div>
-              <span className="text-slate-400 block text-[11px]">هشدار موجودی انبار:</span>
-              <span className={`font-mono font-black text-sm ${lowStockItems.length > 0 ? 'text-amber-300' : 'text-emerald-300'}`}>
-                {lowStockItems.length}{' '}
-                <span className="text-[10px] text-slate-400 font-normal">قلم کالا</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      </Card>
 
       {/* 2. INTERACTIVE PERSPECTIVE / VIEW FILTER TABS & WIDGET TOGGLES */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
-            <span className="text-xs font-bold text-slate-400 px-2 flex items-center gap-1.5 shrink-0">
+        <Card variant="default" padding="sm" className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-1 overflow-x-auto py-0.5">
+            <span className="text-xs font-bold text-slate-500 px-2 flex items-center gap-1.5 shrink-0">
               <SlidersHorizontal className="w-3.5 h-3.5" />
               دیدگاه تحلیلی:
             </span>
             <button
               type="button"
               onClick={() => setActivePerspective('ALL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activePerspective === 'ALL'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -421,7 +480,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               type="button"
               onClick={() => setActivePerspective('TREASURY')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activePerspective === 'TREASURY'
                   ? 'bg-teal-700 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-teal-50 hover:text-teal-900'
@@ -432,7 +491,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               type="button"
               onClick={() => setActivePerspective('SALES')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activePerspective === 'SALES'
                   ? 'bg-emerald-700 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-900'
@@ -444,7 +503,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => setActivePerspective('PROJECTS')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   activePerspective === 'PROJECTS'
                     ? 'bg-cyan-700 text-white shadow-xs'
                     : 'text-slate-600 hover:bg-cyan-50 hover:text-cyan-900'
@@ -456,7 +515,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => setActivePerspective('PURCHASES')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   activePerspective === 'PURCHASES'
                     ? 'bg-amber-600 text-white shadow-xs'
                     : 'text-slate-600 hover:bg-amber-50 hover:text-amber-900'
@@ -468,7 +527,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               type="button"
               onClick={() => setActivePerspective('INVENTORY')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activePerspective === 'INVENTORY'
                   ? 'bg-amber-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-amber-50 hover:text-amber-900'
@@ -479,27 +538,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setIsWidgetManagerOpen(!isWidgetManagerOpen)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition-all cursor-pointer shadow-xs"
+              leftIcon={<Settings className="w-3.5 h-3.5 text-indigo-600" />}
             >
-              <Settings className="w-3.5 h-3.5 text-indigo-600" />
-              <span>مدیریت و تنظیم ویجت‌ها ({Object.values(widgets).filter(Boolean).length}/8)</span>
-            </button>
+              مدیریت ویجت‌ها ({Object.values(widgets).filter(Boolean).length}/8)
+            </Button>
             <div className="text-[11px] text-slate-500 font-normal px-2 hidden sm:block">
-              سال مالی: <strong className="text-slate-800 font-mono">{foundationData.settings?.activeFiscalYearCode || '1405'}</strong>
+              سال مالی:{' '}
+              <strong className="text-slate-800 font-mono tabular-nums">
+                {foundationData.settings?.activeFiscalYearCode || '1405'}
+              </strong>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* WIDGET VISIBILITY CONTROL PANEL */}
         {isWidgetManagerOpen && (
-          <div className="bg-slate-900 text-white p-4 rounded-2xl border border-slate-700 shadow-xl space-y-3 animate-in fade-in duration-150">
+          <Card variant="default" padding="md" className="bg-slate-900 text-white border-slate-700 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
               <div className="flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4 text-emerald-400" />
-                <h4 className="text-xs font-extrabold text-white">تنظیمات نمایش و سفارشی‌سازی ویجت‌های داشبورد</h4>
+                <h4 className="text-xs font-extrabold text-white">
+                  تنظیمات نمایش و سفارشی‌سازی ویجت‌های داشبورد
+                </h4>
               </div>
               <button
                 type="button"
@@ -518,10 +582,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 { key: 'recentInvoices', label: 'جدول فاکتورهای اخیر' },
                 {
                   key: 'cctvProjects',
-                  label: features.enableInstallationServices
+                  label: features.enableInstallationServices || profileCode === 'CCTV_SECURITY'
                     ? 'پروژه‌های نصب CCTV'
                     : profileCode === 'SUPERMARKET_GROCERY'
-                    ? 'دیده‌بان صندوق و موجودی'
+                    ? 'دیده‌بان صندوق و موجودی سوپرمارکت'
+                    : profileCode === 'RETAIL_GENERAL'
+                    ? 'دیده‌بان صندوق و فروشگاه خرده‌فروشی'
                     : 'دیده‌بان فروشگاه و پیش‌فاکتور',
                 },
                 { key: 'bankVault', label: 'موجودی بانک و صندوق' },
@@ -550,21 +616,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 );
               })}
             </div>
-          </div>
+          </Card>
         )}
       </div>
 
       {/* MAIN DASHBOARD CONTAINER WITH RIGHT VERTICAL SHORTCUTS SIDEBAR */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* RIGHT COLUMN IN RTL: VERTICAL QUICK ACCESS SHORTCUTS PANEL (1 Col on lg) */}
+        {/* RIGHT COLUMN IN RTL: VERTICAL QUICK ACCESS SHORTCUTS PANEL */}
         {widgets.quickShortcuts && (
-          <div className="lg:col-span-1 space-y-3 bg-white p-4 rounded-3xl border border-slate-200/90 shadow-sm sticky top-4">
+          <Card variant="default" padding="md" className="lg:col-span-1 space-y-3 sticky top-28">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-black text-xs text-slate-900 flex items-center gap-1.5">
                 <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span>میانبرهای عمودی دسترسی سریع</span>
+                <span>میانبرهای دسترسی سریع</span>
               </h3>
-              <span className="text-[10px] text-slate-400 font-extrabold font-mono">عمودی</span>
+              <span className="text-[10px] text-slate-400 font-bold">ماژول‌ها</span>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -572,149 +638,147 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigateTab('SALES')}
-                className="w-full p-3 bg-linear-to-r from-emerald-50/80 to-teal-50/40 border border-emerald-200 hover:border-emerald-400 hover:shadow-xs rounded-2xl text-right transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full p-3 bg-slate-50/70 hover:bg-emerald-50/70 border border-slate-200/80 hover:border-emerald-300 rounded-xl text-right transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs group-hover:scale-105 transition-transform">
+                  <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs">
                     <ShoppingCart className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="font-extrabold text-xs text-slate-900 block">
-                      {profileCode === 'SUPERMARKET_GROCERY'
-                        ? 'صندوق فروش (POS)'
-                        : profileCode === 'RETAIL_GENERAL'
-                        ? 'فروشگاه و POS'
-                        : 'فروش و POS'}
+                      {uiLabels.salesTabTitleFa}
                     </span>
-                    <span className="text-[10px] text-emerald-700 block font-medium">
-                      {profileCode === 'SUPERMARKET_GROCERY' ? 'بارکدخوان و تسویه آنی' : 'صدور فاکتور و تسویه'}
+                    <span className="text-[10px] text-slate-500 block font-medium">
+                      {uiLabels.salesTabDescFa}
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
+                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-emerald-700 transition-colors" />
               </button>
 
               {/* 2. PURCHASES */}
               <button
                 type="button"
                 onClick={() => onNavigateTab('PURCHASES')}
-                className="w-full p-3 bg-linear-to-r from-amber-50/80 to-orange-50/40 border border-amber-200 hover:border-amber-400 hover:shadow-xs rounded-2xl text-right transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full p-3 bg-slate-50/70 hover:bg-amber-50/70 border border-slate-200/80 hover:border-amber-300 rounded-xl text-right transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-amber-600 text-white rounded-xl shadow-xs group-hover:scale-105 transition-transform">
+                  <div className="p-2 bg-amber-600 text-white rounded-xl shadow-xs">
                     <ShoppingBag className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="font-extrabold text-xs text-slate-900 block">
-                      {profileCode === 'SUPERMARKET_GROCERY' ? 'خرید اقلام سوپرمارکت' : 'خرید و تدارکات'}
+                      {uiLabels.purchasesTabTitleFa}
                     </span>
-                    <span className="text-[10px] text-amber-700 block font-medium">
-                      {profileCode === 'SUPERMARKET_GROCERY' ? 'تأمین کالا و شارژ انبار' : 'تأمین و بهای تمام‌شده'}
+                    <span className="text-[10px] text-slate-500 block font-medium">
+                      {uiLabels.purchasesTabDescFa}
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
+                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-amber-700 transition-colors" />
               </button>
 
               {/* 3. TREASURY */}
               <button
                 type="button"
                 onClick={() => onNavigateTab('TREASURY')}
-                className="w-full p-3 bg-linear-to-r from-teal-50/80 to-emerald-50/40 border border-teal-200 hover:border-teal-400 hover:shadow-xs rounded-2xl text-right transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full p-3 bg-slate-50/70 hover:bg-teal-50/70 border border-slate-200/80 hover:border-teal-300 rounded-xl text-right transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-teal-600 text-white rounded-xl shadow-xs group-hover:scale-105 transition-transform">
+                  <div className="p-2 bg-teal-600 text-white rounded-xl shadow-xs">
                     <Landmark className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="font-extrabold text-xs text-slate-900 block">
-                      {profileCode === 'SUPERMARKET_GROCERY' ? 'صندوق و کارتخوان' : 'خزانه و چک'}
+                      {uiLabels.treasuryTabTitleFa}
                     </span>
-                    <span className="text-[10px] text-teal-700 block font-medium">
-                      {profileCode === 'SUPERMARKET_GROCERY' ? 'موجودی نقد و پوز' : 'بانک، صندوق و صیاد'}
+                    <span className="text-[10px] text-slate-500 block font-medium">
+                      {uiLabels.treasuryTabDescFa}
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
+                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-teal-700 transition-colors" />
               </button>
 
               {/* 4. PARTIES */}
               <button
                 type="button"
                 onClick={() => onNavigateTab('PARTIES')}
-                className="w-full p-3 bg-linear-to-r from-blue-50/80 to-indigo-50/40 border border-blue-200 hover:border-blue-400 hover:shadow-xs rounded-2xl text-right transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full p-3 bg-slate-50/70 hover:bg-blue-50/70 border border-slate-200/80 hover:border-blue-300 rounded-xl text-right transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-blue-600 text-white rounded-xl shadow-xs group-hover:scale-105 transition-transform">
+                  <div className="p-2 bg-blue-600 text-white rounded-xl shadow-xs">
                     <Users className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="font-extrabold text-xs text-slate-900 block">
-                      {profileCode === 'SUPERMARKET_GROCERY' ? 'مشتریان و تأمین‌کنندگان' : 'طرفین و مشتریان'}
+                      {uiLabels.partiesTabTitleFa}
                     </span>
-                    <span className="text-[10px] text-blue-700 block font-medium">
-                      {profileCode === 'SUPERMARKET_GROCERY' ? 'حساب دفتری و اشخاص' : 'گردش حساب و وضعیت'}
+                    <span className="text-[10px] text-slate-500 block font-medium">
+                      {uiLabels.partiesTabDescFa}
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
+                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-blue-700 transition-colors" />
               </button>
 
               {/* 5. INVENTORY */}
               <button
                 type="button"
                 onClick={() => onNavigateTab('INVENTORY')}
-                className="w-full p-3 bg-linear-to-r from-indigo-50/80 to-purple-50/40 border border-indigo-200 hover:border-indigo-400 hover:shadow-xs rounded-2xl text-right transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full p-3 bg-slate-50/70 hover:bg-indigo-50/70 border border-slate-200/80 hover:border-indigo-300 rounded-xl text-right transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs group-hover:scale-105 transition-transform">
+                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs">
                     <Package className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="font-extrabold text-xs text-slate-900 block">
                       {uiLabels.inventoryTabTitleFa || 'کالا و انبارداری'}
                     </span>
-                    <span className="text-[10px] text-indigo-700 block font-medium">کاردکس و بارکد</span>
+                    <span className="text-[10px] text-slate-500 block font-medium">کاردکس و بارکد</span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
+                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-indigo-700 transition-colors" />
               </button>
 
               {/* 6. ACCOUNTING */}
-              <button
-                type="button"
-                onClick={() => onNavigateTab('ACCOUNTING')}
-                className="w-full p-3 bg-linear-to-r from-purple-50/80 to-pink-50/40 border border-purple-200 hover:border-purple-400 hover:shadow-xs rounded-2xl text-right transition-all cursor-pointer flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-purple-600 text-white rounded-xl shadow-xs group-hover:scale-105 transition-transform">
-                    <BookOpen className="w-4 h-4" />
+              {enableDoubleEntryAccounting && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('ACCOUNTING')}
+                  className="w-full p-3 bg-slate-50/70 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-300 rounded-xl text-right transition-colors cursor-pointer flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-purple-600 text-white rounded-xl shadow-xs">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-extrabold text-xs text-slate-900 block">حسابداری کل</span>
+                      <span className="text-[10px] text-slate-500 block font-medium">اسناد دوبل و دفاتر</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-extrabold text-xs text-slate-900 block">حسابداری کل</span>
-                    <span className="text-[10px] text-purple-700 block font-medium">اسناد دوبل و دفاتر</span>
-                  </div>
-                </div>
-                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
-              </button>
+                  <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-purple-700 transition-colors" />
+                </button>
+              )}
 
               {/* 7. INSTALLATION */}
               {features.enableInstallationServices && (
                 <button
                   type="button"
                   onClick={() => onNavigateTab('INSTALLATION')}
-                  className="w-full p-3 bg-linear-to-r from-cyan-50/80 to-blue-50/40 border border-cyan-200 hover:border-cyan-400 hover:shadow-xs rounded-2xl text-right transition-all cursor-pointer flex items-center justify-between group"
+                  className="w-full p-3 bg-slate-50/70 hover:bg-cyan-50/70 border border-slate-200/80 hover:border-cyan-300 rounded-xl text-right transition-colors cursor-pointer flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="p-2 bg-cyan-600 text-white rounded-xl shadow-xs group-hover:scale-105 transition-transform">
+                    <div className="p-2 bg-cyan-600 text-white rounded-xl shadow-xs">
                       <Wrench className="w-4 h-4" />
                     </div>
                     <div>
                       <span className="font-extrabold text-xs text-slate-900 block">خدمات و نصب CCTV</span>
-                      <span className="text-[10px] text-cyan-700 block font-medium">پروژه‌های نظارتی</span>
+                      <span className="text-[10px] text-slate-500 block font-medium">پروژه‌های نظارتی</span>
                     </div>
                   </div>
-                  <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
+                  <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-cyan-700 transition-colors" />
                 </button>
               )}
 
@@ -722,975 +786,1021 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigateTab('SETTINGS_HEALTH')}
-                className="w-full p-3 bg-linear-to-r from-slate-50 to-slate-100 border border-slate-200 hover:border-slate-400 hover:shadow-xs rounded-2xl text-right transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full p-3 bg-slate-50/70 hover:bg-slate-100 border border-slate-200/80 hover:border-slate-300 rounded-xl text-right transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-slate-800 text-white rounded-xl shadow-xs group-hover:scale-105 transition-transform">
+                  <div className="p-2 bg-slate-800 text-white rounded-xl shadow-xs">
                     <SlidersHorizontal className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="font-extrabold text-xs text-slate-900 block">تنظیمات و صنف</span>
-                    <span className="text-[10px] text-slate-600 block font-medium">پیکربندی سیستم</span>
+                    <span className="text-[10px] text-slate-500 block font-medium">پیکربندی سیستم</span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" />
+                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-slate-800 transition-colors" />
               </button>
             </div>
-          </div>
+          </Card>
         )}
 
-        {/* LEFT COLUMN IN RTL: MAIN ANALYTICAL DASHBOARD CONTENT (3 Cols on lg) */}
+        {/* LEFT COLUMN IN RTL: MAIN ANALYTICAL DASHBOARD CONTENT */}
         <div className={`${widgets.quickShortcuts ? 'lg:col-span-3' : 'lg:col-span-4'} space-y-6`}>
           {/* 3. PRIMARY EXECUTIVE KPI METRIC CARDS */}
           {widgets.kpiCards && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {/* Card 1: Liquidity */}
-        <div
-          onClick={() => onNavigateTab('TREASURY')}
-          className={`group bg-white p-5 rounded-2xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between ${
-            activePerspective === 'TREASURY' || activePerspective === 'ALL'
-              ? 'border-slate-200 hover:border-teal-400 ring-1 ring-transparent hover:ring-teal-400/20'
-              : 'opacity-60 border-slate-200'
-          }`}
-        >
-          <div className="absolute top-0 right-0 w-1.5 h-full bg-teal-500 rounded-r" />
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">کل نقدینگی و خزانه</span>
-              <div className="p-2.5 bg-teal-50 text-teal-700 rounded-xl group-hover:scale-110 group-hover:bg-teal-600 group-hover:text-white transition-all">
-                <Landmark className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
-                {(totalLiquidityIrr / 10).toLocaleString('fa-IR')}
-                <span className="text-[10px] font-normal text-slate-500 mr-1.5">تومان</span>
-              </p>
-              <div className="mt-2 space-y-1">
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex">
-                  <div
-                    style={{ width: `${Math.round((totalBankBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%` }}
-                    className="bg-teal-600 h-full"
-                    title="بانک‌ها"
-                  />
-                  <div
-                    style={{ width: `${Math.round((totalCashBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%` }}
-                    className="bg-emerald-400 h-full"
-                    title="صندوق‌ها"
-                  />
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-slate-500">
-                  <span>بانک: {Math.round((totalBankBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%</span>
-                  <span>صندوق: {Math.round((totalCashBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <span className="text-[11px] font-bold text-teal-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>مدیریت حساب‌ها</span>
-            <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-          </span>
-        </div>
-
-        {/* Card 2: Total Sales */}
-        <div
-          onClick={() => onNavigateTab('SALES')}
-          className={`group bg-white p-5 rounded-2xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between ${
-            activePerspective === 'SALES' || activePerspective === 'ALL'
-              ? 'border-slate-200 hover:border-emerald-400 ring-1 ring-transparent hover:ring-emerald-400/20'
-              : 'opacity-60 border-slate-200'
-          }`}
-        >
-          <div className="absolute top-0 right-0 w-1.5 h-full bg-emerald-500 rounded-r" />
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">
-                {profileCode === 'SUPERMARKET_GROCERY'
-                  ? 'فروش کل صندوق و POS'
-                  : profileCode === 'RETAIL_GENERAL'
-                  ? 'فروش و فاکتورهای فروشگاهی'
-                  : 'فروش کل دوره‌ای'}
-              </span>
-              <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                <ShoppingCart className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <p className="text-xl font-black text-emerald-700 tracking-tight font-mono tabular-nums">
-                {(totalSalesIrr / 10).toLocaleString('fa-IR')}
-                <span className="text-[10px] font-normal text-slate-500 mr-1.5">تومان</span>
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                تعداد: <strong className="text-slate-800 font-mono">{salesInvoices.length}</strong> فاکتور رسمی
-              </p>
-            </div>
-          </div>
-          <span className="text-[11px] font-bold text-emerald-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>{profileCode === 'SUPERMARKET_GROCERY' ? 'صندوق فروش سریع' : 'میز فروش POS'}</span>
-            <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-          </span>
-        </div>
-
-        {/* Card 3: Receivables */}
-        <div
-          onClick={() => onNavigateTab('PARTIES')}
-          className={`group bg-white p-5 rounded-2xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between ${
-            activePerspective === 'SALES' || activePerspective === 'ALL'
-              ? 'border-slate-200 hover:border-blue-400 ring-1 ring-transparent hover:ring-blue-400/20'
-              : 'opacity-60 border-slate-200'
-          }`}
-        >
-          <div className="absolute top-0 right-0 w-1.5 h-full bg-blue-500 rounded-r" />
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">مطالبات از خریداران</span>
-              <div className="p-2.5 bg-blue-50 text-blue-700 rounded-xl group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                <Users className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <p className="text-xl font-black text-blue-700 tracking-tight font-mono tabular-nums">
-                {(totalReceivablesIrr / 10).toLocaleString('fa-IR')}
-                <span className="text-[10px] font-normal text-slate-500 mr-1.5">تومان</span>
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1 truncate" title={`بدهی به تأمین‌کنندگان: ${(totalPayablesIrr / 10).toLocaleString('fa-IR')} تومان`}>
-                بدهی تأمین‌کننده: {(totalPayablesIrr / 10).toLocaleString('fa-IR')}
-              </p>
-            </div>
-          </div>
-          <span className="text-[11px] font-bold text-blue-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>صورت‌حساب اشخاص</span>
-            <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-          </span>
-        </div>
-
-        {/* Card 4: Installation & Projects OR Purchases & Supply */}
-        {features.enableInstallationServices ? (
-          <div
-            onClick={() => onNavigateTab('INSTALLATION')}
-            className={`group bg-white p-5 rounded-2xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between ${
-              activePerspective === 'PROJECTS' || activePerspective === 'ALL'
-                ? 'border-slate-200 hover:border-cyan-400 ring-1 ring-transparent hover:ring-cyan-400/20'
-                : 'opacity-60 border-slate-200'
-            }`}
-          >
-            <div className="absolute top-0 right-0 w-1.5 h-full bg-cyan-500 rounded-r" />
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">پروژه‌های نصب دوربین</span>
-                <div className="p-2.5 bg-cyan-50 text-cyan-700 rounded-xl group-hover:scale-110 group-hover:bg-cyan-600 group-hover:text-white transition-all">
-                  <Wrench className="w-4 h-4" />
-                </div>
-              </div>
-              <div>
-                <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
-                  {activeProjects.length + activeJobs.length}
-                  <span className="text-[10px] font-normal text-slate-500 mr-1.5">مورد فعال</span>
-                </p>
-                <p className="text-[11px] text-cyan-800 font-medium mt-1">
-                  کارتابل نصابان و پیشرفت میدانی
-                </p>
-              </div>
-            </div>
-            <span className="text-[11px] font-bold text-cyan-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-              <span>مدیریت پروژه‌ها</span>
-              <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-            </span>
-          </div>
-        ) : (
-          <div
-            onClick={() => onNavigateTab('PURCHASES')}
-            className={`group bg-white p-5 rounded-2xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between ${
-              activePerspective === 'PURCHASES' || activePerspective === 'ALL'
-                ? 'border-slate-200 hover:border-amber-400 ring-1 ring-transparent hover:ring-amber-400/20'
-                : 'opacity-60 border-slate-200'
-            }`}
-          >
-            <div className="absolute top-0 right-0 w-1.5 h-full bg-amber-500 rounded-r" />
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">
-                  {profileCode === 'SUPERMARKET_GROCERY' ? 'خرید و تأمین کالا' : 'خرید و تدارکات کالا'}
-                </span>
-                <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all">
-                  <ShoppingBag className="w-4 h-4" />
-                </div>
-              </div>
-              <div>
-                <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
-                  {(totalPurchasesIrr / 10).toLocaleString('fa-IR')}
-                  <span className="text-[10px] font-normal text-slate-500 mr-1.5">تومان</span>
-                </p>
-                <p className="text-[11px] text-amber-800 font-medium mt-1">
-                  تعداد: <strong className="font-mono">{purchaseInvoices.length}</strong> فاکتور خرید دوره
-                </p>
-              </div>
-            </div>
-            <span className="text-[11px] font-bold text-amber-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-              <span>مدیریت خرید و ورود انبار</span>
-              <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-            </span>
-          </div>
-        )}
-
-        {/* Card 5: In-hand Cheques */}
-        <div
-          onClick={() => onNavigateTab('TREASURY')}
-          className={`group bg-white p-5 rounded-2xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between ${
-            activePerspective === 'TREASURY' || activePerspective === 'ALL'
-              ? 'border-slate-200 hover:border-indigo-400 ring-1 ring-transparent hover:ring-indigo-400/20'
-              : 'opacity-60 border-slate-200'
-          }`}
-        >
-          <div className="absolute top-0 right-0 w-1.5 h-full bg-indigo-500 rounded-r" />
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">چک‌های نزد صندوق</span>
-              <div className="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                <CreditCard className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <p className="text-xl font-black text-indigo-700 tracking-tight font-mono tabular-nums">
-                {(totalInHandChequesIrr / 10).toLocaleString('fa-IR')}
-                <span className="text-[10px] font-normal text-slate-500 mr-1.5">تومان</span>
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                تعداد: <strong className="text-slate-800 font-mono">{inHandCheques.length}</strong> فقره چک دریافتنی
-              </p>
-            </div>
-          </div>
-          <span className="text-[11px] font-bold text-indigo-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>دفتر چک و سررسید</span>
-            <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-          </span>
-        </div>
-
-        {/* Card 6: Low Stock Alert */}
-        <div
-          onClick={() => onNavigateTab('INVENTORY')}
-          className={`group bg-white p-5 rounded-2xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between ${
-            activePerspective === 'INVENTORY' || activePerspective === 'ALL'
-              ? 'border-slate-200 hover:border-amber-400 ring-1 ring-transparent hover:ring-amber-400/20'
-              : 'opacity-60 border-slate-200'
-          }`}
-        >
-          <div className="absolute top-0 right-0 w-1.5 h-full bg-amber-500 rounded-r" />
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">اقلام نیازمند سفارش</span>
-              <div
-                className={`p-2.5 rounded-xl group-hover:scale-110 transition-all ${
-                  lowStockItems.length > 0
-                    ? 'bg-amber-100 text-amber-800 group-hover:bg-amber-500 group-hover:text-white'
-                    : 'bg-slate-100 text-slate-600 group-hover:bg-slate-700 group-hover:text-white'
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Card 1: Liquidity */}
+              <Card
+                variant="default"
+                padding="md"
+                onClick={() => onNavigateTab('TREASURY')}
+                className={`group cursor-pointer hover:border-teal-400 transition-all flex flex-col justify-between ${
+                  activePerspective === 'TREASURY' || activePerspective === 'ALL' ? '' : 'opacity-60'
                 }`}
               >
-                <AlertTriangle className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
-                {lowStockItems.length}
-                <span className="text-[10px] font-normal text-slate-500 mr-1.5">کالا</span>
-              </p>
-              <p
-                className={`text-[11px] font-bold mt-1 ${
-                  lowStockItems.length > 0 ? 'text-amber-700' : 'text-emerald-700'
-                }`}
-              >
-                {lowStockItems.length > 0 ? 'کمتر از نقطه سفارش انبار' : 'موجودی انبار در حد مطلوب'}
-              </p>
-            </div>
-          </div>
-          <span className="text-[11px] font-bold text-amber-700 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>کاردکس و انبارداری</span>
-            <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-          </span>
-        </div>
-      </div>
-    )}
-
-    {/* 4. VISUAL CHARTS ROW: SALES VELOCITY & LIQUIDITY ALLOCATION */}
-    {(widgets.salesChart || widgets.liquidityChart) && (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart 1 (2 cols): Recent Sales Velocity Spark-Chart */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-emerald-50 text-emerald-700 rounded-xl">
-                <BarChart3 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-sm text-slate-900">
-                  نمودار تحلیلی روند گردش و مبالغ فاکتورهای فروش اخیر
-                </h3>
-                <p className="text-[11px] text-slate-500">
-                  ارزش ریالی تراکنش‌های فروش متوالی در فروشگاه و دفتر مرکزی
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onNavigateTab('SALES')}
-              className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer bg-emerald-50/60 px-3 py-1.5 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-colors"
-            >
-              <span>مشاهده کل فاکتورها</span>
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* SVG Animated Chart Visualization */}
-          <div className="pt-6 pb-2">
-            <div className="h-48 flex items-end gap-3 sm:gap-6 justify-between px-2 sm:px-4">
-              {salesChartData.map((d, index) => (
-                <div key={index} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                  {/* Tooltip on hover */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-lg font-mono pointer-events-none whitespace-nowrap mb-1">
-                    {d.amountToman ? `${d.amountToman.toLocaleString('fa-IR')} تومان` : '۰ تومان'}
-                  </div>
-
-                  {/* Animated Bar with gradient */}
-                  <div className="w-full max-w-[48px] bg-slate-100 rounded-t-xl overflow-hidden h-full flex items-end">
-                    <div
-                      style={{ height: `${d.heightPct}%` }}
-                      className="w-full bg-gradient-to-t from-emerald-600 via-emerald-500 to-teal-400 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-xs relative"
-                    >
-                      <div className="absolute top-0 inset-x-0 h-1 bg-white/40" />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-slate-500">کل نقدینگی و خزانه</span>
+                    <div className="p-2.5 bg-teal-50 text-teal-700 rounded-xl group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                      <Landmark className="w-4 h-4" />
                     </div>
                   </div>
-
-                  {/* Label */}
-                  <span className="text-[11px] font-mono text-slate-500 group-hover:text-slate-900 font-bold">
-                    {d.label}
-                  </span>
+                  <div>
+                    <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
+                      {(totalLiquidityIrr / 10).toLocaleString('fa-IR')}
+                      <span className="text-[11px] font-normal text-slate-500 mr-1.5">تومان</span>
+                    </p>
+                    <div className="mt-2.5 space-y-1.5">
+                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex">
+                        <div
+                          style={{ width: `${Math.round((totalBankBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%` }}
+                          className="bg-teal-600 h-full"
+                          title="بانک‌ها"
+                        />
+                        <div
+                          style={{ width: `${Math.round((totalCashBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%` }}
+                          className="bg-emerald-400 h-full"
+                          title="صندوق‌ها"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 tabular-nums">
+                        <span>بانک: {Math.round((totalBankBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%</span>
+                        <span>صندوق: {Math.round((totalCashBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t border-slate-100 pt-3 flex flex-wrap items-center justify-between text-xs text-slate-500">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-                فروش خالص نقدی و اعتباری
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-teal-400 inline-block" />
-                میانگین ارزش فاکتورها
-              </span>
-            </div>
-            <span className="font-mono text-slate-600">
-              مجموع ۷ فاکتور اخیر: {(salesChartData.reduce((s, x) => s + (x.amountToman || 0), 0)).toLocaleString('fa-IR')} تومان
-            </span>
-          </div>
-        </div>
-
-        {/* Chart 2 (1 col): Liquidity & Vault Distribution (Interactive Donut / Bar) */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-teal-50 text-teal-700 rounded-xl">
-                <PieChart className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-sm text-slate-900">ترکیب دارایی‌های نقدینگی</h3>
-                <p className="text-[11px] text-slate-500">توزیع بین بانک، صندوق و اسناد نزد صندوق</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Donut representation */}
-          <div className="py-4 flex items-center justify-center">
-            <div className="relative w-40 h-40 flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                {/* Background Ring */}
-                <circle cx="50" cy="50" r="38" className="text-slate-100 stroke-current" strokeWidth="12" fill="transparent" />
-                {/* Bank slice */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="38"
-                  className="text-teal-600 stroke-current transition-all duration-1000"
-                  strokeWidth="12"
-                  strokeDasharray={`${(bankPct * 238.76) / 100} 238.76`}
-                  strokeDashoffset="0"
-                  fill="transparent"
-                />
-                {/* Cash slice */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="38"
-                  className="text-emerald-400 stroke-current transition-all duration-1000"
-                  strokeWidth="12"
-                  strokeDasharray={`${(cashPct * 238.76) / 100} 238.76`}
-                  strokeDashoffset={`${-((bankPct * 238.76) / 100)}`}
-                  fill="transparent"
-                />
-                {/* Cheque slice */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="38"
-                  className="text-indigo-500 stroke-current transition-all duration-1000"
-                  strokeWidth="12"
-                  strokeDasharray={`${(chequePct * 238.76) / 100} 238.76`}
-                  strokeDashoffset={`${-(((bankPct + cashPct) * 238.76) / 100)}`}
-                  fill="transparent"
-                />
-              </svg>
-              <div className="absolute text-center">
-                <span className="text-[10px] text-slate-400 font-bold block">مجموع نقدینگی</span>
-                <span className="text-sm font-black font-mono text-slate-900 block tabular-nums">
-                  {(totalAssets / 10).toLocaleString('fa-IR')}
+                <span className="text-[11px] font-bold text-teal-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                  <span>مدیریت حساب‌ها</span>
+                  <ChevronLeft className="w-3.5 h-3.5" />
                 </span>
-                <span className="text-[9px] text-slate-500">تومان</span>
-              </div>
-            </div>
-          </div>
+              </Card>
 
-          {/* Legend Items */}
-          <div className="space-y-2 border-t border-slate-100 pt-3 text-xs">
-            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-md bg-teal-600 inline-block" />
-                <span className="font-bold text-slate-800">حساب‌های بانکی ({bankAccounts.length})</span>
-              </div>
-              <span className="font-mono font-bold text-teal-800">
-                {(totalBankBalanceIrr / 10).toLocaleString('fa-IR')} ت ({bankPct}%)
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-md bg-emerald-400 inline-block" />
-                <span className="font-bold text-slate-800">صندوق‌های نقدی ({cashBoxes.length})</span>
-              </div>
-              <span className="font-mono font-bold text-emerald-800">
-                {(totalCashBalanceIrr / 10).toLocaleString('fa-IR')} ت ({cashPct}%)
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-md bg-indigo-500 inline-block" />
-                <span className="font-bold text-slate-800">چک‌های نزد صندوق ({inHandCheques.length})</span>
-              </div>
-              <span className="font-mono font-bold text-indigo-800">
-                {(totalInHandChequesIrr / 10).toLocaleString('fa-IR')} ت ({chequePct}%)
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {/* 5. MAIN OPERATIONS SPLIT: RECENT INVOICES & CCTV PROJECTS VS BANK VAULT & ALERTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Invoices Table with Search & CCTV Active Projects */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Table: Recent Sales Invoices */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4 text-emerald-600" />
-                  آخرین فاکتورهای فروش صادرشده
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  جستجو و فیلتر سریع فاکتورهای رسمی و تسویه‌حساب مشتریان
-                </p>
-              </div>
-
-              {/* Status Filter & Search */}
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-48">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={invoiceSearchQuery}
-                    onChange={(e) => setInvoiceSearchQuery(e.target.value)}
-                    placeholder="جستجوی فاکتور / خریدار..."
-                    className="w-full pr-8 pl-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:outline-none"
-                  />
+              {/* Card 2: Total Sales */}
+              <Card
+                variant="default"
+                padding="md"
+                onClick={() => onNavigateTab('SALES')}
+                className={`group cursor-pointer hover:border-emerald-400 transition-all flex flex-col justify-between ${
+                  activePerspective === 'SALES' || activePerspective === 'ALL' ? '' : 'opacity-60'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-slate-500">
+                      {uiLabels.salesTabTitleFa}
+                    </span>
+                    <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                      <ShoppingCart className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xl font-black text-emerald-700 tracking-tight font-mono tabular-nums">
+                      {(totalSalesIrr / 10).toLocaleString('fa-IR')}
+                      <span className="text-[11px] font-normal text-slate-500 mr-1.5">تومان</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-1.5">
+                      تعداد: <strong className="text-slate-800 font-mono tabular-nums">{salesInvoices.length}</strong> فاکتور رسمی
+                    </p>
+                  </div>
                 </div>
+                <span className="text-[11px] font-bold text-emerald-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                  <span>{uiLabels.quickPosButtonLabelFa}</span>
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </span>
+              </Card>
 
-                <div className="flex items-center bg-slate-100 p-0.5 rounded-xl text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setInvoiceStatusFilter('ALL')}
-                    className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer ${
-                      invoiceStatusFilter === 'ALL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
-                    }`}
-                  >
-                    همه
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInvoiceStatusFilter('PAID')}
-                    className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer ${
-                      invoiceStatusFilter === 'PAID' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600'
-                    }`}
-                  >
-                    تسویه
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInvoiceStatusFilter('PENDING')}
-                    className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer ${
-                      invoiceStatusFilter === 'PENDING' ? 'bg-white text-rose-700 shadow-xs' : 'text-slate-600'
-                    }`}
-                  >
-                    بدهکار
-                  </button>
+              {/* Card 3: Receivables */}
+              <Card
+                variant="default"
+                padding="md"
+                onClick={() => onNavigateTab('PARTIES')}
+                className={`group cursor-pointer hover:border-blue-400 transition-all flex flex-col justify-between ${
+                  activePerspective === 'SALES' || activePerspective === 'ALL' ? '' : 'opacity-60'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-slate-500">مطالبات از خریداران</span>
+                    <div className="p-2.5 bg-blue-50 text-blue-700 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      <Users className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xl font-black text-blue-700 tracking-tight font-mono tabular-nums">
+                      {(totalReceivablesIrr / 10).toLocaleString('fa-IR')}
+                      <span className="text-[11px] font-normal text-slate-500 mr-1.5">تومان</span>
+                    </p>
+                    <p
+                      className="text-[11px] text-slate-500 mt-1.5 truncate tabular-nums"
+                      title={`بدهی به تأمین‌کنندگان: ${(totalPayablesIrr / 10).toLocaleString('fa-IR')} تومان`}
+                    >
+                      بدهی تأمین‌کننده: {(totalPayablesIrr / 10).toLocaleString('fa-IR')} تومان
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
+                <span className="text-[11px] font-bold text-blue-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                  <span>صورت‌حساب اشخاص</span>
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </span>
+              </Card>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-right text-xs">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-600 font-extrabold border-b border-slate-200">
-                    <th className="p-3">شماره فاکتور</th>
-                    <th className="p-3">خریدار / مشتری</th>
-                    <th className="p-3 text-center">تاریخ صدور</th>
-                    <th className="p-3 text-left">مبلغ کل (تومان)</th>
-                    <th className="p-3 text-center">وضعیت تسویه</th>
-                    <th className="p-3 text-center">عملیات</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredSales.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-400">
-                        موردی منطبق با فیلتر یا جستجو یافت نشد.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredSales.map((inv) => (
-                      <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors group">
-                        <td className="p-3 font-mono font-bold text-slate-900" dir="ltr">
-                          #{inv.invoiceNumber}
-                        </td>
-                        <td className="p-3">
-                          <div className="font-extrabold text-slate-900">{inv.customerTitleFa}</div>
-                          {inv.notesFa && (
-                            <span className="text-[10px] text-slate-400 truncate max-w-xs block">
-                              {inv.notesFa}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3 text-center font-mono text-slate-600">{inv.dateJalali}</td>
-                        <td className="p-3 text-left font-mono font-black text-slate-900 tabular-nums">
-                          {(inv.totalInvoiceAmountIrr / 10).toLocaleString('fa-IR')}
-                        </td>
-                        <td className="p-3 text-center">
-                          <span
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold inline-block ${
-                              inv.status === 'PAID'
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                : inv.status === 'PARTIALLY_PAID'
-                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                : 'bg-rose-50 text-rose-800 border border-rose-200'
-                            }`}
-                          >
-                            {inv.status === 'PAID'
-                              ? 'تسویه کامل'
-                              : inv.status === 'PARTIALLY_PAID'
-                              ? 'تسویه ناقص'
-                              : 'در انتظار پرداخت'}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => onNavigateTab('SALES')}
-                            className="p-1.5 hover:bg-slate-100 text-slate-600 hover:text-emerald-700 rounded-lg transition-colors cursor-pointer"
-                            title="مشاهده در ماژول فروش"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Operations & Industry Specific Section */}
-          {widgets.cctvProjects && (
-            features.enableInstallationServices ? (
-              /* Active CCTV Projects & Installations Section */
-              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-cyan-50 text-cyan-700 rounded-xl">
-                      <Wrench className="w-4 h-4" />
+              {/* Card 4: Installation & Projects OR Purchases & Supply */}
+              {features.enableInstallationServices ? (
+                <Card
+                  variant="default"
+                  padding="md"
+                  onClick={() => onNavigateTab('INSTALLATION')}
+                  className={`group cursor-pointer hover:border-cyan-400 transition-all flex flex-col justify-between ${
+                    activePerspective === 'PROJECTS' || activePerspective === 'ALL' ? '' : 'opacity-60'
+                  }`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-slate-500">پروژه‌های نصب دوربین</span>
+                      <div className="p-2.5 bg-cyan-50 text-cyan-700 rounded-xl group-hover:bg-cyan-600 group-hover:text-white transition-colors">
+                        <Wrench className="w-4 h-4" />
+                      </div>
                     </div>
                     <div>
-                      <h3 className="font-black text-sm text-slate-900">
-                        پروژه‌ها و سفارشات نصب فعال دوربین مداربسته (CCTV)
-                      </h3>
-                      <p className="text-[11px] text-slate-500">
-                        نظارت بر کارتابل نصابان، بازدیدهای میدانی و تحویل تجهیزات
+                      <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
+                        {activeProjects.length + activeJobs.length}
+                        <span className="text-[11px] font-normal text-slate-500 mr-1.5">مورد فعال</span>
+                      </p>
+                      <p className="text-[11px] text-cyan-800 font-medium mt-1.5">
+                        کارتابل نصابان و پیشرفت میدانی
                       </p>
                     </div>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onNavigateTab('INSTALLATION')}
-                    className="text-xs font-bold text-cyan-700 hover:text-cyan-800 flex items-center gap-1 cursor-pointer bg-cyan-50/60 px-3 py-1.5 rounded-xl border border-cyan-200 hover:bg-cyan-100 transition-colors"
-                  >
-                    <span>مشاهده کارتابل نصابان</span>
+                  <span className="text-[11px] font-bold text-cyan-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                    <span>مدیریت پروژه‌ها</span>
                     <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
+                  </span>
+                </Card>
+              ) : (
+                <Card
+                  variant="default"
+                  padding="md"
+                  onClick={() => onNavigateTab('PURCHASES')}
+                  className={`group cursor-pointer hover:border-amber-400 transition-all flex flex-col justify-between ${
+                    activePerspective === 'PURCHASES' || activePerspective === 'ALL' ? '' : 'opacity-60'
+                  }`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-slate-500">
+                        {uiLabels.purchasesTabTitleFa}
+                      </span>
+                      <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                        <ShoppingBag className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
+                        {(totalPurchasesIrr / 10).toLocaleString('fa-IR')}
+                        <span className="text-[11px] font-normal text-slate-500 mr-1.5">تومان</span>
+                      </p>
+                      <p className="text-[11px] text-amber-800 font-medium mt-1.5">
+                        تعداد: <strong className="font-mono tabular-nums">{purchaseInvoices.length}</strong> فاکتور خرید دوره
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-bold text-amber-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                    <span>مدیریت خرید و ورود انبار</span>
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </span>
+                </Card>
+              )}
+
+              {/* Card 5: In-hand Cheques */}
+              <Card
+                variant="default"
+                padding="md"
+                onClick={() => onNavigateTab('TREASURY')}
+                className={`group cursor-pointer hover:border-indigo-400 transition-all flex flex-col justify-between ${
+                  activePerspective === 'TREASURY' || activePerspective === 'ALL' ? '' : 'opacity-60'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-slate-500">چک‌های نزد صندوق</span>
+                    <div className="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      <CreditCard className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xl font-black text-indigo-700 tracking-tight font-mono tabular-nums">
+                      {(totalInHandChequesIrr / 10).toLocaleString('fa-IR')}
+                      <span className="text-[11px] font-normal text-slate-500 mr-1.5">تومان</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-1.5">
+                      تعداد: <strong className="text-slate-800 font-mono tabular-nums">{inHandCheques.length}</strong> فقره چک دریافتنی
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-indigo-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                  <span>دفتر چک و سررسید</span>
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </span>
+              </Card>
+
+              {/* Card 6: Low Stock Alert */}
+              <Card
+                variant="default"
+                padding="md"
+                onClick={() => onNavigateTab('INVENTORY')}
+                className={`group cursor-pointer hover:border-amber-400 transition-all flex flex-col justify-between ${
+                  activePerspective === 'INVENTORY' || activePerspective === 'ALL' ? '' : 'opacity-60'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-slate-500">اقلام نیازمند سفارش</span>
+                    <div
+                      className={`p-2.5 rounded-xl transition-colors ${
+                        lowStockItems.length > 0
+                          ? 'bg-amber-100 text-amber-800 group-hover:bg-amber-500 group-hover:text-white'
+                          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-700 group-hover:text-white'
+                      }`}
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
+                      {lowStockItems.length}
+                      <span className="text-[11px] font-normal text-slate-500 mr-1.5">کالا</span>
+                    </p>
+                    <p
+                      className={`text-[11px] font-bold mt-1.5 ${
+                        lowStockItems.length > 0 ? 'text-amber-700' : 'text-emerald-700'
+                      }`}
+                    >
+                      {lowStockItems.length > 0 ? 'کمتر از نقطه سفارش انبار' : 'موجودی انبار در حد مطلوب'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-amber-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                  <span>کاردکس و انبارداری</span>
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </span>
+              </Card>
+            </div>
+          )}
+
+          {/* EXECUTIVE BI: Server-Calculated Multi-Dimensional Metrics Panel */}
+          <Card variant="default" padding="lg" className="border-indigo-100 bg-gradient-to-br from-white to-indigo-50/20 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-100/80 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-sm text-slate-900">
+                      هوش تجاری مدیران (Executive BI)
+                    </h3>
+                    <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">
+                      محاسبه برخط سرور
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    شاخص‌های کلان سودآوری، جریان نقدی، نسبت سرمایه در گردش و ۵ کالای پرفروش
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchExecutiveBi}
+                  disabled={biLoading}
+                  leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${biLoading ? 'animate-spin' : ''}`} />}
+                >
+                  بروزرسانی شاخص‌ها
+                </Button>
+              </div>
+            </div>
+
+            {/* BI Loading State */}
+            {biLoading && !executiveBi && (
+              <div className="py-6 flex items-center justify-center gap-3 text-slate-500 text-xs">
+                <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />
+                <span>در حال دریافت و تحلیل شاخص‌های کلان هوش تجاری از سرور مرکزی...</span>
+              </div>
+            )}
+
+            {/* BI Error State / Permission Denied */}
+            {biError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{biError}</span>
+                </div>
+                <Button variant="secondary" size="sm" onClick={fetchExecutiveBi}>
+                  تلاش مجدد
+                </Button>
+              </div>
+            )}
+
+            {/* BI Content */}
+            {!biLoading && !biError && executiveBi && (
+              <div className="space-y-4">
+                {/* 4 Macro Metrics Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  {/* Metric 1: Gross Profit */}
+                  <div className="p-3 bg-white border border-slate-200/90 rounded-xl space-y-1">
+                    <span className="text-[11px] text-slate-500 block">سود ناخالص عملیاتی:</span>
+                    <p className="text-base font-black text-emerald-700 font-mono tabular-nums">
+                      {Math.round(executiveBi.totalGrossProfitIrr / 10).toLocaleString('fa-IR')}
+                      <span className="text-[10px] font-normal text-slate-500 mr-1">تومان</span>
+                    </p>
+                    <span className="text-[10px] text-slate-400 block font-mono tabular-nums">
+                      درآمد: {Math.round(executiveBi.totalRevenueIrr / 10).toLocaleString('fa-IR')} تومان
+                    </span>
+                  </div>
+
+                  {/* Metric 2: Net Profit */}
+                  <div className="p-3 bg-white border border-slate-200/90 rounded-xl space-y-1">
+                    <span className="text-[11px] text-slate-500 block">سود خالص دوره:</span>
+                    <p className={`text-base font-black font-mono tabular-nums ${executiveBi.totalNetProfitIrr >= 0 ? 'text-indigo-700' : 'text-rose-700'}`}>
+                      {Math.round(executiveBi.totalNetProfitIrr / 10).toLocaleString('fa-IR')}
+                      <span className="text-[10px] font-normal text-slate-500 mr-1">تومان</span>
+                    </p>
+                    <span className="text-[10px] text-slate-400 block font-mono tabular-nums">
+                      هزینه‌ها: {Math.round(executiveBi.totalOperatingExpensesIrr / 10).toLocaleString('fa-IR')} تومان
+                    </span>
+                  </div>
+
+                  {/* Metric 3: Working Capital Ratio */}
+                  <div className="p-3 bg-white border border-slate-200/90 rounded-xl space-y-1">
+                    <span className="text-[11px] text-slate-500 block">نسبت سرمایه در گردش:</span>
+                    <p className="text-base font-black text-teal-700 font-mono tabular-nums">
+                      {executiveBi.workingCapitalRatio}x
+                    </p>
+                    <span className="text-[10px] text-slate-400 block">
+                      {executiveBi.workingCapitalRatio >= 1.5 ? 'پوشش مطلوب تعهدات جاری' : 'نیاز به مدیریت تعهدات'}
+                    </span>
+                  </div>
+
+                  {/* Metric 4: Inventory Valuation & Cashflow */}
+                  <div className="p-3 bg-white border border-slate-200/90 rounded-xl space-y-1">
+                    <span className="text-[11px] text-slate-500 block">ارزش ریالی موجودی کالا:</span>
+                    <p className="text-base font-black text-slate-800 font-mono tabular-nums">
+                      {Math.round(executiveBi.inventoryValuationIrr / 10).toLocaleString('fa-IR')}
+                      <span className="text-[10px] font-normal text-slate-500 mr-1">تومان</span>
+                    </p>
+                    <div className="flex items-center gap-1 text-[10px]">
+                      <span className="text-slate-500">وضعیت نقدینگی:</span>
+                      <span
+                        className={`font-bold px-1.5 py-0.5 rounded ${
+                          executiveBi.cashFlowStatus === 'POSITIVE'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : executiveBi.cashFlowStatus === 'NEUTRAL'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-rose-100 text-rose-800'
+                        }`}
+                      >
+                        {executiveBi.cashFlowStatus === 'POSITIVE' ? 'مثبت' : executiveBi.cashFlowStatus === 'NEUTRAL' ? 'متعادل' : 'هشدار'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  {projects.slice(0, 4).length === 0 && installationJobs.slice(0, 4).length === 0 ? (
-                    <div className="col-span-2 p-6 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                      هیچ سفارش یا پروژه فعالی در جریان نیست. برای ثبت پروژه به بخش خدمات و نصب مراجعه کنید.
+                {/* Top Selling Items from Executive BI */}
+                {executiveBi.topSellingItems && executiveBi.topSellingItems.length > 0 && (
+                  <div className="pt-2">
+                    <div className="text-xs font-bold text-slate-700 mb-2 flex items-center justify-between">
+                      <span>پرفروش‌ترین کالاها بر اساس تحلیل سرور:</span>
+                      <span className="text-[11px] text-slate-400 font-normal">۵ کالای برتر دوره</span>
                     </div>
-                  ) : (
-                    projects.slice(0, 4).map((p) => (
-                      <div
-                        key={p.id}
-                        onClick={() => onNavigateTab('INSTALLATION')}
-                        className="p-4 rounded-2xl bg-linear-to-br from-slate-50 to-cyan-50/30 border border-slate-200 hover:border-cyan-300 hover:shadow-md transition-all cursor-pointer space-y-2.5"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-[11px] font-bold text-cyan-900 bg-cyan-100/70 px-2 py-0.5 rounded-md">
-                            {p.projectCode}
-                          </span>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                              p.status === 'COMPLETED'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : p.status === 'IN_PROGRESS'
-                                ? 'bg-cyan-100 text-cyan-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
-                          >
-                            {p.status === 'COMPLETED'
-                              ? 'تکمیل‌شده'
-                              : p.status === 'IN_PROGRESS'
-                              ? 'در حال اجرا'
-                              : 'در انتظار'}
-                          </span>
-                        </div>
-
-                        <div>
-                          <h4 className="font-extrabold text-xs text-slate-900 truncate">{p.titleFa}</h4>
-                          <p className="text-[11px] text-slate-600 truncate mt-0.5">
-                            مشتری: <strong>{p.customerTitleFa}</strong> · نصاب:{' '}
-                            <span className="text-cyan-800 font-bold">{p.installerTitleFa || 'تعیین‌نشده'}</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                      {executiveBi.topSellingItems.map((item, idx) => (
+                        <div
+                          key={item.itemId || idx}
+                          className="bg-white border border-slate-200/80 p-2.5 rounded-xl text-xs space-y-1"
+                        >
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="font-mono text-slate-400 font-bold">#{idx + 1}</span>
+                            <span className="text-indigo-700 font-bold font-mono tabular-nums">
+                              {item.quantity} عدد
+                            </span>
+                          </div>
+                          <p className="font-bold text-slate-800 text-[11px] truncate" title={item.titleFa}>
+                            {item.titleFa}
+                          </p>
+                          <p className="text-[10px] text-slate-500 font-mono tabular-nums">
+                            {Math.round(item.revenueIrr / 10).toLocaleString('fa-IR')} تومان
                           </p>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
 
-                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                          <span className="text-slate-500">مبلغ قرارداد:</span>
-                          <span className="font-mono font-black text-slate-900">
-                            {(p.contractAmountIrr / 10).toLocaleString('fa-IR')} تومان
+          {/* 4. VISUAL CHARTS ROW: SALES VELOCITY & LIQUIDITY ALLOCATION */}
+          {(widgets.salesChart || widgets.liquidityChart) && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Chart 1 (2 cols): Recent Sales Velocity Spark-Chart */}
+              {widgets.salesChart && (
+                <Card variant="default" padding="lg" className="lg:col-span-2 flex flex-col justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 bg-emerald-50 text-emerald-700 rounded-xl">
+                        <BarChart3 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-extrabold text-sm text-slate-900">
+                          نمودار تحلیلی روند گردش و مبالغ فاکتورهای فروش اخیر
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
+                          ارزش ریالی تراکنش‌های فروش متوالی در فروشگاه و دفتر مرکزی
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onNavigateTab('SALES')}
+                      rightIcon={<ChevronLeft className="w-3.5 h-3.5" />}
+                    >
+                      مشاهده کل فاکتورها
+                    </Button>
+                  </div>
+
+                  {/* SVG Animated Chart Visualization */}
+                  <div className="pt-6 pb-2">
+                    <div className="h-48 flex items-end gap-3 sm:gap-6 justify-between px-2 sm:px-4">
+                      {salesChartData.map((d, index) => (
+                        <div key={index} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md shadow-lg font-mono tabular-nums pointer-events-none whitespace-nowrap mb-1">
+                            {d.amountToman ? `${d.amountToman.toLocaleString('fa-IR')} تومان` : '۰ تومان'}
+                          </div>
+
+                          <div className="w-full max-w-[48px] bg-slate-100 rounded-t-xl overflow-hidden h-full flex items-end">
+                            <div
+                              style={{ height: `${d.heightPct}%` }}
+                              className="w-full bg-gradient-to-t from-emerald-600 via-emerald-500 to-teal-400 rounded-t-xl transition-all duration-700 group-hover:brightness-110 relative"
+                            />
+                          </div>
+
+                          <span className="text-[11px] font-mono tabular-nums text-slate-500 group-hover:text-slate-900 font-bold">
+                            {d.label}
                           </span>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-3 flex flex-wrap items-center justify-between text-xs text-slate-500">
+                    <div className="flex items-center gap-4">
+                      <span>فروش خالص نقدی و اعتباری</span>
+                      <span aria-hidden="true">·</span>
+                      <span>میانگین ارزش فاکتورها</span>
+                    </div>
+                    <span className="font-mono tabular-nums text-slate-700 font-bold">
+                      مجموع ۷ فاکتور اخیر: {salesChartData.reduce((s, x) => s + (x.amountToman || 0), 0).toLocaleString('fa-IR')} تومان
+                    </span>
+                  </div>
+                </Card>
+              )}
+
+              {/* Chart 2 (1 col): Liquidity & Vault Distribution */}
+              {widgets.liquidityChart && (
+                <Card variant="default" padding="lg" className="flex flex-col justify-between">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 bg-teal-50 text-teal-700 rounded-xl">
+                        <PieChart className="w-5 h-5" />
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            ) : profileCode === 'SUPERMARKET_GROCERY' ? (
-              /* Supermarket Operations & Fast POS Monitor */
-              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl">
-                      <ShoppingCart className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-black text-sm text-slate-900">
-                        دیده‌بان فروش سریع صندوق و وضعیت تأمین اقلام سوپرمارکت
-                      </h3>
-                      <p className="text-[11px] text-slate-500">
-                        میز کار عملیاتی فروش بارکدی، بررسی موجودی قفسه‌ها و ثبت فاکتورهای خرید
-                      </p>
+                      <div>
+                        <h3 className="font-extrabold text-sm text-slate-900">ترکیب دارایی‌های نقدینگی</h3>
+                        <p className="text-[11px] text-slate-500">توزیع بین بانک، صندوق و اسناد نزد صندوق</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab('SALES')}
-                      className="text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                    >
-                      <ShoppingCart className="w-3.5 h-3.5" />
-                      <span>صندوق فروش سریع (F2)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab('PURCHASES')}
-                      className="text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>فاکتور خرید جدید</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  <div
-                    onClick={() => onNavigateTab('SALES')}
-                    className="p-4 rounded-2xl bg-linear-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-200 hover:border-emerald-300 transition-all cursor-pointer space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-emerald-900">فاکتورهای ثبت‌شده دوره</span>
-                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">صندوق POS</span>
-                    </div>
-                    <p className="text-xl font-black text-emerald-800 font-mono">
-                      {salesInvoices.length} <span className="text-xs font-normal text-slate-500">فاکتور</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      مجموع فروش: {((totalSalesIrr) / 10).toLocaleString('fa-IR')} تومان
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => onNavigateTab('INVENTORY')}
-                    className="p-4 rounded-2xl bg-linear-to-br from-indigo-50/70 to-blue-50/40 border border-indigo-200 hover:border-indigo-300 transition-all cursor-pointer space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-indigo-900">تنوع اقلام و کاردکس</span>
-                      <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded">موجودی انبار</span>
-                    </div>
-                    <p className="text-xl font-black text-indigo-800 font-mono">
-                      {items.length} <span className="text-xs font-normal text-slate-500">قلم کالا</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      اقلام کمتر از نقطه سفارش: <strong className="text-amber-700">{lowStockItems.length}</strong> کالا
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => onNavigateTab('TREASURY')}
-                    className="p-4 rounded-2xl bg-linear-to-br from-teal-50/70 to-cyan-50/40 border border-teal-200 hover:border-teal-300 transition-all cursor-pointer space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-teal-900">صندوق‌ها و کارتخوان‌ها</span>
-                      <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded">نقدینگی</span>
-                    </div>
-                    <p className="text-xl font-black text-teal-800 font-mono">
-                      {cashBoxes.length + bankAccounts.length} <span className="text-xs font-normal text-slate-500">مرکز تسویه</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      موجودی نقد: {((totalCashBalanceIrr) / 10).toLocaleString('fa-IR')} تومان
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Retail General Store Monitor */
-              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2.5 bg-blue-50 text-blue-700 rounded-xl">
-                      <Building2 className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-black text-sm text-slate-900">
-                        دیده‌بان فروشگاه، پیش‌فاکتورها و گردش کالا
-                      </h3>
-                      <p className="text-[11px] text-slate-500">
-                        مدیریت سفارشات فروشگاهی، کنترل مطالبات خریداران و ورود کالاهای خریداری‌شده
-                      </p>
+                  <div className="py-4 flex items-center justify-center">
+                    <div className="relative w-40 h-40 flex items-center justify-center">
+                      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="38" className="text-slate-100 stroke-current" strokeWidth="12" fill="transparent" />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="38"
+                          className="text-teal-600 stroke-current transition-all duration-1000"
+                          strokeWidth="12"
+                          strokeDasharray={`${(bankPct * 238.76) / 100} 238.76`}
+                          strokeDashoffset="0"
+                          fill="transparent"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="38"
+                          className="text-emerald-400 stroke-current transition-all duration-1000"
+                          strokeWidth="12"
+                          strokeDasharray={`${(cashPct * 238.76) / 100} 238.76`}
+                          strokeDashoffset={`${-((bankPct * 238.76) / 100)}`}
+                          fill="transparent"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="38"
+                          className="text-indigo-500 stroke-current transition-all duration-1000"
+                          strokeWidth="12"
+                          strokeDasharray={`${(chequePct * 238.76) / 100} 238.76`}
+                          strokeDashoffset={`${-(((bankPct + cashPct) * 238.76) / 100)}`}
+                          fill="transparent"
+                        />
+                      </svg>
+                      <div className="absolute text-center">
+                        <span className="text-[10px] text-slate-400 font-bold block">مجموع نقدینگی</span>
+                        <span className="text-sm font-black font-mono text-slate-900 block tabular-nums">
+                          {(totalAssets / 10).toLocaleString('fa-IR')}
+                        </span>
+                        <span className="text-[9px] text-slate-500">تومان</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab('SALES')}
-                      className="text-xs font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1.5 cursor-pointer bg-blue-50 px-3.5 py-2 rounded-xl border border-blue-200 hover:bg-blue-100 transition-colors"
-                    >
-                      <ShoppingCart className="w-3.5 h-3.5" />
-                      <span>فروشگاه و POS</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab('PURCHASES')}
-                      className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1.5 cursor-pointer bg-amber-50 px-3.5 py-2 rounded-xl border border-amber-200 hover:bg-amber-100 transition-colors"
-                    >
-                      <ShoppingBag className="w-3.5 h-3.5" />
-                      <span>خرید و تدارکات</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  <div
-                    onClick={() => onNavigateTab('SALES')}
-                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition-all cursor-pointer space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-800">فاکتورهای فروشگاهی</span>
-                      <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">فروش</span>
+                  <div className="space-y-2 border-t border-slate-100 pt-3 text-xs">
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-md bg-teal-600 inline-block" />
+                        <span className="font-bold text-slate-800">حساب‌های بانکی ({bankAccounts.length})</span>
+                      </div>
+                      <span className="font-mono font-bold text-teal-800 tabular-nums">
+                        {(totalBankBalanceIrr / 10).toLocaleString('fa-IR')} ت ({bankPct}%)
+                      </span>
                     </div>
-                    <p className="text-xl font-black text-slate-900 font-mono">
-                      {salesInvoices.length} <span className="text-xs font-normal text-slate-500">سند</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      مبلغ کل: {((totalSalesIrr) / 10).toLocaleString('fa-IR')} تومان
-                    </p>
-                  </div>
 
-                  <div
-                    onClick={() => onNavigateTab('PARTIES')}
-                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition-all cursor-pointer space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-800">مشتریان و خریداران</span>
-                      <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded">طرفین</span>
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-md bg-emerald-400 inline-block" />
+                        <span className="font-bold text-slate-800">صندوق‌های نقدی ({cashBoxes.length})</span>
+                      </div>
+                      <span className="font-mono font-bold text-emerald-800 tabular-nums">
+                        {(totalCashBalanceIrr / 10).toLocaleString('fa-IR')} ت ({cashPct}%)
+                      </span>
                     </div>
-                    <p className="text-xl font-black text-slate-900 font-mono">
-                      {parties.length} <span className="text-xs font-normal text-slate-500">شخص</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      مطالبات جاری: {((totalReceivablesIrr) / 10).toLocaleString('fa-IR')} تومان
-                    </p>
-                  </div>
 
-                  <div
-                    onClick={() => onNavigateTab('INVENTORY')}
-                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition-all cursor-pointer space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-800">کاردکس و انبار</span>
-                      <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">کالا</span>
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-md bg-indigo-500 inline-block" />
+                        <span className="font-bold text-slate-800">چک‌های نزد صندوق ({inHandCheques.length})</span>
+                      </div>
+                      <span className="font-mono font-bold text-indigo-800 tabular-nums">
+                        {(totalInHandChequesIrr / 10).toLocaleString('fa-IR')} ت ({chequePct}%)
+                      </span>
                     </div>
-                    <p className="text-xl font-black text-slate-900 font-mono">
-                      {items.length} <span className="text-xs font-normal text-slate-500">کالا</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      کسری نقطه سفارش: <strong className="text-amber-700">{lowStockItems.length}</strong> قلم
-                    </p>
                   </div>
-                </div>
-              </div>
-            )
+                </Card>
+              )}
+            </div>
           )}
-        </div>
 
-        {/* Right 1 Col: Real-time Bank Balances & Critical Inventory Alerts */}
-        <div className="space-y-6">
-          {/* Real-time Bank Accounts and Cash Registers */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Landmark className="w-4 h-4 text-teal-600" />
-                <h3 className="font-black text-sm text-slate-900">موجودی حساب‌ها و صندوق‌ها</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => onNavigateTab('TREASURY')}
-                className="text-xs font-bold text-teal-700 hover:text-teal-800 flex items-center gap-1 cursor-pointer"
-              >
-                <span>خزانه</span>
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
-              {bankAccounts.map((b) => (
-                <div
-                  key={b.id}
-                  className="p-3.5 bg-gradient-to-r from-slate-50 to-teal-50/20 rounded-2xl border border-slate-200 flex items-center justify-between hover:border-teal-300 transition-all"
-                >
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-teal-500" />
-                      {b.bankNameFa}
-                    </p>
-                    <p className="text-[10px] text-slate-500 font-mono">حساب: {b.accountNumber}</p>
-                  </div>
-                  <div className="text-left font-mono font-black text-teal-800 text-xs tabular-nums">
-                    {(b.balanceIrr / 10).toLocaleString('fa-IR')}{' '}
-                    <span className="text-[10px] font-normal text-slate-500">تومان</span>
-                  </div>
-                </div>
-              ))}
-
-              {cashBoxes.map((c) => (
-                <div
-                  key={c.id}
-                  className="p-3.5 bg-gradient-to-r from-slate-50 to-emerald-50/20 rounded-2xl border border-slate-200 flex items-center justify-between hover:border-emerald-300 transition-all"
-                >
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      {c.titleFa}
-                    </p>
-                    <p className="text-[10px] text-slate-500">صندوق نقدی فروشگاه</p>
-                  </div>
-                  <div className="text-left font-mono font-black text-slate-900 text-xs tabular-nums">
-                    {(c.balanceIrr / 10).toLocaleString('fa-IR')}{' '}
-                    <span className="text-[10px] font-normal text-slate-500">تومان</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Critical Inventory Low Stock Alerts */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <h3 className="font-black text-sm text-slate-900">دیده‌بان موجودی کالای بحرانی</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => onNavigateTab('INVENTORY')}
-                className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer"
-              >
-                <span>انبارداری</span>
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
-              {lowStockItems.length === 0 ? (
-                <div className="p-5 text-center text-emerald-700 bg-emerald-50/50 rounded-2xl border border-emerald-200 text-xs">
-                  <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-emerald-600" />
-                  تمامی اقلام کالا دارای موجودی بالاتر از نقطه هشدار می‌باشند.
-                </div>
-              ) : (
-                lowStockItems.slice(0, 5).map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-3 bg-amber-50/50 border border-amber-200 rounded-2xl flex items-center justify-between"
-                  >
+          {/* 5. MAIN OPERATIONS SPLIT: RECENT INVOICES & CCTV PROJECTS VS BANK VAULT & ALERTS */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left 2 Cols: Invoices Table with Search & CCTV Active Projects */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Table: Recent Sales Invoices using Table & Input UI Primitives */}
+              {widgets.recentInvoices && (
+                <Card variant="default" padding="lg" className="space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                     <div>
-                      <p className="text-xs font-bold text-slate-900 truncate max-w-[170px]">{item.titleFa}</p>
-                      <p className="text-[10px] text-slate-500">
-                        کد: <span className="font-mono">{item.itemCode || (item as any).code}</span> · حداقل هشدار: {item.minStockAlert}
+                      <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
+                        <ShoppingCart className="w-4 h-4 text-emerald-600" />
+                        آخرین فاکتورهای فروش صادرشده
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        جستجو و فیلتر سریع فاکتورهای رسمی و تسویه‌حساب مشتریان
                       </p>
                     </div>
-                    <div className="text-left font-mono font-black text-amber-900 text-xs">
-                      {item.totalStock ?? (item as any).stock ?? 0} <span className="text-[10px] font-normal">{item.unitNameFa || (item as any).unitFa || 'عدد'}</span>
+
+                    {/* Status Filter & Search */}
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <div className="flex-1 sm:w-52">
+                        <Input
+                          type="text"
+                          value={invoiceSearchQuery}
+                          onChange={(e) => setInvoiceSearchQuery(e.target.value)}
+                          placeholder="جستجوی فاکتور / خریدار..."
+                          rightIcon={<Search className="w-3.5 h-3.5" />}
+                          className="py-1.5 text-xs"
+                        />
+                      </div>
+
+                      <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setInvoiceStatusFilter('ALL')}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer ${
+                            invoiceStatusFilter === 'ALL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                          }`}
+                        >
+                          همه
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInvoiceStatusFilter('PAID')}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer ${
+                            invoiceStatusFilter === 'PAID' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600'
+                          }`}
+                        >
+                          تسویه
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInvoiceStatusFilter('PENDING')}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer ${
+                            invoiceStatusFilter === 'PENDING' ? 'bg-white text-rose-700 shadow-xs' : 'text-slate-600'
+                          }`}
+                        >
+                          بدهکار
+                        </button>
+                      </div>
                     </div>
                   </div>
-                ))
+
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>شماره فاکتور</TableHead>
+                        <TableHead>خریدار / مشتری</TableHead>
+                        <TableHead className="text-center">تاریخ صدور</TableHead>
+                        <TableHead numeric>مبلغ کل (تومان)</TableHead>
+                        <TableHead className="text-center">وضعیت تسویه</TableHead>
+                        <TableHead className="text-center">عملیات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSales.length === 0 ? (
+                        <TableEmptyState
+                          colSpan={6}
+                          title="موردی منطبق با فیلتر یا جستجو یافت نشد."
+                        />
+                      ) : (
+                        filteredSales.map((inv) => (
+                          <TableRow key={inv.id}>
+                            <TableCell numeric className="font-bold text-slate-900" dir="ltr">
+                              #{inv.invoiceNumber}
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-extrabold text-slate-900">{inv.customerTitleFa}</div>
+                              {inv.notesFa && (
+                                <span className="text-[10px] text-slate-400 truncate max-w-xs block">
+                                  {inv.notesFa}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell numeric className="text-center text-slate-600">
+                              {inv.dateJalali}
+                            </TableCell>
+                            <TableCell numeric className="text-left font-black text-slate-900">
+                              {(inv.totalInvoiceAmountIrr / 10).toLocaleString('fa-IR')}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span
+                                className={`text-[11px] font-extrabold ${
+                                  inv.status === 'PAID'
+                                    ? 'text-emerald-700'
+                                    : inv.status === 'PARTIALLY_PAID'
+                                    ? 'text-amber-700'
+                                    : 'text-rose-700'
+                                }`}
+                              >
+                                {inv.status === 'PAID'
+                                  ? 'تسویه کامل'
+                                  : inv.status === 'PARTIALLY_PAID'
+                                  ? 'تسویه ناقص'
+                                  : 'در انتظار پرداخت'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <button
+                                type="button"
+                                onClick={() => onNavigateTab('SALES')}
+                                className="p-1.5 hover:bg-slate-100 text-slate-600 hover:text-emerald-700 rounded-lg transition-colors cursor-pointer"
+                                title="مشاهده در ماژول فروش"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </Card>
+              )}
+
+              {/* Operations & Industry Specific Section */}
+              {widgets.cctvProjects &&
+                (features.enableInstallationServices ? (
+                  /* Active CCTV Projects & Installations Section */
+                  <Card variant="default" padding="lg" className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 bg-cyan-50 text-cyan-700 rounded-xl">
+                          <Wrench className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="font-black text-sm text-slate-900">
+                            پروژه‌ها و سفارشات نصب فعال دوربین مداربسته (CCTV)
+                          </h3>
+                          <p className="text-[11px] text-slate-500">
+                            نظارت بر کارتابل نصابان، بازدیدهای میدانی و تحویل تجهیزات
+                          </p>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onNavigateTab('INSTALLATION')}
+                        rightIcon={<ChevronLeft className="w-3.5 h-3.5" />}
+                      >
+                        مشاهده کارتابل نصابان
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                      {projects.slice(0, 4).length === 0 && installationJobs.slice(0, 4).length === 0 ? (
+                        <div className="col-span-2 p-6 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                          هیچ سفارش یا پروژه فعالی در جریان نیست. برای ثبت پروژه به بخش خدمات و نصب مراجعه کنید.
+                        </div>
+                      ) : (
+                        projects.slice(0, 4).map((p) => (
+                          <div
+                            key={p.id}
+                            onClick={() => onNavigateTab('INSTALLATION')}
+                            className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-cyan-300 transition-colors cursor-pointer space-y-2.5"
+                          >
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="font-mono font-bold text-cyan-800">{p.projectCode}</span>
+                              <span
+                                className={`font-extrabold ${
+                                  p.status === 'COMPLETED'
+                                    ? 'text-emerald-700'
+                                    : p.status === 'IN_PROGRESS'
+                                    ? 'text-cyan-700'
+                                    : 'text-amber-700'
+                                }`}
+                              >
+                                {p.status === 'COMPLETED'
+                                  ? 'تکمیل‌شده'
+                                  : p.status === 'IN_PROGRESS'
+                                  ? 'در حال اجرا'
+                                  : 'در انتظار'}
+                              </span>
+                            </div>
+
+                            <div>
+                              <h4 className="font-extrabold text-xs text-slate-900 truncate">{p.titleFa}</h4>
+                              <p className="text-[11px] text-slate-600 truncate mt-0.5">
+                                مشتری: <strong>{p.customerTitleFa}</strong> · نصاب:{' '}
+                                <span className="text-cyan-800 font-bold">{p.installerTitleFa || 'تعیین‌نشده'}</span>
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                              <span className="text-slate-500">مبلغ قرارداد:</span>
+                              <span className="font-mono font-black text-slate-900 tabular-nums">
+                                {(p.contractAmountIrr / 10).toLocaleString('fa-IR')} تومان
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </Card>
+                ) : (
+                  /* Universal Industry Operational & Fast Monitor */
+                  <Card variant="default" padding="lg" className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl">
+                          <ShoppingCart className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-black text-sm text-slate-900">
+                            دیده‌بان عملیاتی {industryProfile?.badgeLabelFa || 'کسب‌وکار'} و گردش کالا
+                          </h3>
+                          <p className="text-[11px] text-slate-500">
+                            {uiLabels.salesTabDescFa} و {uiLabels.purchasesTabDescFa}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => onNavigateTab('SALES')}
+                          leftIcon={<ShoppingCart className="w-3.5 h-3.5" />}
+                          className="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                          صندوق فروش سریع (F2)
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onNavigateTab('PURCHASES')}
+                          leftIcon={<Plus className="w-3.5 h-3.5" />}
+                        >
+                          فاکتور خرید جدید
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                      <div
+                        onClick={() => onNavigateTab('SALES')}
+                        className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-emerald-300 transition-colors cursor-pointer space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-slate-800">فاکتورهای ثبت‌شده دوره</span>
+                          <span className="text-emerald-700 font-bold">صندوق POS</span>
+                        </div>
+                        <p className="text-xl font-black text-emerald-800 font-mono tabular-nums">
+                          {salesInvoices.length} <span className="text-xs font-normal text-slate-500">فاکتور</span>
+                        </p>
+                        <p className="text-[11px] text-slate-500 tabular-nums">
+                          مجموع فروش: {(totalSalesIrr / 10).toLocaleString('fa-IR')} تومان
+                        </p>
+                      </div>
+
+                      <div
+                        onClick={() => onNavigateTab('INVENTORY')}
+                        className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-indigo-300 transition-colors cursor-pointer space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-slate-800">تنوع اقلام و کاردکس</span>
+                          <span className="text-indigo-700 font-bold">موجودی انبار</span>
+                        </div>
+                        <p className="text-xl font-black text-indigo-800 font-mono tabular-nums">
+                          {items.length} <span className="text-xs font-normal text-slate-500">قلم کالا</span>
+                        </p>
+                        <p className="text-[11px] text-slate-500 tabular-nums">
+                          اقلام کمتر از نقطه سفارش: <strong className="text-amber-700">{lowStockItems.length}</strong> کالا
+                        </p>
+                      </div>
+
+                      <div
+                        onClick={() => onNavigateTab('TREASURY')}
+                        className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-teal-300 transition-colors cursor-pointer space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-slate-800">صندوق‌ها و کارتخوان‌ها</span>
+                          <span className="text-teal-700 font-bold">نقدینگی</span>
+                        </div>
+                        <p className="text-xl font-black text-teal-800 font-mono tabular-nums">
+                          {cashBoxes.length + bankAccounts.length}{' '}
+                          <span className="text-xs font-normal text-slate-500">مرکز تسویه</span>
+                        </p>
+                        <p className="text-[11px] text-slate-500 tabular-nums">
+                          موجودی نقد: {(totalCashBalanceIrr / 10).toLocaleString('fa-IR')} تومان
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+            </div>
+
+            {/* Right 1 Col: Real-time Bank Balances & Critical Inventory Alerts */}
+            <div className="space-y-6">
+              {/* Real-time Bank Accounts and Cash Registers */}
+              {widgets.bankVault && (
+                <Card variant="default" padding="lg" className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Landmark className="w-4 h-4 text-teal-600" />
+                      <h3 className="font-black text-sm text-slate-900">موجودی حساب‌ها و صندوق‌ها</h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('TREASURY')}
+                      className="text-xs font-bold text-teal-700 hover:text-teal-800 flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>خزانه</span>
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                    {bankAccounts.map((b) => (
+                      <div
+                        key={b.id}
+                        className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between hover:border-teal-300 transition-colors"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-extrabold text-slate-900">{b.bankNameFa}</p>
+                          <p className="text-[10px] text-slate-500 font-mono tabular-nums">حساب: {b.accountNumber}</p>
+                        </div>
+                        <div className="text-left font-mono font-black text-teal-800 text-xs tabular-nums">
+                          {(b.balanceIrr / 10).toLocaleString('fa-IR')}{' '}
+                          <span className="text-[10px] font-normal text-slate-500">تومان</span>
+                        </div>
+                      </div>
+                    ))}
+
+                    {cashBoxes.map((c) => (
+                      <div
+                        key={c.id}
+                        className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between hover:border-emerald-300 transition-colors"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-extrabold text-slate-900">{c.titleFa}</p>
+                          <p className="text-[10px] text-slate-500">صندوق نقدی فروشگاه</p>
+                        </div>
+                        <div className="text-left font-mono font-black text-slate-900 text-xs tabular-nums">
+                          {(c.balanceIrr / 10).toLocaleString('fa-IR')}{' '}
+                          <span className="text-[10px] font-normal text-slate-500">تومان</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* Critical Inventory Low Stock Alerts */}
+              {widgets.lowStockAlerts && (
+                <Card variant="default" padding="lg" className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                      <h3 className="font-black text-sm text-slate-900">دیده‌بان موجودی کالای بحرانی</h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('INVENTORY')}
+                      className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>انبارداری</span>
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
+                    {lowStockItems.length === 0 ? (
+                      <div className="p-5 text-center text-emerald-700 bg-emerald-50/50 rounded-2xl border border-emerald-200 text-xs">
+                        <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-emerald-600" />
+                        تمامی اقلام کالا دارای موجودی بالاتر از نقطه هشدار می‌باشند.
+                      </div>
+                    ) : (
+                      lowStockItems.slice(0, 5).map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-2xl flex items-center justify-between"
+                        >
+                          <div>
+                            <p className="text-xs font-bold text-slate-900 truncate max-w-[170px]">{item.titleFa}</p>
+                            <p className="text-[10px] text-slate-500 tabular-nums">
+                              کد: <span className="font-mono">{item.itemCode || (item as any).code}</span> · حداقل هشدار:{' '}
+                              {item.minStockAlert}
+                            </p>
+                          </div>
+                          <div className="text-left font-mono font-black text-amber-900 text-xs tabular-nums">
+                            {item.totalStock ?? (item as any).stock ?? 0}{' '}
+                            <span className="text-[10px] font-normal">{item.unitNameFa || (item as any).unitFa || 'عدد'}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </Card>
               )}
             </div>
           </div>
         </div>
       </div>
-
-        </div>
-      </div>
     </div>
   );
 };
+

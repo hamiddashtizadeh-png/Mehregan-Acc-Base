@@ -24,6 +24,9 @@ import {
   TrendingUp,
   Filter,
   Trash2,
+  Pencil,
+  Edit3,
+  X,
 } from 'lucide-react';
 import {
   FoundationDataResponse,
@@ -62,6 +65,15 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Edit Transaction Modal States
+  const [editingTransaction, setEditingTransaction] = useState<TreasuryTransactionRecord | null>(null);
+  const [editAmountToman, setEditAmountToman] = useState<number>(0);
+  const [editDateJalali, setEditDateJalali] = useState<string>('');
+  const [editPartyId, setEditPartyId] = useState<number | undefined>(undefined);
+  const [editPaymentMethod, setEditPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'POS' | 'CHEQUE'>('POS');
+  const [editNotesFa, setEditNotesFa] = useState<string>('');
+  const [isUpdatingTx, setIsUpdatingTx] = useState<boolean>(false);
 
   // Raw lists from store
   const cashBoxes = foundationData.cashBoxes || [];
@@ -365,6 +377,60 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
       }
     } catch {
       setFeedback({ type: 'error', message: 'خطا در ثبت هزینه.' });
+    }
+  };
+
+  const handleOpenEditTxModal = (tx: TreasuryTransactionRecord) => {
+    setEditingTransaction(tx);
+    setEditAmountToman(tx.amountIrr / 10);
+    setEditDateJalali(tx.dateJalali || '1405/01/25');
+    setEditPartyId(tx.partyId || undefined);
+    setEditPaymentMethod(tx.paymentMethod || 'POS');
+    setEditNotesFa(tx.notesFa || '');
+  };
+
+  const handleUpdateTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTransaction) return;
+
+    if (editAmountToman <= 0) {
+      setFeedback({ type: 'error', message: 'مبلغ تراکنش باید بزرگتر از صفر باشد.' });
+      return;
+    }
+
+    setIsUpdatingTx(true);
+    try {
+      const res = await fetch(`/api/treasury/transactions/${editingTransaction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amountIrr: editAmountToman * 10,
+          dateJalali: editDateJalali,
+          partyId: editPartyId,
+          paymentMethod: editPaymentMethod,
+          notesFa: editNotesFa,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.messageFa || 'خطا در ویرایش تراکنش خزانه.');
+      }
+
+      setFeedback({
+        type: 'success',
+        message: data.messageFa || `تراکنش مالی [${editingTransaction.txNumber}] با موفقیت اصلاح گردید.`,
+      });
+
+      setEditingTransaction(null);
+      await onRefresh();
+    } catch (err: unknown) {
+      setFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'خطا در ویرایش تراکنش خزانه.',
+      });
+    } finally {
+      setIsUpdatingTx(false);
     }
   };
 
@@ -916,14 +982,24 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
                       </td>
                       <td className="px-3.5 py-3 text-slate-600 text-[11px]">{tx.notesFa || '-'}</td>
                       <td className="px-3.5 py-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTransaction(tx)}
-                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                          title="حذف تراکنش مالی"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditTxModal(tx)}
+                            className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="ویرایش و اصلاح تراکنش مالی"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTransaction(tx)}
+                            className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="حذف تراکنش مالی"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1407,7 +1483,7 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
 
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
-                <span>طرف حساب:</span>
+                <span>طرف حساب / شخص:</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -1421,17 +1497,22 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
                   <span>شخص جدید</span>
                 </button>
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 min-w-0 w-full max-w-full overflow-hidden">
                 <select
                   value={txPartyId}
                   onChange={(e) => setTxPartyId(Number(e.target.value))}
-                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                  className="flex-1 min-w-0 w-0 max-w-full truncate px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-emerald-500/20"
                 >
-                  {parties.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.fullName} ({p.partyCode}) {p.mobile ? `· ${p.mobile}` : ''}
-                    </option>
-                  ))}
+                  {parties.map((p) => {
+                    const rawName = p.fullName || (p as any).nameFa || 'بدون نام';
+                    const displayName = rawName.length > 35 ? rawName.slice(0, 35) + '…' : rawName;
+                    const code = p.partyCode || (p as any).code || 'کد ' + p.id;
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {displayName} ({code}) {p.mobile ? `· ${p.mobile}` : ''}
+                      </option>
+                    );
+                  })}
                 </select>
                 <QuickAddButton
                   onClick={() => {
@@ -1617,17 +1698,22 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
                     <span>شخص جدید</span>
                   </button>
                 </label>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 min-w-0 w-full max-w-full overflow-hidden">
                   <select
                     value={chequePartyId}
                     onChange={(e) => setChequePartyId(Number(e.target.value))}
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                    className="flex-1 min-w-0 w-0 max-w-full truncate px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:bg-white"
                   >
-                    {parties.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.fullName} ({p.partyCode}) {p.mobile ? `· ${p.mobile}` : ''}
-                      </option>
-                    ))}
+                    {parties.map((p) => {
+                      const rawName = p.fullName || (p as any).nameFa || 'بدون نام';
+                      const displayName = rawName.length > 35 ? rawName.slice(0, 35) + '…' : rawName;
+                      const code = p.partyCode || (p as any).code || 'کد ' + p.id;
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {displayName} ({code}) {p.mobile ? `· ${p.mobile}` : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                   <QuickAddButton
                     onClick={() => {
@@ -1845,6 +1931,142 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
         }}
         onRefresh={onRefresh}
       />
+
+      {/* EDIT TRANSACTION MODAL */}
+      {editingTransaction && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <form
+            onSubmit={handleUpdateTransaction}
+            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 relative animate-in fade-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-blue-600" />
+                ویرایش و اصلاح تراکنش مالی شماره {editingTransaction.txNumber}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingTransaction(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs">
+              <span className="text-slate-600 font-medium">نوع رویداد مالی:</span>
+              <span
+                className={`font-bold px-2.5 py-1 rounded-md text-[11px] ${
+                  editingTransaction.txType === 'RECEIPT'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : editingTransaction.txType === 'PAYMENT' || editingTransaction.txType === 'EXPENSE'
+                    ? 'bg-rose-100 text-rose-800'
+                    : 'bg-blue-100 text-blue-800'
+                }`}
+              >
+                {editingTransaction.txType === 'RECEIPT'
+                  ? 'دریافت وجه (افزایش خزانه)'
+                  : editingTransaction.txType === 'PAYMENT'
+                  ? 'پرداخت وجه (کاهش خزانه)'
+                  : editingTransaction.txType === 'EXPENSE'
+                  ? 'هزینه عملیاتی'
+                  : 'انتقال بین‌حسابی'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  مبلغ اصلاح‌شده (تومان) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={editAmountToman}
+                  onChange={(e) => setEditAmountToman(Number(e.target.value) || 0)}
+                  placeholder="مثال: ۵۰۰۰۰۰"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-slate-900"
+                  required
+                  min={1}
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  تاریخ ثبت (شمسی) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editDateJalali}
+                  onChange={(e) => setEditDateJalali(e.target.value)}
+                  placeholder="1405/01/25"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono text-center"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">طرف حساب مرتبط:</label>
+                <select
+                  value={editPartyId || ''}
+                  onChange={(e) => setEditPartyId(e.target.value ? Number(e.target.value) : undefined)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-medium text-slate-800"
+                >
+                  <option value="">بدون طرف حساب (عمومی / متفرقه)</option>
+                  {parties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.fullName || (p as any).nameFa} ({p.partyCode || (p as any).code || 'کد ' + p.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">روش پرداخت / تسویه:</label>
+                <select
+                  value={editPaymentMethod}
+                  onChange={(e) =>
+                    setEditPaymentMethod(e.target.value as 'CASH' | 'BANK_TRANSFER' | 'POS' | 'CHEQUE')
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-medium text-slate-800"
+                >
+                  <option value="POS">کارتخوان متصل به بانک</option>
+                  <option value="CASH">نقدی (صندوق)</option>
+                  <option value="BANK_TRANSFER">حواله پایا / کارت به کارت / ساتنا</option>
+                  <option value="CHEQUE">چک صیادی</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">توضیحات و بابت:</label>
+              <textarea
+                rows={3}
+                value={editNotesFa}
+                onChange={(e) => setEditNotesFa(e.target.value)}
+                placeholder="شرح کامل علت اصلاح یا جزئیات تراکنش..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="submit"
+                disabled={isUpdatingTx}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all disabled:opacity-50"
+              >
+                {isUpdatingTx ? 'در حال ذخیره اصلاحات...' : 'ذخیره و ثبت اصلاحات تراکنش'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingTransaction(null)}
+                className="px-4 py-2.5 bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold text-xs rounded-xl transition-all"
+              >
+                انصراف
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* CONFIRM DELETE MODAL */}
       <ConfirmDeleteModal

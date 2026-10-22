@@ -29,12 +29,19 @@ import {
   Download,
   FileSpreadsheet,
   Monitor,
+  Coins,
+  Percent,
+  Tag,
+  LayoutGrid,
+  Sparkles,
+  Scale,
 } from 'lucide-react';
 import { exportToExcel, exportToPdf } from '../utils/exportUtils';
 import { printHtmlContent, downloadInvoiceHtml } from '../utils/printUtils';
 import { QuickMasterModal, QuickAddButton, QuickMasterType } from './QuickMasterModal';
 import { PriceInput } from './PriceInput';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { GoldDualLedgerView } from './GoldDualLedgerView';
 import {
   FoundationDataResponse,
   SalesInvoiceRecord,
@@ -46,6 +53,7 @@ import {
   ItemSerialRecord,
   WarehouseRecord,
   PartyRecord,
+  resolveIndustryUiLabels,
 } from '../types/foundation';
 
 interface SalesManagementViewProps {
@@ -53,7 +61,7 @@ interface SalesManagementViewProps {
   onRefresh: () => void;
 }
 
-type SalesSubTab = 'QUICK_POS' | 'INVOICES' | 'PROFORMAS' | 'RETURNS';
+type SalesSubTab = 'QUICK_POS' | 'INVOICES' | 'PROFORMAS' | 'RETURNS' | 'GOLD_COLLEAGUE';
 
 interface CartLine {
   itemId: number;
@@ -78,6 +86,7 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
   // Industry Profile Context from actual foundationData
   const industryProfile = foundationData.industryProfile;
   const profileCode = industryProfile?.code || 'CCTV_SECURITY';
+  const uiLabels = resolveIndustryUiLabels(industryProfile);
 
   // Lists from foundationData
   const salesInvoices = foundationData.salesInvoices || [];
@@ -146,16 +155,31 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
     Array<{ itemId: number; quantity: number; unitPriceIrr: number; discountIrr: number; vatAmountIrr: number }>
   >([]);
 
+  // Retail POS UX State (Phase 4: General Retail)
+  const [showCatalogShortcuts, setShowCatalogShortcuts] = useState<boolean>(true);
+  const [catalogCategoryFilter, setCatalogCategoryFilter] = useState<number | 'ALL'>('ALL');
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [posDiscountInputToman, setPosDiscountInputToman] = useState<number>(0);
+
   // Auto-fill default paid amount when cart total changes
-  const cartSubtotal = useMemo(
-    () => cartLines.reduce((acc, l) => acc + (l.unitPriceIrr - l.discountIrr) * l.quantity, 0),
+  const cartGrossSubtotal = useMemo(
+    () => cartLines.reduce((acc, l) => acc + l.unitPriceIrr * l.quantity, 0),
     [cartLines]
   );
+  const cartTotalDiscount = useMemo(
+    () => cartLines.reduce((acc, l) => acc + (l.discountIrr || 0) * l.quantity, 0),
+    [cartLines]
+  );
+  const cartSubtotal = Math.max(0, cartGrossSubtotal - cartTotalDiscount);
   const cartVatTotal = useMemo(
-    () => cartLines.reduce((acc, l) => acc + l.vatAmountIrr, 0),
+    () => cartLines.reduce((acc, l) => acc + (l.vatAmountIrr || 0), 0),
     [cartLines]
   );
-  const cartTotalPayable = cartSubtotal + cartVatTotal;
+  const cartTotalPayable = Math.max(0, cartSubtotal + cartVatTotal);
+
+  // Change and Customer Debt Calculations
+  const posChangeToReturnIrr = Math.max(0, posPaidAmount - cartTotalPayable);
+  const posRemainingDebtIrr = Math.max(0, cartTotalPayable - posPaidAmount);
 
   useEffect(() => {
     setPosPaidAmount(cartTotalPayable);
@@ -234,6 +258,93 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
       return updated;
     });
   };
+
+  // Quick increment/decrement
+  const handleQuickIncrement = (idx: number, delta: number) => {
+    setCartLines((prev) => {
+      const copy = [...prev];
+      const target = copy[idx];
+      if (!target) return prev;
+      const newQty = Math.max(1, target.quantity + delta);
+      copy[idx] = { ...target, quantity: newQty };
+      return copy;
+    });
+  };
+
+  // Global Discounts for POS Cart
+  const handleApplyGlobalDiscountPercent = (percent: number) => {
+    if (cartLines.length === 0 || percent <= 0) return;
+    setCartLines((prev) => {
+      return prev.map((l) => {
+        const lineTotal = l.unitPriceIrr * l.quantity;
+        const discountTotal = Math.round(lineTotal * (percent / 100));
+        const unitDiscount = Math.round(discountTotal / (l.quantity || 1));
+        return {
+          ...l,
+          discountIrr: unitDiscount,
+        };
+      });
+    });
+  };
+
+  const handleApplyGlobalDiscountAmount = (amountToman: number) => {
+    const totalDiscountIrr = amountToman * 10;
+    if (cartLines.length === 0 || totalDiscountIrr <= 0 || cartGrossSubtotal <= 0) return;
+    setCartLines((prev) => {
+      return prev.map((l) => {
+        const lineShare = (l.unitPriceIrr * l.quantity) / cartGrossSubtotal;
+        const lineDiscountTotal = Math.min(l.unitPriceIrr * l.quantity, Math.round(totalDiscountIrr * lineShare));
+        const unitDiscount = Math.round(lineDiscountTotal / (l.quantity || 1));
+        return {
+          ...l,
+          discountIrr: unitDiscount,
+        };
+      });
+    });
+  };
+
+  const handleClearAllDiscounts = () => {
+    setCartLines((prev) => prev.map((l) => ({ ...l, discountIrr: 0 })));
+    setPosDiscountInputToman(0);
+  };
+
+  // Quick Cash & Tender Shortcuts
+  const handleQuickCashExact = () => {
+    setPosPaidAmount(cartTotalPayable);
+  };
+
+  const handleQuickCashRoundNext = (stepToman: number) => {
+    const payableToman = cartTotalPayable / 10;
+    const roundedToman = Math.ceil(payableToman / stepToman) * stepToman;
+    setPosPaidAmount(roundedToman * 10);
+  };
+
+  const handleAddQuickCash = (amountToman: number) => {
+    setPosPaidAmount((prev) => prev + amountToman * 10);
+  };
+
+  // Catalog shortcuts
+  const catalogCategories = useMemo(() => {
+    return foundationData.itemCategories || [];
+  }, [foundationData.itemCategories]);
+
+  const catalogItems = useMemo(() => {
+    let list = items.filter((i) => i.status === 'ACTIVE');
+    if (catalogCategoryFilter !== 'ALL') {
+      list = list.filter((i) => i.categoryId === catalogCategoryFilter);
+    }
+    if (catalogSearch.trim()) {
+      const q = catalogSearch.trim().toLowerCase();
+      list = list.filter(
+        (i) =>
+          i.titleFa.toLowerCase().includes(q) ||
+          i.itemCode.toLowerCase().includes(q) ||
+          (i.barcode && i.barcode.toLowerCase().includes(q)) ||
+          (i.model && i.model.toLowerCase().includes(q))
+      );
+    }
+    return list.slice(0, 12);
+  }, [items, catalogCategoryFilter, catalogSearch]);
 
   // Submit Quick POS Sale
   const handleCheckoutQuickPos = async () => {
@@ -603,18 +714,10 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
             <ShoppingCart className="w-6 h-6 text-blue-600" />
-            {profileCode === 'SUPERMARKET_GROCERY'
-              ? 'صندوق فروش سریع بارکدی و مدیریت فروش سوپرمارکت'
-              : profileCode === 'RETAIL_GENERAL'
-              ? 'مدیریت فروش، پیش‌فاکتور و صندوق فروشگاهی (POS)'
-              : 'مدیریت فروش، پیش‌فاکتور و صندوق فروش سریع (Quick POS)'}
+            {uiLabels.salesTabTitleFa} - {uiLabels.quickSalesSubmenuTitleFa}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            {profileCode === 'SUPERMARKET_GROCERY'
-              ? 'ثبت سریع بارکد اقلام، تسویه صندوق POS، فاکتورهای فروشگاهی و گردش انبار سوپرمارکت'
-              : profileCode === 'RETAIL_GENERAL'
-              ? 'ماژول فروش سریع بارکدی، خرید، تسویه نقدی و کارتخوان و صدور فاکتور رسمی'
-              : 'ماژول کامل فروش آنی حضوری، صدور پیش‌فاکتور، ثبت دریافت وجه، محاسبه بهای تمام‌شده COGS و مرجوعی فروش'}
+            {uiLabels.salesTabDescFa}
           </p>
         </div>
 
@@ -668,6 +771,20 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
             <RotateCcw className="w-3.5 h-3.5" />
             مرجوعی فروش
           </button>
+          {profileCode === 'GOLD_JEWELRY' && (
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('GOLD_COLLEAGUE')}
+              className={`px-3.5 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeSubTab === 'GOLD_COLLEAGUE'
+                  ? 'bg-amber-600 text-white shadow-xs font-bold'
+                  : 'text-amber-900 bg-amber-50 hover:bg-amber-100 font-bold border border-amber-300'
+              }`}
+            >
+              <Scale className="w-3.5 h-3.5" />
+              <span>فروش همکار و کاردکس طلا</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -748,6 +865,14 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* SUBTAB GOLD: GOLD COLLEAGUE DUAL LEDGER & WEIGHT BARTER */}
+      {activeSubTab === 'GOLD_COLLEAGUE' && (
+        <GoldDualLedgerView
+          foundationData={foundationData}
+          onRefresh={async () => onRefresh()}
+        />
+      )}
 
       {/* SUBTAB 1: QUICK POS SALE (فروش سریع صندوق) */}
       {activeSubTab === 'QUICK_POS' && (
@@ -839,9 +964,23 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                     }
                   }}
                   placeholder="بارکد یا نام کالا را تایپ کنید (با دکمه‌های ↑ و ↓ انتخاب و با Enter ثبت کنید)..."
-                  className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:bg-white focus:border-blue-600 focus:outline-hidden"
+                  className="w-full pr-10 pl-9 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:bg-white focus:border-blue-600 focus:outline-hidden"
                   autoFocus
                 />
+                {itemSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setItemSearchQuery('');
+                      setSelectedSearchIndex(0);
+                      if (barcodeInputRef.current) barcodeInputRef.current.focus();
+                    }}
+                    className="absolute left-3 top-2.5 p-0.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 cursor-pointer"
+                    title="پاک کردن کادر جستجو"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
               {/* Search Suggestions Dropdown with Keyboard Navigation */}
@@ -896,6 +1035,87 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                   })}
                 </div>
               )}
+
+              {/* Quick Item Shortcuts & Touch Catalog (Phase 4: General Retail) */}
+              <div className="pt-2 border-t border-slate-100 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCatalogShortcuts(!showCatalogShortcuts)}
+                    className="text-xs font-bold text-slate-700 hover:text-blue-600 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <LayoutGrid className="w-4 h-4 text-blue-600" />
+                    <span>ویترین لمسی و میانبرهای کالاهای پرفروش</span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      ({showCatalogShortcuts ? 'بستن' : 'نمایش ویترین کالاها'})
+                    </span>
+                  </button>
+
+                  {showCatalogShortcuts && (
+                    <div className="flex items-center gap-1 text-[11px] overflow-x-auto pb-1 max-w-[65%] scrollbar-none">
+                      <button
+                        type="button"
+                        onClick={() => setCatalogCategoryFilter('ALL')}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 transition-colors cursor-pointer ${
+                          catalogCategoryFilter === 'ALL'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        همه دسته‌ها
+                      </button>
+                      {catalogCategories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setCatalogCategoryFilter(cat.id)}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 transition-colors cursor-pointer ${
+                            catalogCategoryFilter === cat.id
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {cat.titleFa}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {showCatalogShortcuts && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-1 max-h-56 overflow-y-auto">
+                    {catalogItems.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleAddItemToCart(item)}
+                        className="p-2 bg-slate-50 hover:bg-blue-50/70 border border-slate-200 hover:border-blue-400 rounded-xl text-right transition-all group flex flex-col justify-between cursor-pointer active:scale-98"
+                      >
+                        <div>
+                          <p
+                            className="text-xs font-bold text-slate-900 group-hover:text-blue-700 truncate"
+                            title={item.titleFa}
+                          >
+                            {item.titleFa}
+                          </p>
+                          <p className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
+                            {item.itemCode} {item.barcode ? `· ${item.barcode}` : ''}
+                          </p>
+                        </div>
+                        <div className="mt-2 pt-1.5 border-t border-slate-200/60 flex items-center justify-between">
+                          <span className="text-[11px] font-black text-blue-700 font-mono">
+                            {((item.salePriceIrr || 0) / 10).toLocaleString()}{' '}
+                            <span className="text-[9px] font-normal text-slate-500">تومان</span>
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-white text-emerald-700 font-bold border border-slate-200">
+                            + افزودن
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Cart Items Table */}
@@ -926,141 +1146,191 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right text-xs">
-                    <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
-                      <tr>
-                        <th className="px-3 py-2.5">شرح کالا</th>
-                        <th className="px-3 py-2.5 text-center">تعداد</th>
-                        <th className="px-3 py-2.5">قیمت واحد (تومان)</th>
-                        <th className="px-3 py-2.5">تخفیف (تومان)</th>
-                        <th className="px-3 py-2.5">جمع کل (تومان)</th>
-                        <th className="px-3 py-2.5 text-center">عملیات</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {cartLines.map((line, idx) => {
-                        const lineNet =
-                          (line.unitPriceIrr - line.discountIrr) * line.quantity + line.vatAmountIrr;
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="px-3 py-2.5">شرح کالا</th>
+                          <th className="px-3 py-2.5 text-center">تعداد</th>
+                          <th className="px-3 py-2.5">قیمت واحد (تومان)</th>
+                          <th className="px-3 py-2.5">تخفیف (تومان)</th>
+                          <th className="px-3 py-2.5">جمع کل (تومان)</th>
+                          <th className="px-3 py-2.5 text-center">عملیات</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {cartLines.map((line, idx) => {
+                          const lineNet =
+                            (line.unitPriceIrr - line.discountIrr) * line.quantity + line.vatAmountIrr;
 
-                        return (
-                          <tr key={idx} className="hover:bg-slate-50">
-                            <td className="px-3 py-3">
-                              <p className="font-bold text-slate-900">{line.itemTitleFa}</p>
-                              <p className="text-[10px] text-slate-500 mt-0.5">کد: {line.itemCode}</p>
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50">
+                              <td className="px-3 py-3">
+                                <p className="font-bold text-slate-900">{line.itemTitleFa}</p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">کد: {line.itemCode}</p>
 
-                              {line.isSerialized && (
-                                <div className="mt-1.5">
+                                {line.isSerialized && (
+                                  <div className="mt-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSerialPickerLineIndex(idx)}
+                                      className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md hover:bg-blue-100 font-semibold flex items-center gap-1"
+                                    >
+                                      <Barcode className="w-3 h-3" />
+                                      {line.selectedSerials.length > 0
+                                        ? `سریال‌ها (${line.selectedSerials.length}): ${line.selectedSerials.join(', ')}`
+                                        : 'انتخاب شماره سریال‌ها...'}
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+
+                              <td className="px-3 py-3 text-center">
+                                <div className="inline-flex items-center border border-slate-300 rounded-md bg-white">
                                   <button
                                     type="button"
-                                    onClick={() => setSerialPickerLineIndex(idx)}
-                                    className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md hover:bg-blue-100 font-semibold flex items-center gap-1"
+                                    onClick={() =>
+                                      handleUpdateCartLine(idx, 'quantity', Math.max(1, line.quantity - 1))
+                                    }
+                                    className="px-2 py-0.5 text-slate-600 hover:bg-slate-100 rounded-r-md font-bold"
                                   >
-                                    <Barcode className="w-3 h-3" />
-                                    {line.selectedSerials.length > 0
-                                      ? `سریال‌ها (${line.selectedSerials.length}): ${line.selectedSerials.join(', ')}`
-                                      : 'انتخاب شماره سریال‌ها...'}
+                                    -
+                                  </button>
+                                  <span className="px-2.5 font-bold text-slate-900">{line.quantity}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleUpdateCartLine(idx, 'quantity', line.quantity + 1)
+                                    }
+                                    className="px-2 py-0.5 text-slate-600 hover:bg-slate-100 rounded-l-md font-bold"
+                                  >
+                                    +
                                   </button>
                                 </div>
-                              )}
-                            </td>
+                              </td>
 
-                            <td className="px-3 py-3 text-center">
-                              <div className="inline-flex items-center border border-slate-300 rounded-md bg-white">
+                              <td className="px-3 py-3">
+                                <input
+                                  type="number"
+                                  value={line.unitPriceIrr / 10}
+                                  onChange={(e) =>
+                                    handleUpdateCartLine(idx, 'unitPriceIrr', (Number(e.target.value) || 0) * 10)
+                                  }
+                                  className="w-24 px-2 py-1 border border-slate-300 rounded-md text-xs font-semibold bg-white text-slate-900"
+                                />
+                              </td>
+
+                              <td className="px-3 py-3">
+                                <input
+                                  type="number"
+                                  value={line.discountIrr / 10}
+                                  onChange={(e) =>
+                                    handleUpdateCartLine(idx, 'discountIrr', (Number(e.target.value) || 0) * 10)
+                                  }
+                                  className="w-20 px-2 py-1 border border-slate-300 rounded-md text-xs font-semibold bg-white text-slate-900"
+                                />
+                              </td>
+
+                              <td className="px-3 py-3 font-extrabold text-slate-900">
+                                {(lineNet / 10).toLocaleString()}
+                              </td>
+
+                              <td className="px-3 py-3 text-center">
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    handleUpdateCartLine(idx, 'quantity', Math.max(1, line.quantity - 1))
-                                  }
-                                  className="px-2 py-0.5 text-slate-600 hover:bg-slate-100 rounded-r-md font-bold"
+                                  onClick={() => handleRemoveFromCart(idx)}
+                                  className="text-slate-400 hover:text-rose-600"
                                 >
-                                  -
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
-                                <span className="px-2.5 font-bold text-slate-900">{line.quantity}</span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleUpdateCartLine(idx, 'quantity', line.quantity + 1)
-                                  }
-                                  className="px-2 py-0.5 text-slate-600 hover:bg-slate-100 rounded-l-md font-bold"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </td>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
 
-                            <td className="px-3 py-3">
-                              <input
-                                type="number"
-                                value={line.unitPriceIrr / 10}
-                                onChange={(e) =>
-                                  handleUpdateCartLine(idx, 'unitPriceIrr', (Number(e.target.value) || 0) * 10)
-                                }
-                                className="w-24 px-2 py-1 border border-slate-300 rounded-md text-xs font-semibold bg-white text-slate-900"
-                              />
-                            </td>
+                  {/* Fast Global Discounts & Cart Actions Bar (Phase 4: General Retail) */}
+                  <div className="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
+                        <Percent className="w-3.5 h-3.5 text-blue-600" />
+                        <span>تخفیف سریع فاکتور:</span>
+                      </span>
+                      {[5, 10, 15, 20].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => handleApplyGlobalDiscountPercent(pct)}
+                          className="px-2 py-0.5 rounded-md bg-white border border-slate-300 hover:border-blue-500 hover:bg-blue-50 text-[10px] font-extrabold text-slate-700 transition-colors cursor-pointer"
+                        >
+                          %{pct}
+                        </button>
+                      ))}
+                      {cartTotalDiscount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClearAllDiscounts}
+                          className="px-2 py-0.5 rounded-md bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-[10px] font-bold cursor-pointer transition-colors"
+                        >
+                          حذف تخفیفات
+                        </button>
+                      )}
+                    </div>
 
-                            <td className="px-3 py-3">
-                              <input
-                                type="number"
-                                value={line.discountIrr / 10}
-                                onChange={(e) =>
-                                  handleUpdateCartLine(idx, 'discountIrr', (Number(e.target.value) || 0) * 10)
-                                }
-                                className="w-20 px-2 py-1 border border-slate-300 rounded-md text-xs font-semibold bg-white text-slate-900"
-                              />
-                            </td>
-
-                            <td className="px-3 py-3 font-extrabold text-slate-900">
-                              {(lineNet / 10).toLocaleString()}
-                            </td>
-
-                            <td className="px-3 py-3 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveFromCart(idx)}
-                                className="text-slate-400 hover:text-rose-600"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-slate-500 font-medium">مبلغی:</span>
+                      <input
+                        type="number"
+                        placeholder="تومان..."
+                        value={posDiscountInputToman || ''}
+                        onChange={(e) => setPosDiscountInputToman(Number(e.target.value) || 0)}
+                        className="w-24 px-2 py-0.5 text-xs bg-white border border-slate-300 rounded-md font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleApplyGlobalDiscountAmount(posDiscountInputToman)}
+                        disabled={!posDiscountInputToman || posDiscountInputToman <= 0}
+                        className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-md text-[10px] font-bold cursor-pointer"
+                      >
+                        اعمال
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>
 
           {/* Right Column: Checkout, Customer & Payment Details (5 cols) */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
+          <div className="lg:col-span-5 space-y-4 min-w-0 max-w-full overflow-hidden">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4 min-w-0 max-w-full">
               <h3 className="text-xs font-bold text-slate-800 border-b border-slate-100 pb-2.5 flex items-center gap-1.5">
                 <CreditCard className="w-4 h-4 text-blue-600" />
                 تنظیمات فروش و تسویه سریع صندوق
               </h3>
 
               {/* Warehouse Selection */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+              <div className="min-w-0 space-y-1.5">
+                <label className="block text-[11px] font-bold text-slate-700 flex items-center justify-between gap-1 flex-wrap">
                   <span>انبار خروج کالا:</span>
                   <button
                     type="button"
                     onClick={() => setQuickMasterType('WAREHOUSE')}
-                    className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5 cursor-pointer"
+                    className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
                     title="افزودن سریع انبار جدید"
                   >
                     <Plus className="w-3 h-3" />
                     <span>انبار جدید</span>
                   </button>
                 </label>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 min-w-0 w-full max-w-full">
                   <select
                     value={posWarehouseId}
                     onChange={(e) => setPosWarehouseId(Number(e.target.value))}
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:bg-white focus:outline-hidden"
+                    className="w-full min-w-0 flex-1 truncate px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:bg-white focus:outline-hidden"
                   >
                     {warehouses.map((w) => (
                       <option key={w.id} value={w.id}>
@@ -1068,46 +1338,50 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                       </option>
                     ))}
                   </select>
-                  <QuickAddButton
-                    onClick={() => setQuickMasterType('WAREHOUSE')}
-                    title="افزودن سریع انبار جدید"
-                  />
+                  <div className="shrink-0">
+                    <QuickAddButton
+                      onClick={() => setQuickMasterType('WAREHOUSE')}
+                      title="افزودن سریع انبار جدید"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Customer Selection */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span>مشتری / خریدار:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setQuickMasterDefaultRole('CUSTOMER');
-                        setQuickMasterType('PARTY');
-                      }}
-                      className="text-[10px] text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-0.5 cursor-pointer"
-                      title="افزودن سریع شخص / خریدار جدید"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>شخص جدید</span>
-                    </button>
+              <div className="min-w-0 space-y-1.5">
+                <label className="block text-[11px] font-bold text-slate-700">
+                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <span>مشتری / خریدار:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuickMasterDefaultRole('CUSTOMER');
+                          setQuickMasterType('PARTY');
+                        }}
+                        className="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
+                        title="افزودن سریع شخص / خریدار جدید"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>شخص جدید</span>
+                      </button>
+                    </div>
+                    {walkInCustomer && (
+                      <button
+                        type="button"
+                        onClick={() => setPosCustomerId(walkInCustomer.id)}
+                        className="text-[10px] text-blue-700 hover:underline font-bold shrink-0"
+                      >
+                        خریدار عمومی حضوری
+                      </button>
+                    )}
                   </div>
-                  {walkInCustomer && (
-                    <button
-                      type="button"
-                      onClick={() => setPosCustomerId(walkInCustomer.id)}
-                      className="text-[10px] text-blue-600 hover:underline font-bold"
-                    >
-                      انتخاب خریدار عمومی حضوری
-                    </button>
-                  )}
                 </label>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 min-w-0 w-full max-w-full">
                   <select
                     value={posCustomerId}
                     onChange={(e) => setPosCustomerId(Number(e.target.value))}
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:bg-white focus:outline-hidden"
+                    className="w-full min-w-0 flex-1 truncate px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:bg-white focus:outline-hidden"
                   >
                     {customers.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -1115,13 +1389,15 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                       </option>
                     ))}
                   </select>
-                  <QuickAddButton
-                    onClick={() => {
-                      setQuickMasterDefaultRole('CUSTOMER');
-                      setQuickMasterType('PARTY');
-                    }}
-                    title="افزودن سریع شخص / مشتری جدید"
-                  />
+                  <div className="shrink-0">
+                    <QuickAddButton
+                      onClick={() => {
+                        setQuickMasterDefaultRole('CUSTOMER');
+                        setQuickMasterType('PARTY');
+                      }}
+                      title="افزودن سریع شخص / مشتری جدید"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1182,18 +1458,18 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                 </div>
               </div>
 
-              {/* Paid Amount Input */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
+              {/* Paid Amount Input & Quick Tender Buttons */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
                   <label className="block text-[11px] font-bold text-slate-700">
                     مبلغ دریافتی (تومان):
                   </label>
                   <button
                     type="button"
-                    onClick={() => setPosPaidAmount(cartTotalPayable)}
+                    onClick={handleQuickCashExact}
                     className="text-[10px] text-emerald-600 hover:text-emerald-800 font-bold cursor-pointer"
                   >
-                    تسویه کل مبلغ
+                    تسویه دقیق فاکتور
                   </button>
                 </div>
                 <PriceInput
@@ -1203,6 +1479,52 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                   unit="تومان"
                   className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-extrabold text-emerald-700 focus:bg-white"
                 />
+
+                {/* Quick Cash Tender Shortcuts (Phase 4: General Retail) */}
+                <div className="flex flex-wrap gap-1 text-[10px] pt-1">
+                  <button
+                    type="button"
+                    onClick={handleQuickCashExact}
+                    className="px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 font-bold cursor-pointer"
+                  >
+                    دقیق
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickCashRoundNext(50000)}
+                    className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 font-bold cursor-pointer"
+                  >
+                    رند ۵۰هزار
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickCashRoundNext(100000)}
+                    className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 font-bold cursor-pointer"
+                  >
+                    رند ۱۰۰هزار
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddQuickCash(50000)}
+                    className="px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-mono cursor-pointer"
+                  >
+                    +۵۰هزار
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddQuickCash(100000)}
+                    className="px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-mono cursor-pointer"
+                  >
+                    +۱۰۰هزار
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddQuickCash(500000)}
+                    className="px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-mono cursor-pointer"
+                  >
+                    +۵۰۰هزار
+                  </button>
+                </div>
               </div>
 
               {/* Payment Details */}
@@ -1259,12 +1581,18 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                 </div>
               </div>
 
-              {/* Cart Financial Breakdown */}
+              {/* Cart Financial Breakdown & Change Notification */}
               <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-2 text-xs">
                 <div className="flex justify-between text-slate-600">
-                  <span>جمع اقلام:</span>
-                  <span className="font-semibold">{(cartSubtotal / 10).toLocaleString()} تومان</span>
+                  <span>جمع اقلام فاکتور:</span>
+                  <span className="font-semibold">{(cartGrossSubtotal / 10).toLocaleString()} تومان</span>
                 </div>
+                {cartTotalDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>مجموع تخفیفات:</span>
+                    <span>-{(cartTotalDiscount / 10).toLocaleString()} تومان</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-slate-600">
                   <span>مالیات بر ارزش افزوده:</span>
                   <span className="font-semibold">{(cartVatTotal / 10).toLocaleString()} تومان</span>
@@ -1273,10 +1601,47 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                   <span>مبلغ کل قابل پرداخت:</span>
                   <span className="text-blue-700">{(cartTotalPayable / 10).toLocaleString()} تومان</span>
                 </div>
+
+                {/* Change or Debt Callout */}
+                {posPaidAmount > cartTotalPayable && (
+                  <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-300 rounded-lg flex items-center justify-between text-emerald-900">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-md bg-emerald-100 flex items-center justify-center text-emerald-700">
+                        <Coins className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-emerald-800">مبلغ عودت به خریدار (باقی‌مانده پول):</p>
+                        <p className="text-xs font-black text-emerald-700 font-mono">
+                          {((posPaidAmount - cartTotalPayable) / 10).toLocaleString()} تومان
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleQuickCashExact}
+                      className="text-[10px] text-emerald-700 hover:underline font-bold"
+                    >
+                      تسویه دقیق
+                    </button>
+                  </div>
+                )}
+
                 {cartTotalPayable > posPaidAmount && (
-                  <div className="flex justify-between text-rose-600 font-bold text-xs pt-1">
-                    <span>مانده بدهکار مشتری:</span>
-                    <span>{((cartTotalPayable - posPaidAmount) / 10).toLocaleString()} تومان</span>
+                  <div className="mt-2 p-2.5 bg-rose-50 border border-rose-300 rounded-lg flex items-center justify-between text-rose-900">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-md bg-rose-100 flex items-center justify-center text-rose-700">
+                        <Receipt className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-rose-800">مانده بدهکار مشتری (ثبت در حساب دفتری):</p>
+                        <p className="text-xs font-black text-rose-700 font-mono">
+                          {((cartTotalPayable - posPaidAmount) / 10).toLocaleString()} تومان
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] bg-white px-2 py-0.5 rounded border border-rose-200 font-bold text-rose-700">
+                      حساب نسیه
+                    </span>
                   </div>
                 )}
               </div>

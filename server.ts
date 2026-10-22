@@ -1952,9 +1952,21 @@ async function startServer() {
     }
   );
 
+  const requireDoubleEntryAccounting = (_req: Request, res: Response, next: NextFunction) => {
+    if (!foundationStore.isDoubleEntryAccountingEnabled()) {
+      res.status(403).json({
+        ok: false,
+        messageFa: 'ماژول حسابداری دوبل در تنظیمات سراسری سیستم غیرفعال می‌باشد.',
+      });
+      return;
+    }
+    next();
+  };
+
   // 54. Get Accounting Documents List
   app.get(
     '/api/accounting/documents',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.view'),
     (req: Request, res: Response) => {
       try {
@@ -1977,6 +1989,7 @@ async function startServer() {
   // 55. Get Single Accounting Document by ID
   app.get(
     '/api/accounting/documents/:id',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.view'),
     (req: Request, res: Response) => {
       try {
@@ -1999,6 +2012,7 @@ async function startServer() {
   // 56. Create Accounting Document (with Debit/Credit Balance Check)
   app.post(
     '/api/accounting/documents',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.documents.manage'),
     (req: Request, res: Response) => {
       try {
@@ -2021,6 +2035,7 @@ async function startServer() {
   // 57. Update Accounting Document (Controlled Editing for non-permanent docs)
   app.put(
     '/api/accounting/documents/:id',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.documents.manage'),
     (req: Request, res: Response) => {
       try {
@@ -2044,6 +2059,7 @@ async function startServer() {
   // 58. Approve Accounting Document
   app.post(
     '/api/accounting/documents/:id/approve',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.documents.approve'),
     (req: Request, res: Response) => {
       try {
@@ -2067,6 +2083,7 @@ async function startServer() {
   // 59. Make Accounting Document Permanent (Lock)
   app.post(
     '/api/accounting/documents/:id/permanent',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.documents.permanent'),
     (req: Request, res: Response) => {
       try {
@@ -2090,6 +2107,7 @@ async function startServer() {
   // 60. Delete Draft Accounting Document
   app.delete(
     '/api/accounting/documents/:id',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.documents.manage'),
     (req: Request, res: Response) => {
       try {
@@ -2109,6 +2127,7 @@ async function startServer() {
   // 61. Auto-generate Accounting Document from Source Event
   app.post(
     '/api/accounting/auto-generate',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.documents.manage'),
     (req: Request, res: Response) => {
       try {
@@ -2143,9 +2162,29 @@ async function startServer() {
     }
   );
 
+  // 61b. Regenerate Missing Auto Vouchers
+  app.post(
+    '/api/accounting/regenerate-missing-vouchers',
+    requireDoubleEntryAccounting,
+    requirePermission('accounting.documents.manage'),
+    (_req: Request, res: Response) => {
+      try {
+        const activeUser = foundationStore.getActiveUser();
+        const result = foundationStore.generateMissingAutoVouchers(activeUser.id);
+        res.json(result);
+      } catch (err: unknown) {
+        res.status(400).json({
+          ok: false,
+          messageFa: err instanceof Error ? err.message : 'خطا در بازسازی اسناد جامانده.',
+        });
+      }
+    }
+  );
+
   // 62. Report: Journal Ledger (دفتر روزنامه)
   app.get(
     '/api/accounting/reports/journal',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.reports.view'),
     (_req: Request, res: Response) => {
       try {
@@ -2163,6 +2202,7 @@ async function startServer() {
   // 63. Report: General Ledger (دفتر کل)
   app.get(
     '/api/accounting/reports/ledger',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.reports.view'),
     (req: Request, res: Response) => {
       try {
@@ -2181,6 +2221,7 @@ async function startServer() {
   // 64. Report: Trial Balance (تراز آزمایشی ۲ ستونی و ۴ ستونی)
   app.get(
     '/api/accounting/reports/trial-balance',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.reports.view'),
     (_req: Request, res: Response) => {
       try {
@@ -2265,6 +2306,7 @@ async function startServer() {
   // 68. Close Fiscal Year (اختتامیه سال مالی)
   app.post(
     '/api/accounting/fiscal-years/:id/close',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.periods.close'),
     (req: Request, res: Response) => {
       try {
@@ -2302,6 +2344,7 @@ async function startServer() {
   // 70. Close Accounting Period (بستن دوره مالی - ایجاد سند بستن حساب‌های موقت بدون حذف سوابق)
   app.post(
     '/api/accounting/periods/:id/close',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.periods.close'),
     (req: Request, res: Response) => {
       try {
@@ -2321,6 +2364,7 @@ async function startServer() {
   // 71. Reopen Accounting Period (بازگشایی دوره با دلیل مستند و مجوزمحور)
   app.post(
     '/api/accounting/periods/:id/reopen',
+    requireDoubleEntryAccounting,
     requirePermission('accounting.periods.close'),
     (req: Request, res: Response) => {
       try {
@@ -3085,6 +3129,28 @@ async function startServer() {
     }
   });
 
+  // Treasury Transaction Update
+  app.put('/api/treasury/transactions/:id', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const updated = foundationStore.updateTreasuryTransaction(
+        Number(req.params.id),
+        req.body || {},
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        messageFa: `تراکنش مالی «${updated.txNumber}» با موفقیت ویرایش گردید.`,
+        transaction: updated,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ویرایش تراکنش خزانه.',
+      });
+    }
+  });
+
   // Treasury Transaction Delete
   app.delete('/api/treasury/transactions/:id', (req: Request, res: Response) => {
     try {
@@ -3451,6 +3517,647 @@ ${JSON.stringify(foundationDataSummary || {}, null, 2)}"
         ok: false,
         mode: 'OFFLINE_FALLBACK',
         error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  });
+
+  // ============================================================================
+  // GOLD & JEWELRY MODULE ROUTES (معاملات همکار، فروش گرمی بدون ریال و کاردکس دوگانه)
+  // ============================================================================
+
+  app.get('/api/gold/colleague-trades', (req: Request, res: Response) => {
+    try {
+      const partyId = req.query.partyId ? Number(req.query.partyId) : undefined;
+      const trades = foundationStore.getGoldColleagueTrades(partyId);
+      res.json({ ok: true, trades });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت مبادلات همکاران طلا.',
+      });
+    }
+  });
+
+  app.post('/api/gold/colleague-trades', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const trade = foundationStore.createGoldColleagueTrade(req.body, activeUser.id);
+      res.status(201).json({
+        ok: true,
+        messageFa: `معامله همکار ${trade.tradeNumber} با موفقیت ثبت شد.`,
+        trade,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ثبت معامله همکار طلا.',
+      });
+    }
+  });
+
+  app.get('/api/gold/dual-ledger/:partyId', (req: Request, res: Response) => {
+    try {
+      const partyId = Number(req.params.partyId);
+      const ledger = foundationStore.getGoldDualLedger(partyId);
+      res.json({ ok: true, data: ledger });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت کاردکس دوگانه طلا و ریال.',
+      });
+    }
+  });
+
+  app.post('/api/gold/settle-weight', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const result = foundationStore.settleGoldWeight(req.body, activeUser.id);
+      res.json({
+        ok: true,
+        messageFa: 'تسویه وزنی طلا با موفقیت ثبت گردید.',
+        result,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در تسویه وزنی طلا.',
+      });
+    }
+  });
+
+  app.post('/api/gold/convert-to-rial', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const result = foundationStore.convertGoldWeightToRial(req.body, activeUser.id);
+      res.json(result);
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در تبدیل مانده طلا به ریال.',
+      });
+    }
+  });
+
+  // ============================================================================
+  // RESTAURANT & CAFE ROUTES (فاز ۷: میزها، منوی لمسی و بن آشپزخانه)
+  // ============================================================================
+
+  app.get('/api/restaurant/tables', (_req: Request, res: Response) => {
+    try {
+      const tables = foundationStore.getRestaurantTables();
+      res.json({ ok: true, tables });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت فهرست میزها.',
+      });
+    }
+  });
+
+  app.patch('/api/restaurant/tables/:id/status', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const table = foundationStore.updateRestaurantTableStatus(
+        Number(req.params.id),
+        req.body.status,
+        activeUser.id
+      );
+      res.json({ ok: true, table });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در تغییر وضعیت میز.',
+      });
+    }
+  });
+
+  app.get('/api/restaurant/orders', (_req: Request, res: Response) => {
+    try {
+      const orders = foundationStore.getRestaurantOrders();
+      res.json({ ok: true, orders });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت سفارشات رستوران.',
+      });
+    }
+  });
+
+  app.post('/api/restaurant/orders', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const order = foundationStore.createRestaurantOrder(req.body, activeUser.id);
+      res.status(201).json({
+        ok: true,
+        messageFa: `سفارش رستوران ${order.orderNumber} با موفقیت ثبت شد.`,
+        order,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ثبت سفارش رستوران.',
+      });
+    }
+  });
+
+  app.get('/api/restaurant/kitchen-ticket/:orderId', (req: Request, res: Response) => {
+    try {
+      const ticket = foundationStore.generateKitchenTicket(Number(req.params.orderId));
+      res.json({ ok: true, ticket });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در چاپ بن آشپزخانه.',
+      });
+    }
+  });
+
+  app.put('/api/restaurant/orders/:id', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const order = foundationStore.updateRestaurantOrder(
+        Number(req.params.id),
+        req.body,
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        messageFa: `سفارش ${order.orderNumber} با موفقیت ویرایش و اصلاح گردید.`,
+        order,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در اصلاح سفارش رستوران.',
+      });
+    }
+  });
+
+  app.delete('/api/restaurant/orders/:id', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const result = foundationStore.deleteRestaurantOrder(
+        Number(req.params.id),
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        messageFa: 'سفارش رستوران با موفقیت از سیستم حذف گردید.',
+        ...result,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در حذف سفارش رستوران.',
+      });
+    }
+  });
+
+  // ============================================================================
+  // WHOLESALE & DISTRIBUTION ROUTES (فاز ۸: پخش عمده، کارتن، نرخ همکار و توزیع)
+  // ============================================================================
+
+  app.get('/api/wholesale/orders', (_req: Request, res: Response) => {
+    try {
+      const orders = foundationStore.getWholesaleOrders();
+      res.json({ ok: true, orders });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت سفارشات عمده.',
+      });
+    }
+  });
+
+  app.post('/api/wholesale/orders', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const order = foundationStore.createWholesaleOrder(req.body, activeUser.id);
+      res.status(201).json({
+        ok: true,
+        order,
+        messageFa: `سفارش عمده شماره ${order.orderNumber} با موفقیت ثبت شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ثبت سفارش عمده.',
+      });
+    }
+  });
+
+  app.get('/api/wholesale/dispatches', (_req: Request, res: Response) => {
+    try {
+      const dispatches = foundationStore.getWholesaleDispatches();
+      res.json({ ok: true, dispatches });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت حواله‌های خروج و بارگیری.',
+      });
+    }
+  });
+
+  app.post('/api/wholesale/dispatches', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const dispatch = foundationStore.createWholesaleDispatch(req.body, activeUser.id);
+      res.status(201).json({
+        ok: true,
+        dispatch,
+        messageFa: `حواله بارگیری و خروج شماره ${dispatch.dispatchNumber} با موفقیت صادر شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در صدور حواله خروج انبار.',
+      });
+    }
+  });
+
+  app.patch('/api/wholesale/dispatches/:id/status', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const dispatch = foundationStore.updateWholesaleDispatchStatus(
+        Number(req.params.id),
+        req.body.status,
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        dispatch,
+        messageFa: `وضعیت حواله ${dispatch.dispatchNumber} با موفقیت به‌روزرسانی شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در تغییر وضعیت حواله.',
+      });
+    }
+  });
+
+  app.get('/api/wholesale/credit-check/:customerId', (req: Request, res: Response) => {
+    try {
+      const amount = Number(req.query.amountIrr) || 0;
+      const creditInfo = foundationStore.checkCustomerWholesaleCredit(
+        Number(req.params.customerId),
+        amount
+      );
+      res.json({ ok: true, creditInfo });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در استعلام سقف اعتبار مشتری.',
+      });
+    }
+  });
+
+  app.get('/api/wholesale/items/:id/price-tiers', (req: Request, res: Response) => {
+    try {
+      const priceTiers = foundationStore.getItemPriceTiers(Number(req.params.id));
+      res.json({ ok: true, priceTiers });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در استعلام سطوح قیمت کالا.',
+      });
+    }
+  });
+
+  // ============================================================================
+  // SERVICES & CONTRACTING ROUTES (فاز ۹: خدمات فنی، تیکت کار، تکنسین و قطعات)
+  // ============================================================================
+
+  app.get('/api/services/tickets', (_req: Request, res: Response) => {
+    try {
+      const tickets = foundationStore.getServiceJobTickets();
+      res.json({ ok: true, tickets });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت تیکت‌های کار.',
+      });
+    }
+  });
+
+  app.post('/api/services/tickets', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const ticket = foundationStore.createServiceJobTicket(req.body, activeUser.id);
+      res.status(201).json({
+        ok: true,
+        ticket,
+        messageFa: `تیکت کار شماره ${ticket.ticketNumber} با موفقیت ثبت شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ثبت تیکت کار فنی.',
+      });
+    }
+  });
+
+  app.patch('/api/services/tickets/:id/status', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const ticket = foundationStore.updateServiceJobTicketStatus(
+        Number(req.params.id),
+        req.body.status,
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        ticket,
+        messageFa: `وضعیت تیکت ${ticket.ticketNumber} به‌روزرسانی شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در تغییر وضعیت تیکت.',
+      });
+    }
+  });
+
+  app.patch('/api/services/tickets/:id/assign', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const ticket = foundationStore.assignTechnicianToJobTicket(
+        Number(req.params.id),
+        Number(req.body.technicianId),
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        ticket,
+        messageFa: `تکنسین ${ticket.technicianNameFa} به تیکت کار ${ticket.ticketNumber} تخصیص یافت.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ارجاع تکنسین.',
+      });
+    }
+  });
+
+  app.post('/api/services/tickets/:id/parts', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const ticket = foundationStore.addSparePartsToJobTicket(
+        Number(req.params.id),
+        req.body.spareParts || [],
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        ticket,
+        messageFa: `قطعات مصرفی به تیکت کار ${ticket.ticketNumber} افزوده شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ثبت قطعات مصرفی.',
+      });
+    }
+  });
+
+  app.post('/api/services/tickets/:id/invoice', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const result = foundationStore.invoiceJobTicket(Number(req.params.id), activeUser.id);
+      res.status(201).json({
+        ok: true,
+        ticket: result.ticket,
+        salesInvoice: result.salesInvoice,
+        messageFa: `صورت‌حساب رسمی شماره ${result.salesInvoice.invoiceNumber} بابت تیکت کار ${result.ticket.ticketNumber} صادر شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در صدور صورت‌حساب خدمات.',
+      });
+    }
+  });
+
+  // ============================================================================
+  // MOBILE, ELECTRONICS, REGISTRY & REPAIR ROUTES (فاز ۹: صنف موبایل، لپ‌تاپ و تعمیرات)
+  // ============================================================================
+
+  app.get('/api/mobile/devices', (req: Request, res: Response) => {
+    try {
+      const devices = foundationStore.getMobileDevices({
+        brandFa: req.query.brandFa as string,
+        condition: req.query.condition as any,
+        stockStatus: req.query.stockStatus as string,
+        search: req.query.search as string,
+      });
+      res.json({ ok: true, devices });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت لیست دستگاه‌های موبایل.',
+      });
+    }
+  });
+
+  app.post('/api/mobile/devices', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const device = foundationStore.addMobileDevice(req.body, activeUser.id);
+      res.status(201).json({
+        ok: true,
+        device,
+        messageFa: `دستگاه ${device.modelFa} با کد IMEI ${device.imei1} با موفقیت در انبار ثبت گردید.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ثبت دستگاه موبایل.',
+      });
+    }
+  });
+
+  app.get('/api/mobile/lookup/:query', (req: Request, res: Response) => {
+    try {
+      const result = foundationStore.lookupDeviceByImeiOrSerial(req.params.query);
+      res.json({ ok: true, ...result });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در استعلام سریال/IMEI.',
+      });
+    }
+  });
+
+  app.get('/api/mobile/repair-tickets', (req: Request, res: Response) => {
+    try {
+      const tickets = foundationStore.getMobileRepairTickets({
+        status: req.query.status as any,
+        search: req.query.search as string,
+      });
+      res.json({ ok: true, tickets });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت پذیرش‌های تعمیرات.',
+      });
+    }
+  });
+
+  app.post('/api/mobile/repair-tickets', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const ticket = foundationStore.createMobileRepairTicket(req.body, activeUser.id);
+      res.status(201).json({
+        ok: true,
+        ticket,
+        messageFa: `قبض پذیرش تعمیرات شماره ${ticket.ticketNumber} برای دستگاه ${ticket.deviceModelFa} صادر شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در صدور قبض تعمیرات.',
+      });
+    }
+  });
+
+  app.patch('/api/mobile/repair-tickets/:id/status', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const ticket = foundationStore.updateMobileRepairStatus(
+        Number(req.params.id),
+        req.body.status,
+        req.body.notesFa,
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        ticket,
+        messageFa: `وضعیت تعمیرات قبض ${ticket.ticketNumber} به‌روزرسانی شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در تغییر وضعیت تعمیرات.',
+      });
+    }
+  });
+
+  app.post('/api/mobile/repair-tickets/:id/parts', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const ticket = foundationStore.addPartToRepairTicket(
+        Number(req.params.id),
+        req.body,
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        ticket,
+        messageFa: `قطعه «${req.body.partNameFa}» به قبض تعمیر ${ticket.ticketNumber} اضافه شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در افزودن قطعه تعویضی.',
+      });
+    }
+  });
+
+  app.post('/api/mobile/repair-tickets/:id/checkout', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const result = foundationStore.completeAndInvoiceRepairTicket(
+        Number(req.params.id),
+        req.body.paymentMethod || 'POS',
+        activeUser.id
+      );
+      res.status(201).json({
+        ok: true,
+        ticket: result.ticket,
+        salesInvoice: result.salesInvoice,
+        messageFa: `دستگاه تحویل مشتری شد و فاکتور فروش/خدمات [${result.salesInvoice.invoiceNumber}] صادر گردید.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در تسویه و تحویل دستگاه.',
+      });
+    }
+  });
+
+  app.get('/api/mobile/repair-slip/:id', (req: Request, res: Response) => {
+    try {
+      const slip = foundationStore.generateMobileRepairSlip(Number(req.params.id));
+      res.json({ ok: true, slip });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در صدور رسید پذیرش.',
+      });
+    }
+  });
+
+  // ============================================================================
+  // PHASE 11: MULTI-BRANCH, INTER-WAREHOUSE TRANSFERS & EXECUTIVE BI ROUTES
+  // ============================================================================
+
+  app.get('/api/inventory/transfers', (_req: Request, res: Response) => {
+    try {
+      const transfers = foundationStore.getInventoryTransfers();
+      res.json({ ok: true, transfers });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت حواله‌های انتقال کالا.',
+      });
+    }
+  });
+
+  app.post('/api/inventory/transfers', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const transfer = foundationStore.createInventoryTransferRequisition(req.body, activeUser.id);
+      res.status(201).json({
+        ok: true,
+        transfer,
+        messageFa: `حواله ترانزیت کالا ${transfer.transferNumber} با موفقیت صادر گردید.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در صدور حواله ترانزیت.',
+      });
+    }
+  });
+
+  app.post('/api/inventory/transfers/:id/receive', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const transfer = foundationStore.receiveInventoryTransferRequisition(
+        Number(req.params.id),
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        transfer,
+        messageFa: `محموله ترانزیت ${transfer.transferNumber} با موفقیت در انبار مقصد تحویل و انبارگردانی شد.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در تحویل محموله ترانزیت.',
+      });
+    }
+  });
+
+  app.get('/api/system/executive-bi', (_req: Request, res: Response) => {
+    try {
+      const metrics = foundationStore.getExecutiveBiMetrics();
+      res.json({ ok: true, metrics });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در محاسبه شاخص‌های کلان مدیریتی BI.',
       });
     }
   });

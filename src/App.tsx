@@ -18,9 +18,13 @@ import {
   Settings,
   BookOpen,
   ChevronDown,
+  Scale,
+  UtensilsCrossed,
+  Truck,
+  Smartphone,
 } from 'lucide-react';
 import { LayoutDashboard } from 'lucide-react';
-import { FoundationDataResponse, PublicUser } from './types/foundation';
+import { FoundationDataResponse, PublicUser, resolveIndustryUiLabels } from './types/foundation';
 import { LoginModal } from './components/LoginModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { UserManagementView } from './components/UserManagementView';
@@ -37,6 +41,12 @@ import { TreasuryManagementView } from './components/TreasuryManagementView';
 import { AccountingManagementView } from './components/AccountingManagementView';
 import { DashboardView } from './components/DashboardView';
 import { SmartAgentWidget } from './components/SmartAgentWidget';
+import { GoldDualLedgerView } from './components/GoldDualLedgerView';
+import { RestaurantCafeManagementView } from './components/RestaurantCafeManagementView';
+import { WholesaleDistributionView } from './components/WholesaleDistributionView';
+import { MobileElectronicsManagementView } from './components/MobileElectronicsManagementView';
+import { ServicesContractingView } from './components/ServicesContractingView';
+import { Button, Card } from './components/ui';
 
 type WorkspaceTab =
   | 'DASHBOARD'
@@ -51,7 +61,12 @@ type WorkspaceTab =
   | 'USERS'
   | 'RBAC'
   | 'AUDIT'
-  | 'SETTINGS_HEALTH';
+  | 'SETTINGS_HEALTH'
+  | 'GOLD_DUAL_LEDGER'
+  | 'RESTAURANT_CAFE'
+  | 'WHOLESALE_DISTRIBUTION'
+  | 'MOBILE_ELECTRONICS'
+  | 'SERVICES_CONTRACTING';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('DASHBOARD');
@@ -88,12 +103,17 @@ export default function App() {
 
   const enableInstallationServices =
     foundationData?.industryProfile?.features?.enableInstallationServices ?? true;
+  const enableDoubleEntryAccounting =
+    foundationData?.settings?.enableDoubleEntryAccounting !== false;
 
   useEffect(() => {
     if (!enableInstallationServices && activeTab === 'INSTALLATION') {
       setActiveTab('DASHBOARD');
     }
-  }, [enableInstallationServices, activeTab]);
+    if (!enableDoubleEntryAccounting && activeTab === 'ACCOUNTING') {
+      setActiveTab('DASHBOARD');
+    }
+  }, [enableInstallationServices, enableDoubleEntryAccounting, activeTab]);
 
   const handleSwitchUser = async (userId: number) => {
     try {
@@ -118,11 +138,11 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 space-y-4">
+        <Card variant="default" padding="lg" className="w-full max-w-md space-y-4">
           <div className="flex items-center gap-3">
             <RefreshCw className="h-5 w-5 text-blue-600 animate-spin shrink-0" />
             <div>
-              <h1 className="text-sm font-bold text-slate-900">
+              <h1 className="text-sm font-extrabold text-slate-900">
                 در حال راه‌اندازی و اتصال به هسته مرکزی Foundation...
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -131,10 +151,10 @@ export default function App() {
             </div>
           </div>
           <div className="space-y-2">
-            <div className="h-3 w-full rounded bg-slate-100" />
-            <div className="h-3 w-4/5 rounded bg-slate-100" />
+            <div className="h-2.5 w-full rounded-lg bg-slate-100 animate-pulse" />
+            <div className="h-2.5 w-4/5 rounded-lg bg-slate-100 animate-pulse" />
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -142,30 +162,31 @@ export default function App() {
   if (networkError || !foundationData) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="w-full max-w-lg rounded-xl border border-red-300 bg-white p-6 space-y-4">
-          <div className="flex items-center gap-2.5 text-red-800">
-            <AlertTriangle className="h-6 w-6 text-red-600 shrink-0" />
+        <Card variant="default" padding="lg" className="w-full max-w-lg border-rose-200 space-y-4">
+          <div className="flex items-center gap-2.5 text-rose-800">
+            <AlertTriangle className="h-6 w-6 text-rose-600 shrink-0" />
             <div>
-              <h1 className="text-sm font-bold">خطا در برقراری ارتباط با سرور دیتابیس</h1>
+              <h1 className="text-sm font-extrabold">خطا در برقراری ارتباط با سرور دیتابیس</h1>
               <p className="text-xs text-slate-600 mt-0.5">
                 سرویس مرکزی Backend روی پورت 3000 در دسترس نیست یا خطایی رخ داده است.
               </p>
             </div>
           </div>
-          <div className="rounded border border-red-200 bg-red-50 p-3 text-xs text-red-950 font-mono">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-950 font-mono">
             {networkError}
           </div>
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
             onClick={() => {
               setLoading(true);
               fetchFoundationData();
             }}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
           >
             تلاش مجدد
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     );
   }
@@ -181,412 +202,438 @@ export default function App() {
     enableWarrantyTracking: true,
     enableBarcodeScanQuickPos: true,
   };
-  const uiLabels = industryProfile?.uiLabels || {
-    inventoryTabTitleFa: 'کالا و انبارداری',
-    serialTrackerTitleFa: 'رهگیری شماره سریال کالا',
-    partiesInstallerRoleTitleFa: 'نصابان و تکنسین‌ها',
+  const uiLabels = resolveIndustryUiLabels(industryProfile);
+
+  // Industry-specific profile logic and presets
+  const isSupermarket = profileCode === 'SUPERMARKET_GROCERY';
+  const isRetailGeneral = profileCode === 'RETAIL_GENERAL';
+  const isCctvSecurity = profileCode === 'CCTV_SECURITY';
+
+  const theme = industryProfile?.theme || {
+    id: 'cctv',
+    primaryColor: '#0284c7',
+    badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    badgeText: 'text-emerald-700',
+    headerBrandTitleFa: 'سامانه جامع ERP و نظارت تصویری',
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
-      {/* 1. Top Brand & User Session Bar */}
-      <header className="bg-white border-b border-slate-200 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
-          {/* Zone 1: Wordmark & Company Brand */}
-          <div className="flex items-center gap-2.5">
+    <div
+      dir="rtl"
+      data-industry-theme={theme.id || 'cctv'}
+      className="min-h-screen bg-slate-50 text-slate-900 flex flex-col"
+    >
+      {/* Main Unified Header: Divided into 3 Structured Zones (Brand, Navigation, User Actions) */}
+      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-40">
+        {/* Industry Top Color Line */}
+        <div
+          className="h-1 w-full transition-colors duration-300"
+          style={{ backgroundColor: theme.primaryColor || 'var(--theme-top-bar, #0284c7)' }}
+        />
+        {/* Top Row: Zone 1 (Brand Identity) & Zone 3 (User Actions) */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+          {/* ZONE 1: Brand & Industry Identity */}
+          <div className="flex items-center gap-3 min-w-0">
             <a
               href="#top"
-              className="text-sm font-extrabold tracking-tight text-slate-900 whitespace-nowrap flex items-center gap-2"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab('DASHBOARD');
+              }}
+              className="flex items-center gap-2.5 focus-ring rounded-xl"
             >
-              <span className="bg-slate-900 text-white px-2.5 py-1 rounded-lg font-black text-xs shadow-xs">
+              <span className="bg-slate-900 text-white px-3 py-1.5 rounded-xl font-black text-xs tracking-tight shrink-0">
                 {foundationData.settings?.companyName || 'مهرگان'}
               </span>
-              <span className="font-extrabold text-slate-900 text-xs sm:text-sm">
-                {profileCode === 'SUPERMARKET_GROCERY'
-                  ? 'سامانه فروشگاهی و حسابداری سوپرمارکت'
-                  : profileCode === 'RETAIL_GENERAL'
-                  ? 'سامانه جامع فروشگاهی و حسابداری دوبل'
-                  : 'سامانه جامع ERP و حسابداری دوطرفه'}
+              <span className="font-extrabold text-slate-900 text-xs sm:text-sm truncate">
+                {theme.headerBrandTitleFa || 'سامانه جامع ERP و نظارت تصویری'}
               </span>
             </a>
-            <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-              سال مالی {foundationData.settings?.activeFiscalYearCode || '۱۴۰۵'}
-            </span>
-            <span
-              className={`hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                profileCode === 'RETAIL_GENERAL'
-                  ? 'bg-blue-50 text-blue-800 border-blue-300'
-                  : profileCode === 'SUPERMARKET_GROCERY'
-                  ? 'bg-amber-50 text-amber-800 border-amber-300'
-                  : 'bg-emerald-50 text-emerald-800 border-emerald-300'
-              }`}
-              title={industryProfile?.descriptionFa}
-            >
-              {industryProfile?.badgeLabelFa || 'صنف نظارت تصویری و حفاظتی'}
-            </span>
+
+            <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 border-r border-slate-200 pr-3">
+              <span className="font-semibold text-slate-700 tabular-nums">
+                سال مالی {foundationData.settings?.activeFiscalYearCode || '۱۴۰۵'}
+              </span>
+              <span aria-hidden="true">·</span>
+              <span
+                className={`font-bold px-2 py-0.5 rounded-full text-[11px] border ${
+                  theme.badgeBg || 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                }`}
+                title={industryProfile?.descriptionFa}
+              >
+                {industryProfile?.badgeLabelFa || 'صنف نظارت تصویری و حفاظتی'}
+              </span>
+            </div>
           </div>
 
-          {/* Zone 2: Active User Info & Account Actions */}
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+          {/* ZONE 3: Active User Profile & Account Controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl">
               <UserCheck className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-              <span className="font-semibold text-slate-900">{activeUser.fullName}</span>
-              <span className="text-[10px] text-slate-400 font-mono">(@{activeUser.username})</span>
+              <span className="font-extrabold text-slate-900">{activeUser.fullName}</span>
+              <span className="text-[11px] text-slate-400 font-mono">(@{activeUser.username})</span>
             </div>
 
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setIsChangePassOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap"
+              leftIcon={<KeyRound className="h-3.5 w-3.5 text-amber-600" />}
               title="تغییر کلمه عبور کاربر جاری"
             >
-              <KeyRound className="h-3.5 w-3.5 text-amber-600" />
               <span className="hidden xs:inline">رمز عبور</span>
-            </button>
+            </Button>
 
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setIsLoginModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors whitespace-nowrap shadow-xs"
+              leftIcon={<UserCheck className="h-3.5 w-3.5" />}
             >
-              <UserCheck className="h-3.5 w-3.5" />
-              <span>تغییر حساب</span>
-            </button>
+              تغییر حساب
+            </Button>
           </div>
         </div>
 
-        {/* Zone 3: Main Operational Navigation Ribbon with Quick Actions & Color-Coded High-Frequency Menus */}
-        <div className="border-t border-slate-100 bg-slate-50/80 px-4 sm:px-6 py-2">
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
-            {/* Quick Actions Ribbon & Interactive Submenu (دسترسی سریع با زیرمنوی آبشاری) */}
-            <div className="relative">
-              <div className="flex items-center gap-1.5 text-[11px] font-bold bg-white px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs">
+        {/* Bottom Row: ZONE 2 (Primary Navigation Bar - Wrap Layout, No Horizontal Scroll) */}
+        <div className="border-t border-slate-200/70 bg-slate-50/90 px-3 sm:px-6 py-2">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
+            
+            {/* Left/Right Group: Quick Access Trigger & Primary Operational Tabs */}
+            <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+              
+              {/* Quick Access Dropdown Trigger */}
+              <div className="relative shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsQuickSubmenuOpen(!isQuickSubmenuOpen)}
-                  className="text-amber-600 hover:text-amber-700 flex items-center gap-1 font-extrabold ml-1 cursor-pointer bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-lg transition-colors border border-amber-200"
-                  title="کلیک برای باز کردن زیرمنوی دسترسی سریع"
+                  className="text-amber-800 flex items-center gap-1.5 font-extrabold cursor-pointer bg-gradient-to-r from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 px-3 py-1.5 rounded-xl transition-all border border-amber-200/90 whitespace-nowrap shadow-2xs focus-ring"
+                  title="کلیک برای باز کردن منوی میانبرهای سریع"
                 >
-                  <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                  <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-500 animate-pulse" />
                   <span>دسترسی سریع</span>
                   <ChevronDown className={`w-3 h-3 transition-transform ${isQuickSubmenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Interactive Flyout Submenu (Structured 2-Column Grid) */}
+                {isQuickSubmenuOpen && (
+                  <div
+                    className="fixed sm:absolute right-2 sm:right-0 top-24 sm:top-full mt-2 w-[340px] sm:w-[420px] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-4 space-y-3 text-right dir-rtl animate-in fade-in zoom-in-95 duration-150"
+                    onClick={() => setIsQuickSubmenuOpen(false)}
+                  >
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 px-1">
+                      <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                        میانبرهای عملیاتی و دسترسی سریع
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-bold">تمام ماژول‌ها</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold">
+                      {/* Section 1: Sales & Inventory */}
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                          🛒 فروش و انبار
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('SALES')}
+                          className="w-full p-2 rounded-xl hover:bg-slate-50 text-slate-800 flex items-center justify-between transition-colors cursor-pointer text-right"
+                        >
+                          <span className="flex items-center gap-2">
+                            <ShoppingCart className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>{uiLabels.quickSalesSubmenuTitleFa}</span>
+                          </span>
+                          <span className="text-[9px] bg-emerald-100 text-emerald-800 font-mono px-1.5 py-0.5 rounded">POS</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('INVENTORY')}
+                          className="w-full p-2 rounded-xl hover:bg-slate-50 text-slate-800 flex items-center justify-between transition-colors cursor-pointer text-right"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Package className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>{uiLabels.quickInventorySubmenuTitleFa}</span>
+                          </span>
+                          <span className="text-[9px] bg-indigo-100 text-indigo-800 font-mono px-1.5 py-0.5 rounded">انبار</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('PURCHASES')}
+                          className="w-full p-2 rounded-xl hover:bg-slate-50 text-slate-800 flex items-center justify-between transition-colors cursor-pointer text-right"
+                        >
+                          <span className="flex items-center gap-2">
+                            <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
+                            <span>{uiLabels.quickPurchasesSubmenuTitleFa}</span>
+                          </span>
+                          <span className="text-[9px] bg-amber-100 text-amber-800 font-mono px-1.5 py-0.5 rounded">خرید</span>
+                        </button>
+                      </div>
+
+                      {/* Section 2: Treasury & Parties */}
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-black text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md">
+                          🏦 خزانه و اشخاص
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('TREASURY')}
+                          className="w-full p-2 rounded-xl hover:bg-slate-50 text-slate-800 flex items-center justify-between transition-colors cursor-pointer text-right"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Landmark className="w-3.5 h-3.5 text-teal-600" />
+                            <span>{uiLabels.quickTreasurySubmenuTitleFa}</span>
+                          </span>
+                          <span className="text-[9px] bg-teal-100 text-teal-800 font-mono px-1.5 py-0.5 rounded">خزانه</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('PARTIES')}
+                          className="w-full p-2 rounded-xl hover:bg-slate-50 text-slate-800 flex items-center justify-between transition-colors cursor-pointer text-right"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Users className="w-3.5 h-3.5 text-blue-600" />
+                            <span>{uiLabels.quickPartiesSubmenuTitleFa}</span>
+                          </span>
+                          <span className="text-[9px] bg-blue-100 text-blue-800 font-mono px-1.5 py-0.5 rounded">اشخاص</span>
+                        </button>
+                        {enableDoubleEntryAccounting && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('ACCOUNTING')}
+                            className="w-full p-2 rounded-xl hover:bg-slate-50 text-slate-800 flex items-center justify-between transition-colors cursor-pointer text-right"
+                          >
+                            <span className="flex items-center gap-2">
+                              <BookOpen className="w-3.5 h-3.5 text-purple-600" />
+                              <span>حسابداری دوبل و دفاتر</span>
+                            </span>
+                            <span className="text-[9px] bg-purple-100 text-purple-800 font-mono px-1.5 py-0.5 rounded">مالی</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Core Operational Modules (Primary Pill Tabs) */}
+              <nav className="flex flex-wrap items-center gap-1.5 text-xs font-bold" aria-label="ناوبری عملیات اصلی">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('DASHBOARD')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                    activeTab === 'DASHBOARD'
+                      ? 'bg-slate-900 text-white font-extrabold shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200/90 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                  title="داشبورد مدیریتی و شاخص‌های کلیدی عملکرد"
+                >
+                  <LayoutDashboard className={`w-3.5 h-3.5 ${activeTab === 'DASHBOARD' ? 'text-white' : 'text-slate-500'}`} />
+                  <span>داشبورد</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveTab('SALES')}
-                  className="px-2 py-0.5 rounded text-slate-700 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 transition-colors cursor-pointer"
-                  title="صندوق فروش سریع (F2)"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                    activeTab === 'SALES'
+                      ? 'bg-emerald-600 text-white font-extrabold shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200/90 hover:bg-emerald-50 hover:text-emerald-900 hover:border-emerald-200'
+                  }`}
+                  title={uiLabels.salesTabDescFa}
                 >
-                  {profileCode === 'SUPERMARKET_GROCERY' ? '🛒 صندوق سریع POS' : '🛒 فاکتور فروش POS'}
+                  <ShoppingCart className={`w-3.5 h-3.5 ${activeTab === 'SALES' ? 'text-white' : 'text-emerald-600'}`} />
+                  <span>{uiLabels.salesTabTitleFa}</span>
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => setActiveTab(profileCode === 'SUPERMARKET_GROCERY' ? 'INVENTORY' : 'TREASURY')}
-                  className="px-2 py-0.5 rounded text-slate-700 bg-slate-100 hover:bg-indigo-100 hover:text-indigo-800 transition-colors cursor-pointer"
-                  title={profileCode === 'SUPERMARKET_GROCERY' ? 'موجودی اقلام سوپرمارکت' : 'دریافت و پرداخت'}
+                  onClick={() => setActiveTab('PURCHASES')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                    activeTab === 'PURCHASES'
+                      ? 'bg-amber-600 text-white font-extrabold shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200/90 hover:bg-amber-50 hover:text-amber-900 hover:border-amber-200'
+                  }`}
+                  title={uiLabels.purchasesTabDescFa}
                 >
-                  {profileCode === 'SUPERMARKET_GROCERY' ? '📦 موجودی اقلام' : '💳 دریافت و پرداخت'}
+                  <ShoppingBag className={`w-3.5 h-3.5 ${activeTab === 'PURCHASES' ? 'text-white' : 'text-amber-600'}`} />
+                  <span>{uiLabels.purchasesTabTitleFa}</span>
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => setActiveTab(profileCode === 'SUPERMARKET_GROCERY' ? 'PURCHASES' : 'ACCOUNTING')}
-                  className="px-2 py-0.5 rounded text-slate-700 bg-slate-100 hover:bg-purple-100 hover:text-purple-800 transition-colors cursor-pointer hidden md:inline-block"
-                  title={profileCode === 'SUPERMARKET_GROCERY' ? 'فاکتورهای خرید کالا' : 'ثبت هزینه و درآمد'}
+                  onClick={() => setActiveTab('TREASURY')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                    activeTab === 'TREASURY'
+                      ? 'bg-teal-700 text-white font-extrabold shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200/90 hover:bg-teal-50 hover:text-teal-900 hover:border-teal-200'
+                  }`}
+                  title={uiLabels.treasuryTabDescFa}
                 >
-                  {profileCode === 'SUPERMARKET_GROCERY' ? '🛍️ خرید کالا' : '💸 هزینه و درآمد'}
+                  <Landmark className={`w-3.5 h-3.5 ${activeTab === 'TREASURY' ? 'text-white' : 'text-teal-600'}`} />
+                  <span>{uiLabels.treasuryTabTitleFa}</span>
                 </button>
-              </div>
 
-              {/* Interactive Flyout Submenu */}
-              {isQuickSubmenuOpen && (
-                <div
-                  className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-150 text-right dir-rtl"
-                  onClick={() => setIsQuickSubmenuOpen(false)}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('PARTIES')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                    activeTab === 'PARTIES'
+                      ? 'bg-blue-600 text-white font-extrabold shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200/90 hover:bg-blue-50 hover:text-blue-900 hover:border-blue-200'
+                  }`}
+                  title={uiLabels.partiesTabDescFa}
                 >
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 px-1">
-                    <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                      زیرمنوی میانبرهای سیستم
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-bold">انتخاب ماژول</span>
-                  </div>
+                  <Users className={`w-3.5 h-3.5 ${activeTab === 'PARTIES' ? 'text-white' : 'text-blue-600'}`} />
+                  <span>{uiLabels.partiesTabTitleFa}</span>
+                </button>
 
-                  <div className="grid grid-cols-1 gap-1 text-xs font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('SALES')}
-                      className="p-2 rounded-xl hover:bg-emerald-50 text-slate-800 hover:text-emerald-900 flex items-center justify-between transition-colors cursor-pointer group"
-                    >
-                      <span className="flex items-center gap-2">
-                        <ShoppingCart className="w-4 h-4 text-emerald-600" />
-                        <span>
-                          {profileCode === 'SUPERMARKET_GROCERY'
-                            ? '🛒 صندوق فروش سریع بارکدی و تسویه POS'
-                            : profileCode === 'RETAIL_GENERAL'
-                            ? '🛒 فروشگاه، پیش‌فاکتور و صندوق POS'
-                            : '🛒 فروش، POS و پیش‌فاکتور'}
-                        </span>
-                      </span>
-                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-mono">
-                        POS
-                      </span>
-                    </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('INVENTORY')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                    activeTab === 'INVENTORY'
+                      ? 'bg-indigo-600 text-white font-extrabold shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200/90 hover:bg-indigo-50 hover:text-indigo-900 hover:border-indigo-200'
+                  }`}
+                  title="مدیریت موجودی انبار، کاردکس و بارکد"
+                >
+                  <Package className={`w-3.5 h-3.5 ${activeTab === 'INVENTORY' ? 'text-white' : 'text-indigo-600'}`} />
+                  <span>{uiLabels.inventoryTabTitleFa}</span>
+                </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('PURCHASES')}
-                      className="p-2 rounded-xl hover:bg-amber-50 text-slate-800 hover:text-amber-900 flex items-center justify-between transition-colors cursor-pointer group"
-                    >
-                      <span className="flex items-center gap-2">
-                        <ShoppingBag className="w-4 h-4 text-amber-600" />
-                        <span>
-                          {profileCode === 'SUPERMARKET_GROCERY'
-                            ? '🛍️ خرید کالا، فاکتور و ورود به انبار'
-                            : '🛍️ فاکتور خرید و بهای تمام‌شده'}
-                        </span>
-                      </span>
-                      <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono">
-                        Landed Cost
-                      </span>
-                    </button>
+                {enableDoubleEntryAccounting && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('ACCOUNTING')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                      activeTab === 'ACCOUNTING'
+                        ? 'bg-purple-700 text-white font-extrabold shadow-xs'
+                        : 'bg-white text-slate-700 border border-slate-200/90 hover:bg-purple-50 hover:text-purple-900 hover:border-purple-200'
+                    }`}
+                    title="کدینگ حساب‌ها، اسناد دوبل، تراز و دفاتر کل"
+                  >
+                    <BookOpen className={`w-3.5 h-3.5 ${activeTab === 'ACCOUNTING' ? 'text-white' : 'text-purple-600'}`} />
+                    <span>حسابداری</span>
+                  </button>
+                )}
 
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('TREASURY')}
-                      className="p-2 rounded-xl hover:bg-teal-50 text-slate-800 hover:text-teal-900 flex items-center justify-between transition-colors cursor-pointer group"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Landmark className="w-4 h-4 text-teal-600" />
-                        <span>
-                          {profileCode === 'SUPERMARKET_GROCERY'
-                            ? '💳 صندوق‌ها، کارتخوان و واریز بانکی'
-                            : '💳 دریافت، پرداخت و چک صیادی'}
-                        </span>
-                      </span>
-                      <span className="text-[10px] bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded font-mono">
-                        خزانه
-                      </span>
-                    </button>
+                {features.enableInstallationServices && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('INSTALLATION')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                      activeTab === 'INSTALLATION'
+                        ? 'bg-cyan-700 text-white font-extrabold shadow-xs'
+                        : 'bg-white text-slate-700 border border-slate-200/90 hover:bg-cyan-50 hover:text-cyan-900 hover:border-cyan-200'
+                    }`}
+                    title="سفارشات خدمات نصب، تکنسین‌ها و پروژه‌های نظارت تصویری"
+                  >
+                    <Wrench className={`w-3.5 h-3.5 ${activeTab === 'INSTALLATION' ? 'text-white' : 'text-cyan-600'}`} />
+                    <span>{uiLabels.installationTabTitleFa}</span>
+                  </button>
+                )}
 
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('INVENTORY')}
-                      className="p-2 rounded-xl hover:bg-indigo-50 text-slate-800 hover:text-indigo-900 flex items-center justify-between transition-colors cursor-pointer group"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Package className="w-4 h-4 text-indigo-600" />
-                        <span>📦 {uiLabels.inventoryTabTitleFa || 'کالا و انبارداری'} و کاردکس</span>
-                      </span>
-                      <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-mono">
-                        کالا
-                      </span>
-                    </button>
+                {(profileCode === 'GOLD_JEWELRY' || activeTab === 'GOLD_DUAL_LEDGER') && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('GOLD_DUAL_LEDGER')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                      activeTab === 'GOLD_DUAL_LEDGER'
+                        ? 'bg-amber-600 text-white font-extrabold shadow-xs ring-2 ring-amber-300'
+                        : 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 font-bold'
+                    }`}
+                    title="کاردکس دوگانه طلا و ریال، فروش گرمی بدون ریال و بده‌بستان همکار"
+                  >
+                    <Scale className={`w-3.5 h-3.5 ${activeTab === 'GOLD_DUAL_LEDGER' ? 'text-white' : 'text-amber-700'}`} />
+                    <span>کاردکس طلا و ریال</span>
+                  </button>
+                )}
 
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('PARTIES')}
-                      className="p-2 rounded-xl hover:bg-blue-50 text-slate-800 hover:text-blue-900 flex items-center justify-between transition-colors cursor-pointer group"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-blue-600" />
-                        <span>
-                          {profileCode === 'SUPERMARKET_GROCERY'
-                            ? '👥 حساب‌های دفتری و تأمین‌کنندگان'
-                            : '👥 صورت‌حساب مشتریان و اشخاص'}
-                        </span>
-                      </span>
-                      <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono">
-                        طرفین
-                      </span>
-                    </button>
+                {(profileCode === 'RESTAURANT_CAFE' || activeTab === 'RESTAURANT_CAFE') && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('RESTAURANT_CAFE')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                      activeTab === 'RESTAURANT_CAFE'
+                        ? 'bg-orange-600 text-white font-extrabold shadow-xs ring-2 ring-orange-300'
+                        : 'bg-orange-50 text-orange-900 border border-orange-300 hover:bg-orange-100 font-bold'
+                    }`}
+                    title="مدیریت سالن، میزها، منوی لمسی و بن آشپزخانه رستوران"
+                  >
+                    <UtensilsCrossed className={`w-3.5 h-3.5 ${activeTab === 'RESTAURANT_CAFE' ? 'text-white' : 'text-orange-700'}`} />
+                    <span>رستوران و سالن</span>
+                  </button>
+                )}
 
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('ACCOUNTING')}
-                      className="p-2 rounded-xl hover:bg-purple-50 text-slate-800 hover:text-purple-900 flex items-center justify-between transition-colors cursor-pointer group"
-                    >
-                      <span className="flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-purple-600" />
-                        <span>📚 اسناد دوبل، تراز و دفاتر کل</span>
-                      </span>
-                      <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-mono">
-                        حسابداری
-                      </span>
-                    </button>
+                {(profileCode === 'WHOLESALE_DISTRIBUTION' || activeTab === 'WHOLESALE_DISTRIBUTION') && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('WHOLESALE_DISTRIBUTION')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                      activeTab === 'WHOLESALE_DISTRIBUTION'
+                        ? 'bg-teal-700 text-white font-extrabold shadow-xs ring-2 ring-teal-300'
+                        : 'bg-teal-50 text-teal-900 border border-teal-300 hover:bg-teal-100 font-bold'
+                    }`}
+                    title="مدیریت پخش عمده، کارتن‌ها، نرخ همکار و ناوگان توزیع"
+                  >
+                    <Truck className={`w-3.5 h-3.5 ${activeTab === 'WHOLESALE_DISTRIBUTION' ? 'text-white' : 'text-teal-700'}`} />
+                    <span>پخش و فروش عمده</span>
+                  </button>
+                )}
 
-                    {features.enableInstallationServices && (
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('INSTALLATION')}
-                        className="p-2 rounded-xl hover:bg-cyan-50 text-slate-800 hover:text-cyan-900 flex items-center justify-between transition-colors cursor-pointer group"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Wrench className="w-4 h-4 text-cyan-600" />
-                          <span>🔧 کارتابل نصابان و پروژه‌های CCTV</span>
-                        </span>
-                        <span className="text-[10px] bg-cyan-100 text-cyan-800 px-1.5 py-0.5 rounded font-mono">
-                          نصب
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
+                {(profileCode === 'MOBILE_ELECTRONICS' || activeTab === 'MOBILE_ELECTRONICS') && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('MOBILE_ELECTRONICS')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                      activeTab === 'MOBILE_ELECTRONICS'
+                        ? 'bg-cyan-700 text-white font-extrabold shadow-xs ring-2 ring-cyan-300'
+                        : 'bg-cyan-50 text-cyan-900 border border-cyan-300 hover:bg-cyan-100 font-bold'
+                    }`}
+                    title="مدیریت انبار دستگاه‌ها، کد IMEI، رجیستری و پذیرش تعمیرات"
+                  >
+                    <Smartphone className={`w-3.5 h-3.5 ${activeTab === 'MOBILE_ELECTRONICS' ? 'text-white' : 'text-cyan-700'}`} />
+                    <span>موبایل و تعمیرات</span>
+                  </button>
+                )}
+                {(profileCode === 'SERVICES_CONTRACTING' || activeTab === 'SERVICES_CONTRACTING') && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('SERVICES_CONTRACTING')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                      activeTab === 'SERVICES_CONTRACTING'
+                        ? 'bg-blue-700 text-white font-extrabold shadow-xs ring-2 ring-blue-300'
+                        : 'bg-blue-50 text-blue-900 border border-blue-300 hover:bg-blue-100 font-bold'
+                    }`}
+                    title="مدیریت تیکت‌های خدمات فنی، اعزام تکنسین و قطعات یدکی"
+                  >
+                    <Wrench className={`w-3.5 h-3.5 ${activeTab === 'SERVICES_CONTRACTING' ? 'text-white' : 'text-blue-700'}`} />
+                    <span>خدمات و پیمانکاری</span>
+                  </button>
+                )}
+              </nav>
             </div>
 
-            {/* Core Operations & Financial Menus */}
-            <nav className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
-              {/* 0. DASHBOARD (داشبورد مدیریتی) - Slate/Indigo */}
+            {/* System & Governance Modules (Compact Pills Row) */}
+            <div className="flex flex-wrap items-center gap-1 bg-white border border-slate-200/90 p-1 rounded-xl text-[11px] shrink-0">
+              <span className="text-slate-400 font-bold px-1.5">سیستم:</span>
               <button
                 type="button"
-                onClick={() => setActiveTab('DASHBOARD')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer select-none ${
-                  activeTab === 'DASHBOARD'
-                    ? 'bg-slate-900 text-white font-extrabold shadow-sm ring-2 ring-slate-900/30'
-                    : 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-100'
+                onClick={() => setActiveTab('SETTINGS_HEALTH')}
+                className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  activeTab === 'SETTINGS_HEALTH' || (activeTab as string) === 'SETTINGS' ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-700 font-semibold'
                 }`}
-                title="داشبورد مدیریتی و شاخص‌های کلیدی عملکرد"
+                title="تنظیمات صنف و مشخصات بیزینس"
               >
-                <LayoutDashboard className="w-3.5 h-3.5 text-indigo-500" />
-                <span>داشبورد</span>
-              </button>
-
-              {/* 1. SALES (فروش و POS) - Emerald */}
-              <button
-                type="button"
-                onClick={() => setActiveTab('SALES')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer select-none ${
-                  activeTab === 'SALES'
-                    ? 'bg-emerald-600 text-white font-extrabold shadow-sm ring-2 ring-emerald-600/30'
-                    : 'bg-emerald-50 text-emerald-900 border border-emerald-300 hover:bg-emerald-100'
-                }`}
-                title={
-                  profileCode === 'SUPERMARKET_GROCERY'
-                    ? 'صندوق فروش سریع بارکدی POS و فاکتورها'
-                    : 'فروش، پیش‌فاکتور، صندوق POS و مرجوعی'
-                }
-              >
-                <ShoppingCart className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-700" />
-                <span>
-                  {profileCode === 'SUPERMARKET_GROCERY'
-                    ? 'صندوق و فروش'
-                    : profileCode === 'RETAIL_GENERAL'
-                    ? 'فروشگاه و POS'
-                    : 'فروش و POS'}
-                </span>
-              </button>
-
-              {/* 2. PURCHASES (خرید و تدارکات) - Amber */}
-              <button
-                type="button"
-                onClick={() => setActiveTab('PURCHASES')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer select-none ${
-                  activeTab === 'PURCHASES'
-                    ? 'bg-amber-600 text-white font-extrabold shadow-sm ring-2 ring-amber-600/30'
-                    : 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
-                }`}
-                title="فاکتورهای خرید، تأمین کالا و بهای تمام‌شده"
-              >
-                <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
-                <span>{profileCode === 'SUPERMARKET_GROCERY' ? 'خرید کالا' : 'خرید و تدارکات'}</span>
-              </button>
-
-              {/* 3. TREASURY (عملیات پرداخت و دریافت) - Teal */}
-              <button
-                type="button"
-                onClick={() => setActiveTab('TREASURY')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer select-none ${
-                  activeTab === 'TREASURY'
-                    ? 'bg-teal-700 text-white font-extrabold shadow-sm ring-2 ring-teal-600/30'
-                    : 'bg-teal-50 text-teal-900 border border-teal-200 hover:bg-teal-100'
-                }`}
-                title="صندوق‌ها، حساب‌های بانکی، چک‌ها و دریافت/پرداخت"
-              >
-                <Landmark className="w-3.5 h-3.5 text-teal-600" />
-                <span>{profileCode === 'SUPERMARKET_GROCERY' ? 'صندوق و بانک' : 'عملیات پرداخت و دریافت'}</span>
-              </button>
-
-              {/* 4. PARTIES (اشخاص و طرفین) - Blue */}
-              <button
-                type="button"
-                onClick={() => setActiveTab('PARTIES')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer select-none ${
-                  activeTab === 'PARTIES'
-                    ? 'bg-blue-600 text-white font-extrabold shadow-sm ring-2 ring-blue-600/30'
-                    : 'bg-blue-50 text-blue-900 border border-blue-300 hover:bg-blue-100'
-                }`}
-                title="مشتریان، تأمین‌کنندگان و مانده‌حساب اشخاص"
-              >
-                <Users className="w-3.5 h-3.5 text-blue-600" />
-                <span>{profileCode === 'SUPERMARKET_GROCERY' ? 'مشتریان و طرفین' : 'اشخاص و طرفین'}</span>
-              </button>
-
-              {/* 5. INVENTORY (کالا و انبارداری) - Indigo */}
-              <button
-                type="button"
-                onClick={() => setActiveTab('INVENTORY')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer select-none ${
-                  activeTab === 'INVENTORY'
-                    ? 'bg-indigo-600 text-white font-extrabold shadow-sm ring-2 ring-indigo-600/30'
-                    : 'bg-indigo-50 text-indigo-900 border border-indigo-300 hover:bg-indigo-100'
-                }`}
-                title="مدیریت موجودی انبار، کاردکس و بارکد"
-              >
-                <Package className="w-3.5 h-3.5 text-indigo-600" />
-                <span>{uiLabels.inventoryTabTitleFa || 'کالا و انبارداری'}</span>
-              </button>
-
-              {/* 6. ACCOUNTING (حسابداری) - Purple */}
-              <button
-                type="button"
-                onClick={() => setActiveTab('ACCOUNTING')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer select-none ${
-                  activeTab === 'ACCOUNTING'
-                    ? 'bg-purple-700 text-white font-extrabold shadow-sm ring-2 ring-purple-600/30'
-                    : 'bg-purple-50 text-purple-900 border border-purple-200 hover:bg-purple-100'
-                }`}
-                title="کدینگ حساب‌ها، اسناد دوبل، تراز و دفاتر کل"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-purple-600" />
-                <span>حسابداری</span>
-              </button>
-
-              {/* 7. INSTALLATION (خدمات و نصب CCTV) - Cyan */}
-              {features.enableInstallationServices && (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('INSTALLATION')}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer select-none ${
-                    activeTab === 'INSTALLATION'
-                      ? 'bg-cyan-600 text-white font-extrabold shadow-sm ring-2 ring-cyan-600/30'
-                      : 'bg-cyan-50 text-cyan-900 border border-cyan-300 hover:bg-cyan-100'
-                  }`}
-                  title="سفارشات خدمات نصب، تکنسین‌ها و پروژه‌های نظارت تصویری"
-                >
-                  <Wrench className="w-3.5 h-3.5 text-cyan-600" />
-                  <span>خدمات و نصب CCTV</span>
-                </button>
-              )}
-            </nav>
-
-            {/* System Sub-Menu Ribbon */}
-            <div className="flex items-center gap-1 bg-white border border-slate-200 p-0.5 rounded-lg text-[11px]">
-              <span className="text-slate-400 font-semibold px-1.5 hidden md:inline">سیستم:</span>
-              <button
-                type="button"
-                onClick={() => setActiveTab('DEPLOYMENT')}
-                className={`px-2 py-1 rounded transition-colors ${
-                  activeTab === 'DEPLOYMENT' ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-700'
-                }`}
-              >
-                استقرار
+                <Sliders className="w-3 h-3 text-sky-600" />
+                <span>تنظیمات</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('USERS')}
-                className={`px-2 py-1 rounded transition-colors ${
-                  activeTab === 'USERS' ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-700'
+                className={`px-2 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                  activeTab === 'USERS' ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-600 font-semibold'
                 }`}
               >
                 کاربران
@@ -594,8 +641,8 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setActiveTab('RBAC')}
-                className={`px-2 py-1 rounded transition-colors ${
-                  activeTab === 'RBAC' ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-700'
+                className={`px-2 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                  activeTab === 'RBAC' ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-600 font-semibold'
                 }`}
               >
                 مجوزها
@@ -603,45 +650,46 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setActiveTab('AUDIT')}
-                className={`px-2 py-1 rounded transition-colors ${
-                  activeTab === 'AUDIT' ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-700'
+                className={`px-2 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                  activeTab === 'AUDIT' ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-600 font-semibold'
                 }`}
               >
                 لاگ
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('SETTINGS_HEALTH')}
-                className={`px-2 py-1 rounded transition-colors ${
-                  activeTab === 'SETTINGS_HEALTH' ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-700'
+                onClick={() => setActiveTab('DEPLOYMENT')}
+                className={`px-2 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                  activeTab === 'DEPLOYMENT' ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-600 font-semibold'
                 }`}
               >
-                تنظیمات
+                استقرار
               </button>
             </div>
+
           </div>
         </div>
       </header>
 
       {/* Default Password Reminder Banner if active user is default admin */}
       {isDefaultAdminPass && (
-        <div className="bg-amber-100 border-b border-amber-300 px-6 py-2">
+        <div className="bg-amber-50 border-b border-amber-200/80 px-6 py-2">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs text-amber-950">
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-amber-700 fill-amber-700 shrink-0" />
+              <Zap className="h-4 w-4 text-amber-600 shrink-0" />
               <span>
                 <strong>راه‌اندازی سریع اولیه:</strong> هم‌اکنون با کاربر ادمین پیش‌فرض (
                 <span className="font-mono font-bold">admin / admin</span>) وارد شده‌اید. می‌توانید
                 همین حالا کلمه عبور را به مقدار دلخواه تغییر دهید.
               </span>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setIsChangePassOpen(true)}
-              className="rounded bg-amber-800 text-white px-2.5 py-1 text-[11px] font-bold hover:bg-amber-900 transition-colors"
             >
               تغییر فوری کلمه عبور admin
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -680,10 +728,45 @@ export default function App() {
           />
         )}
         {activeTab === 'ACCOUNTING' && (
-          <AccountingManagementView
-            foundationData={foundationData}
-            onRefresh={fetchFoundationData}
-          />
+          enableDoubleEntryAccounting ? (
+            <AccountingManagementView
+              foundationData={foundationData}
+              onRefresh={fetchFoundationData}
+            />
+          ) : (
+            <div className="py-12 flex justify-center">
+              <Card variant="default" padding="lg" className="w-full max-w-xl text-center space-y-4 border-slate-200">
+                <div className="mx-auto w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-slate-900">
+                    ماژول حسابداری دوبل در سیستم غیرفعال است
+                  </h2>
+                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                    سیستم در وضعیت عملیات ساده تجاری قرار دارد. کلیه امور فروش، خرید، انبار، چک‌ها، دریافت و پرداخت، مانده و صورت‌حساب تفصیلی مشتریان و تأمین‌کنندگان در تب «اشخاص و طرفین» به طور مستقل و کامل فعال می‌باشند.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setActiveTab('PARTIES')}
+                    leftIcon={<Users className="w-3.5 h-3.5" />}
+                  >
+                    مشاهده حساب و تفصیلی اشخاص
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveTab('DASHBOARD')}
+                  >
+                    بازگشت به داشبورد
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )
         )}
         {activeTab === 'TREASURY' && (
           <TreasuryManagementView
@@ -714,7 +797,37 @@ export default function App() {
           <RbacConsoleView foundationData={foundationData} onRefresh={fetchFoundationData} />
         )}
         {activeTab === 'AUDIT' && <AuditLogView logs={foundationData.auditLogs} />}
-        {activeTab === 'SETTINGS_HEALTH' && (
+        {activeTab === 'GOLD_DUAL_LEDGER' && (
+          <GoldDualLedgerView
+            foundationData={foundationData}
+            onRefresh={fetchFoundationData}
+          />
+        )}
+        {activeTab === 'RESTAURANT_CAFE' && (
+          <RestaurantCafeManagementView
+            foundationData={foundationData}
+            onRefresh={fetchFoundationData}
+          />
+        )}
+        {activeTab === 'WHOLESALE_DISTRIBUTION' && (
+          <WholesaleDistributionView
+            foundationData={foundationData}
+            onRefresh={fetchFoundationData}
+          />
+        )}
+        {activeTab === 'MOBILE_ELECTRONICS' && (
+          <MobileElectronicsManagementView
+            foundationData={foundationData}
+            onRefresh={fetchFoundationData}
+          />
+        )}
+        {activeTab === 'SERVICES_CONTRACTING' && (
+          <ServicesContractingView
+            foundationData={foundationData}
+            onRefresh={fetchFoundationData}
+          />
+        )}
+        {(activeTab === 'SETTINGS_HEALTH' || (activeTab as string) === 'SETTINGS') && (
           <SettingsAndHealthView
             foundationData={foundationData}
             onRefresh={fetchFoundationData}
