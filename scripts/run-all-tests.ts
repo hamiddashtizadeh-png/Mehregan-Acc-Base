@@ -34,6 +34,17 @@ const TEST_FILES = [
   'tests/ui_redesign_phase2.test.ts',
   'tests/cheque_and_recovery_remediation.test.ts',
   'tests/remediation_services_and_depreciation.test.ts',
+  'tests/inventory_transfer_remediation.test.ts',
+  'tests/persistence_safety.test.ts',
+  'tests/security_sessions_and_rbac.test.ts',
+  'scripts/test-industry-cctv.ts',
+  'scripts/test-industry-retail.ts',
+  'scripts/test-industry-gold.ts',
+  'scripts/test-industry-restaurant.ts',
+  'scripts/test-industry-wholesale.ts',
+  'scripts/test-industry-mobile.ts',
+  'scripts/test-industry-contracting.ts',
+  'scripts/test-industry-enterprise.ts',
 ];
 
 console.log('========================================================================');
@@ -52,6 +63,9 @@ const failedFiles: string[] = [];
 const startTime = Date.now();
 
 for (const testFile of TEST_FILES) {
+  if (fs.existsSync(dataDir)) {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
   const filePath = path.join(process.cwd(), testFile);
   if (!fs.existsSync(filePath)) {
     console.error(`❌ File not found: ${testFile}`);

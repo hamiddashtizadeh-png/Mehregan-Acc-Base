@@ -396,6 +396,44 @@ export interface FoundationDataResponse {
   mobileRepairTickets?: MobileRepairTicketRecord[];
   inventoryTransfers?: InventoryTransferRecord[];
   executiveBi?: ExecutiveBiMetrics;
+  remoteTunnelConfig?: RemoteTunnelConfig;
+  googleSheetsSyncConfig?: GoogleSheetsSyncConfig;
+  googleSheetsSyncLogs?: GoogleSheetsSyncLog[];
+}
+
+export interface RemoteTunnelConfig {
+  enabled: boolean;
+  publicUrl: string;
+  localPort: number;
+  lastTestedAt?: string;
+  testStatus?: 'CONNECTED' | 'DISCONNECTED' | 'UNTESTED';
+}
+
+export interface GoogleSheetsSyncConfig {
+  enabled: boolean;
+  spreadsheetUrl: string;
+  appsScriptWebhookUrl: string;
+  autoSyncIntervalMinutes: number;
+  lastSyncAt?: string;
+  lastSyncStatus?: 'SUCCESS' | 'ERROR' | 'IDLE';
+  lastSyncStats?: {
+    jobsPushed?: number;
+    requisitionsPulled?: number;
+    reportsPulled?: number;
+  };
+}
+
+export interface GoogleSheetsSyncLog {
+  id: string;
+  timestamp: string;
+  type: 'PUSH' | 'PULL' | 'WEBHOOK';
+  status: 'SUCCESS' | 'ERROR';
+  detailsFa: string;
+  stats?: {
+    jobsPushed?: number;
+    requisitionsPulled?: number;
+    reportsPulled?: number;
+  };
 }
 
 export type PartyPrimaryType = 'CUSTOMER' | 'SUPPLIER' | 'INSTALLER' | 'PARTNER_OTHER';
@@ -406,6 +444,9 @@ export type PartyTransactionType =
   | 'PURCHASE_INVOICE'
   | 'PAYMENT'
   | 'RECEIPT'
+  | 'OPENING_DEBIT'
+  | 'OPENING_CREDIT'
+  | 'INSTALLMENT_PLAN'
   | 'CCTV_PROJECT'
   | 'GOLD_COLLEAGUE_SALE'
   | 'GOLD_COLLEAGUE_RECEIPT'
@@ -890,6 +931,8 @@ export interface SalesInvoiceLine {
   serialNumbers?: string[];
   macAddresses?: string[];
   notesFa?: string;
+  isService?: boolean;
+  skipInventoryMovement?: boolean;
 }
 
 export interface SalesInvoiceRecord {

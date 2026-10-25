@@ -56,6 +56,7 @@ import { exportToExcel, exportToPdf } from '../utils/exportUtils';
 import { printHtmlContent } from '../utils/printUtils';
 import { QuickMasterModal, QuickAddButton, QuickMasterType } from './QuickMasterModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { PriceInput } from './PriceInput';
 
 import { ExpensesAndIncomesView } from './ExpensesAndIncomesView';
 
@@ -2907,16 +2908,15 @@ export const AccountingManagementView: React.FC<AccountingManagementViewProps> =
 
                       <div className="flex items-center gap-1">
                         <span className="text-slate-500">فی بهای تمام‌شده (ریال):</span>
-                        <input
-                          type="text"
-                          value={si.unitCostIrr || ''}
-                          onChange={(e) => {
-                            const val = Number(e.target.value.replace(/,/g, '')) || 0;
+                        <PriceInput
+                          value={si.unitCostIrr}
+                          onChange={(val) => {
                             const copy = [...simpleInventory];
                             copy[idx].unitCostIrr = val;
                             setSimpleInventory(copy);
                           }}
-                          className="w-36 p-2 bg-white border border-slate-300 rounded-lg text-left font-mono font-bold text-slate-900 outline-none"
+                          className="w-36 p-2 text-xs"
+                          unit="ریال"
                         />
                       </div>
 
@@ -3168,29 +3168,25 @@ export const AccountingManagementView: React.FC<AccountingManagementViewProps> =
                           />
                         </td>
                         <td className="p-2.5">
-                          <input
-                            type="number"
-                            dir="ltr"
+                          <PriceInput
                             value={item.debitIrr}
-                            onChange={(e) => {
+                            onChange={(val) => {
                               const next = [...openingItems];
-                              next[idx].debitIrr = Number(e.target.value) || 0;
+                              next[idx].debitIrr = val;
                               setOpeningItems(next);
                             }}
-                            className="w-32 rounded border border-slate-300 p-1 font-mono text-[11px] text-left"
+                            className="w-32 p-1 text-[11px]"
                           />
                         </td>
                         <td className="p-2.5">
-                          <input
-                            type="number"
-                            dir="ltr"
+                          <PriceInput
                             value={item.creditIrr}
-                            onChange={(e) => {
+                            onChange={(val) => {
                               const next = [...openingItems];
-                              next[idx].creditIrr = Number(e.target.value) || 0;
+                              next[idx].creditIrr = val;
                               setOpeningItems(next);
                             }}
-                            className="w-32 rounded border border-slate-300 p-1 font-mono text-[11px] text-left"
+                            className="w-32 p-1 text-[11px]"
                           />
                         </td>
                         <td className="p-2.5">
@@ -4314,13 +4310,10 @@ export const AccountingManagementView: React.FC<AccountingManagementViewProps> =
                             />
                           </td>
                           <td className="p-2">
-                            <input
-                              type="number"
-                              min="0"
-                              step="1000"
-                              value={line.debitIrr || ''}
-                              onChange={(e) => {
-                                const val = Number(e.target.value) || 0;
+                            <PriceInput
+                              min={0}
+                              value={line.debitIrr}
+                              onChange={(val) => {
                                 setNewDocLines((prev) =>
                                   prev.map((l, i) =>
                                     i === idx ? { ...l, debitIrr: val, creditIrr: val > 0 ? 0 : l.creditIrr } : l
@@ -4328,17 +4321,14 @@ export const AccountingManagementView: React.FC<AccountingManagementViewProps> =
                                 );
                               }}
                               placeholder="0"
-                              className="w-full p-1.5 text-xs bg-emerald-50/50 border border-slate-200 rounded text-left font-mono font-bold text-emerald-800 focus:outline-none"
+                              className="w-full p-1.5 text-xs font-bold text-emerald-800"
                             />
                           </td>
                           <td className="p-2">
-                            <input
-                              type="number"
-                              min="0"
-                              step="1000"
-                              value={line.creditIrr || ''}
-                              onChange={(e) => {
-                                const val = Number(e.target.value) || 0;
+                            <PriceInput
+                              min={0}
+                              value={line.creditIrr}
+                              onChange={(val) => {
                                 setNewDocLines((prev) =>
                                   prev.map((l, i) =>
                                     i === idx ? { ...l, creditIrr: val, debitIrr: val > 0 ? 0 : l.debitIrr } : l
@@ -4346,7 +4336,7 @@ export const AccountingManagementView: React.FC<AccountingManagementViewProps> =
                                 );
                               }}
                               placeholder="0"
-                              className="w-full p-1.5 text-xs bg-blue-50/50 border border-slate-200 rounded text-left font-mono font-bold text-blue-800 focus:outline-none"
+                              className="w-full p-1.5 text-xs font-bold text-blue-800"
                             />
                           </td>
                           <td className="p-2 text-center">
@@ -4625,23 +4615,21 @@ export const AccountingManagementView: React.FC<AccountingManagementViewProps> =
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">بهای تمام‌شده خرید (ریال):</label>
-                  <input
-                    type="number"
-                    dir="ltr"
+                  <PriceInput
                     required
                     value={newAssetForm.purchaseCostIrr}
-                    onChange={(e) => setNewAssetForm({ ...newAssetForm, purchaseCostIrr: Number(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg font-mono focus:outline-none"
+                    onChange={(val) => setNewAssetForm({ ...newAssetForm, purchaseCostIrr: val })}
+                    className="w-full text-xs"
+                    unit="ریال"
                   />
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">ارزش اسقاط (ریال):</label>
-                  <input
-                    type="number"
-                    dir="ltr"
+                  <PriceInput
                     value={newAssetForm.salvageValueIrr}
-                    onChange={(e) => setNewAssetForm({ ...newAssetForm, salvageValueIrr: Number(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg font-mono focus:outline-none"
+                    onChange={(val) => setNewAssetForm({ ...newAssetForm, salvageValueIrr: val })}
+                    className="w-full text-xs"
+                    unit="ریال"
                   />
                 </div>
               </div>

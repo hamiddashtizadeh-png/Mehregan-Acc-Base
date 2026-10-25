@@ -36,6 +36,7 @@ import {
   IndustryProfileCode,
   IndustryProfileConfig,
 } from '../types/foundation';
+import { PriceInput } from './PriceInput';
 
 interface SettingsAndHealthViewProps {
   foundationData: FoundationDataResponse;
@@ -1765,7 +1766,12 @@ export const SettingsAndHealthView: React.FC<SettingsAndHealthViewProps> = ({
               </div>
               <div>
                 <label className="block text-slate-600 mb-1">موجودی (ریال):</label>
-                <input type="number" dir="ltr" value={editingBank.balanceIrr} onChange={(e) => setEditingBank({ ...editingBank, balanceIrr: Number(e.target.value) })} className="w-full border rounded-lg p-2 font-mono text-xs" />
+                <PriceInput
+                  value={editingBank.balanceIrr}
+                  onChange={(val) => setEditingBank({ ...editingBank, balanceIrr: val })}
+                  className="w-full text-xs"
+                  unit="ریال"
+                />
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
                 <button type="button" onClick={() => setEditingBank(null)} className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-semibold">انصراف</button>
@@ -1872,7 +1878,12 @@ export const SettingsAndHealthView: React.FC<SettingsAndHealthViewProps> = ({
               </div>
               <div>
                 <label className="block text-slate-600 mb-1">موجودی اولیه (ریال):</label>
-                <input type="number" dir="ltr" value={editingCashBox.balanceIrr} onChange={(e) => setEditingCashBox({ ...editingCashBox, balanceIrr: Number(e.target.value) })} className="w-full border rounded-lg p-2 font-mono text-xs" />
+                <PriceInput
+                  value={editingCashBox.balanceIrr}
+                  onChange={(val) => setEditingCashBox({ ...editingCashBox, balanceIrr: val })}
+                  className="w-full text-xs"
+                  unit="ریال"
+                />
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
                 <button type="button" onClick={() => setEditingCashBox(null)} className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-semibold">انصراف</button>

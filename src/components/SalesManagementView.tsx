@@ -1211,24 +1211,24 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                               </td>
 
                               <td className="px-3 py-3">
-                                <input
-                                  type="number"
+                                <PriceInput
                                   value={line.unitPriceIrr / 10}
-                                  onChange={(e) =>
-                                    handleUpdateCartLine(idx, 'unitPriceIrr', (Number(e.target.value) || 0) * 10)
+                                  onChange={(val) =>
+                                    handleUpdateCartLine(idx, 'unitPriceIrr', val * 10)
                                   }
-                                  className="w-24 px-2 py-1 border border-slate-300 rounded-md text-xs font-semibold bg-white text-slate-900"
+                                  className="w-28 px-2 py-1 text-xs"
+                                  unit="تومان"
                                 />
                               </td>
 
                               <td className="px-3 py-3">
-                                <input
-                                  type="number"
+                                <PriceInput
                                   value={line.discountIrr / 10}
-                                  onChange={(e) =>
-                                    handleUpdateCartLine(idx, 'discountIrr', (Number(e.target.value) || 0) * 10)
+                                  onChange={(val) =>
+                                    handleUpdateCartLine(idx, 'discountIrr', val * 10)
                                   }
-                                  className="w-20 px-2 py-1 border border-slate-300 rounded-md text-xs font-semibold bg-white text-slate-900"
+                                  className="w-24 px-2 py-1 text-xs"
+                                  unit="تومان"
                                 />
                               </td>
 
@@ -1282,12 +1282,11 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
 
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] text-slate-500 font-medium">مبلغی:</span>
-                      <input
-                        type="number"
+                      <PriceInput
                         placeholder="تومان..."
-                        value={posDiscountInputToman || ''}
-                        onChange={(e) => setPosDiscountInputToman(Number(e.target.value) || 0)}
-                        className="w-24 px-2 py-0.5 text-xs bg-white border border-slate-300 rounded-md font-mono"
+                        value={posDiscountInputToman || 0}
+                        onChange={(val) => setPosDiscountInputToman(val)}
+                        className="w-28 px-2 py-0.5 text-xs"
                       />
                       <button
                         type="button"
@@ -2939,18 +2938,17 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
                       </div>
                       <div>
                         <label className="block text-[10px] text-slate-600">مبلغ استرداد واحد (تومان):</label>
-                        <input
-                          type="number"
+                        <PriceInput
                           value={l.unitRefundIrr / 10}
-                          onChange={(e) => {
-                            const val = (Number(e.target.value) || 0) * 10;
+                          onChange={(val) => {
                             setReturnLines((prev) => {
                               const updated = [...prev];
-                              updated[idx].unitRefundIrr = val;
+                              updated[idx].unitRefundIrr = val * 10;
                               return updated;
                             });
                           }}
-                          className="w-full px-2 py-1 bg-white border border-slate-300 rounded-md text-xs font-bold"
+                          className="w-full px-2 py-1 text-xs"
+                          unit="تومان"
                         />
                       </div>
                     </div>

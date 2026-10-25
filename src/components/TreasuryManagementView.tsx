@@ -40,6 +40,7 @@ import {
 } from '../types/foundation';
 import { QuickMasterModal, QuickAddButton, QuickMasterType } from './QuickMasterModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { PriceInput } from './PriceInput';
 
 interface TreasuryManagementViewProps {
   foundationData: FoundationDataResponse;
@@ -1328,11 +1329,11 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
               <label className="block text-[11px] font-bold text-slate-700 mb-1">
                 موجودی اولیه (تومان):
               </label>
-              <input
-                type="number"
+              <PriceInput
                 value={newBoxInitialBalance}
-                onChange={(e) => setNewBoxInitialBalance(Number(e.target.value) || 0)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold"
+                onChange={(val) => setNewBoxInitialBalance(val)}
+                className="w-full"
+                unit="تومان"
               />
             </div>
 
@@ -1412,11 +1413,11 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
               <label className="block text-[11px] font-bold text-slate-700 mb-1">
                 موجودی اولیه (تومان):
               </label>
-              <input
-                type="number"
+              <PriceInput
                 value={newBankInitialBalance}
-                onChange={(e) => setNewBankInitialBalance(Number(e.target.value) || 0)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold"
+                onChange={(val) => setNewBankInitialBalance(val)}
+                className="w-full"
+                unit="تومان"
               />
             </div>
 
@@ -1529,11 +1530,11 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
                   مبلغ (تومان):
                 </label>
-                <input
-                  type="number"
+                <PriceInput
                   value={txAmountTomans}
-                  onChange={(e) => setTxAmountTomans(Number(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-extrabold text-emerald-800"
+                  onChange={(val) => setTxAmountTomans(val)}
+                  className="w-full font-extrabold text-emerald-800"
+                  unit="تومان"
                   required
                 />
               </div>
@@ -1744,11 +1745,11 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
                   مبلغ چک (تومان):
                 </label>
-                <input
-                  type="number"
+                <PriceInput
                   value={chequeAmountTomans}
-                  onChange={(e) => setChequeAmountTomans(Number(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-extrabold text-indigo-900"
+                  onChange={(val) => setChequeAmountTomans(val)}
+                  className="w-full font-extrabold text-indigo-900"
+                  unit="تومان"
                   required
                 />
               </div>
@@ -1862,11 +1863,11 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
                   مبلغ (تومان):
                 </label>
-                <input
-                  type="number"
+                <PriceInput
                   value={expenseAmountTomans}
-                  onChange={(e) => setExpenseAmountTomans(Number(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-extrabold text-amber-900"
+                  onChange={(val) => setExpenseAmountTomans(val)}
+                  className="w-full font-extrabold text-amber-900"
+                  unit="تومان"
                   required
                 />
               </div>
@@ -1979,12 +1980,12 @@ export const TreasuryManagementView: React.FC<TreasuryManagementViewProps> = ({
                 <label className="block font-bold text-slate-700 mb-1">
                   مبلغ اصلاح‌شده (تومان) <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="number"
+                <PriceInput
                   value={editAmountToman}
-                  onChange={(e) => setEditAmountToman(Number(e.target.value) || 0)}
+                  onChange={(val) => setEditAmountToman(val)}
                   placeholder="مثال: ۵۰۰۰۰۰"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-slate-900"
+                  className="w-full font-bold text-slate-900"
+                  unit="تومان"
                   required
                   min={1}
                 />

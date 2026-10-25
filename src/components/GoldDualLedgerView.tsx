@@ -27,6 +27,7 @@ import {
 } from '../types/foundation';
 import { printHtmlContent } from '../utils/printUtils';
 import { GoldColleagueTradeModal } from './GoldColleagueTradeModal';
+import { PriceInput } from './PriceInput';
 
 interface GoldDualLedgerViewProps {
   foundationData: FoundationDataResponse;
@@ -742,11 +743,11 @@ export const GoldDualLedgerView: React.FC<GoldDualLedgerViewProps> = ({
                 <label className="block font-bold text-slate-700 mb-1">
                   مظنه روز هر گرم طلا ۱۸ عیار (تومان):
                 </label>
-                <input
-                  type="number"
+                <PriceInput
                   value={convertRateTomanInput}
-                  onChange={(e) => setConvertRateTomanInput(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 p-2.5 font-mono font-bold text-left text-xs"
+                  onChange={(val) => setConvertRateTomanInput(String(val))}
+                  className="w-full text-xs"
+                  unit="تومان"
                   required
                 />
               </div>

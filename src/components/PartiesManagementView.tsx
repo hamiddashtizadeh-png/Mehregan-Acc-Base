@@ -43,6 +43,7 @@ import {
   DuplicateCandidate,
   FoundationDataResponse,
 } from '../types/foundation';
+import { PriceInput } from './PriceInput';
 import { printHtmlContent } from '../utils/printUtils';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { GoldColleagueTradeModal } from './GoldColleagueTradeModal';
@@ -660,8 +661,8 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
 
   const handleOpenSettlementModal = (party: PartyRecord) => {
     const netBal = party.transactionsSummary?.netBalanceIrr || 0;
-    // If debtor (netBal < 0), default to RECEIPT; if creditor (netBal > 0), default to PAYMENT
-    const defaultTx: 'RECEIPT' | 'PAYMENT' = netBal < 0 ? 'RECEIPT' : 'PAYMENT';
+    // If creditor (netBal > 0), default to PAYMENT; if debtor (netBal < 0), default to RECEIPT
+    const defaultTx: 'RECEIPT' | 'PAYMENT' = netBal > 0 ? 'PAYMENT' : 'RECEIPT';
     const absBal = Math.abs(netBal);
     setSettlingParty(party);
     setSettleForm({
@@ -1032,7 +1033,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                               : 'text-slate-600'
                           }
                         >
-                          {netBal.toLocaleString('fa-IR')}
+                          {Math.abs(netBal).toLocaleString('fa-IR')}
                         </span>
                         <span className="text-[10px] text-slate-500 mr-1 font-sans">
                           {netBal > 0 ? '(بستانکار)' : netBal < 0 ? '(بدهکار)' : '(بی‌حساب)'}
@@ -1421,12 +1422,11 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">سقف اعتبار مالی (ریال)</label>
-                  <input
-                    type="number"
-                    dir="ltr"
+                  <PriceInput
                     value={formData.creditLimitIrr}
-                    onChange={(e) => setFormData({ ...formData, creditLimitIrr: e.target.value })}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono text-slate-900"
+                    onChange={(val) => setFormData({ ...formData, creditLimitIrr: String(val) })}
+                    className="w-full"
+                    unit="ریال"
                   />
                 </div>
 
@@ -1683,8 +1683,8 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                   return matchDate && matchSearch;
                 });
 
-                const totalDebit = txs.reduce((s, tx) => (tx.recordType === 'SALE_INVOICE' || tx.recordType === 'PAYMENT' || tx.recordType === 'CCTV_PROJECT' ? s + Number(tx.amountIrr) : s), 0);
-                const totalCredit = txs.reduce((s, tx) => (tx.recordType !== 'SALE_INVOICE' && tx.recordType !== 'PAYMENT' && tx.recordType !== 'CCTV_PROJECT' ? s + Number(tx.amountIrr) : s), 0);
+                const totalDebit = txs.reduce((s, tx) => (tx.recordType === 'SALE_INVOICE' || tx.recordType === 'PAYMENT' || tx.recordType === 'CCTV_PROJECT' || tx.recordType === 'OPENING_DEBIT' ? s + Number(tx.amountIrr) : s), 0);
+                const totalCredit = txs.reduce((s, tx) => (tx.recordType === 'PURCHASE_INVOICE' || tx.recordType === 'RECEIPT' || tx.recordType === 'OPENING_CREDIT' ? s + Number(tx.amountIrr) : s), 0);
                 const netBalance = totalDebit - totalCredit;
 
                 return (
@@ -1735,7 +1735,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                             </tr>
                           ) : (
                             txs.map((tx) => {
-                              const isDebit = tx.recordType === 'SALE_INVOICE' || tx.recordType === 'PAYMENT' || tx.recordType === 'CCTV_PROJECT';
+                              const isDebit = tx.recordType === 'SALE_INVOICE' || tx.recordType === 'PAYMENT' || tx.recordType === 'CCTV_PROJECT' || tx.recordType === 'OPENING_DEBIT';
                               const debitVal = isDebit ? tx.amountIrr : 0;
                               const creditVal = !isDebit ? tx.amountIrr : 0;
 
@@ -1747,6 +1747,8 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                                     {tx.recordType === 'RECEIPT' && <span className="text-emerald-700">💳 دریافت / تسویه</span>}
                                     {tx.recordType === 'PAYMENT' && <span className="text-red-700">💸 پرداخت / حواله</span>}
                                     {tx.recordType === 'CCTV_PROJECT' && <span className="text-amber-800">📹 پروژه دوربین</span>}
+                                    {tx.recordType === 'OPENING_DEBIT' && <span className="text-blue-800">📌 مانده افتتاحیه (بدهکار)</span>}
+                                    {tx.recordType === 'OPENING_CREDIT' && <span className="text-purple-800">📌 مانده افتتاحیه (بستانکار)</span>}
                                   </td>
                                   <td className="py-2.5 px-3 font-mono font-bold text-slate-900" dir="ltr">
                                     {tx.referenceNumber}
@@ -1859,14 +1861,13 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">مبلغ سند (ریال)</label>
-                  <input
-                    type="number"
+                  <PriceInput
                     required
-                    dir="ltr"
                     value={newTxForm.amountIrr}
-                    onChange={(e) => setNewTxForm({ ...newTxForm, amountIrr: e.target.value })}
+                    onChange={(val) => setNewTxForm({ ...newTxForm, amountIrr: String(val) })}
                     placeholder="250000000"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono text-slate-900"
+                    className="w-full"
+                    unit="ریال"
                   />
                 </div>
 
@@ -2060,14 +2061,13 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                   <label className="block font-semibold text-slate-700 mb-1">
                     مبلغ تسویه (ریال) <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
+                  <PriceInput
                     required
-                    dir="ltr"
                     value={settleForm.amountIrr}
-                    onChange={(e) => setSettleForm({ ...settleForm, amountIrr: e.target.value })}
+                    onChange={(val) => setSettleForm({ ...settleForm, amountIrr: String(val) })}
                     placeholder="مبلغ به ریال"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-2 focus:ring-blue-500"
+                    className="w-full font-bold text-slate-900"
+                    unit="ریال"
                   />
                   {Number(settleForm.amountIrr) > 0 && (
                     <p className="text-[10px] text-slate-500 mt-1 font-sans">

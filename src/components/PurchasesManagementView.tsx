@@ -39,6 +39,7 @@ import {
 import { printHtmlContent, downloadInvoiceHtml } from '../utils/printUtils';
 import { QuickMasterModal, QuickAddButton, QuickMasterType } from './QuickMasterModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { PriceInput } from './PriceInput';
 
 interface PurchasesManagementViewProps {
   foundationData: FoundationDataResponse;
@@ -748,41 +749,41 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">هزینه حمل بار (ریال):</label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={calcFreight}
-                    onChange={(e) => setCalcFreight(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-300 p-2 font-mono"
+                    onChange={(val) => setCalcFreight(val)}
+                    className="w-full"
+                    unit="ریال"
                   />
                 </div>
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">بیمه محموله (ریال):</label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={calcInsurance}
-                    onChange={(e) => setCalcInsurance(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-300 p-2 font-mono"
+                    onChange={(val) => setCalcInsurance(val)}
+                    className="w-full"
+                    unit="ریال"
                   />
                 </div>
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">حقوق و عوارض گمرک (ریال):</label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={calcCustoms}
-                    onChange={(e) => setCalcCustoms(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-300 p-2 font-mono"
+                    onChange={(val) => setCalcCustoms(val)}
+                    className="w-full"
+                    unit="ریال"
                   />
                 </div>
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">مالیات غیرقابل استرداد (ریال):</label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={calcTax}
-                    onChange={(e) => setCalcTax(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-300 p-2 font-mono"
+                    onChange={(val) => setCalcTax(val)}
+                    className="w-full"
+                    unit="ریال"
                   />
                 </div>
               </div>
@@ -982,11 +983,11 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
 
             <div>
               <label className="block font-semibold text-slate-700 mb-1">نرخ تبدیل به ریال:</label>
-              <input
-                type="number"
+              <PriceInput
                 value={formExchangeRate}
-                onChange={(e) => setFormExchangeRate(Number(e.target.value))}
-                className="w-full rounded-lg border border-slate-300 p-2 font-mono font-bold"
+                onChange={(val) => setFormExchangeRate(val)}
+                className="w-full font-bold"
+                unit="ریال"
               />
             </div>
 
@@ -1013,61 +1014,55 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
             <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">حمل و نقل (ریال):</label>
-                <input
-                  type="number"
+                <PriceInput
                   value={landedFreight}
-                  onChange={(e) => setLandedFreight(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-300 p-1.5 font-mono"
+                  onChange={(val) => setLandedFreight(val)}
+                  className="w-full"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">بیمه محموله (ریال):</label>
-                <input
-                  type="number"
+                <PriceInput
                   value={landedInsurance}
-                  onChange={(e) => setLandedInsurance(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-300 p-1.5 font-mono"
+                  onChange={(val) => setLandedInsurance(val)}
+                  className="w-full"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">بسته‌بندی (ریال):</label>
-                <input
-                  type="number"
+                <PriceInput
                   value={landedPackaging}
-                  onChange={(e) => setLandedPackaging(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-300 p-1.5 font-mono"
+                  onChange={(val) => setLandedPackaging(val)}
+                  className="w-full"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">گمرک و عوارض (ریال):</label>
-                <input
-                  type="number"
+                <PriceInput
                   value={landedCustoms}
-                  onChange={(e) => setLandedCustoms(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-300 p-1.5 font-mono"
+                  onChange={(val) => setLandedCustoms(val)}
+                  className="w-full"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">مالیات غیرقابل‌استرداد:</label>
-                <input
-                  type="number"
+                <PriceInput
                   value={landedNonRefundableTax}
-                  onChange={(e) => setLandedNonRefundableTax(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-300 p-1.5 font-mono"
+                  onChange={(val) => setLandedNonRefundableTax(val)}
+                  className="w-full"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">سایر هزینه‌ها (ریال):</label>
-                <input
-                  type="number"
+                <PriceInput
                   value={landedOther}
-                  onChange={(e) => setLandedOther(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-300 p-1.5 font-mono"
+                  onChange={(val) => setLandedOther(val)}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -1143,15 +1138,15 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
                       <label className="block font-semibold text-slate-700 mb-1">
                         قیمت واحد ({formCurrency}):
                       </label>
-                      <input
-                        type="number"
+                      <PriceInput
                         value={line.unitPriceForeign}
-                        onChange={(e) => {
+                        onChange={(val) => {
                           const newLines = [...invoiceLines];
-                          newLines[idx].unitPriceForeign = Number(e.target.value);
+                          newLines[idx].unitPriceForeign = val;
                           setInvoiceLines(newLines);
                         }}
-                        className="w-full rounded-lg border border-slate-300 p-2 font-mono font-bold bg-white"
+                        className="w-full"
+                        unit={formCurrency === 'IRR' ? 'ریال' : formCurrency}
                       />
                     </div>
                   </div>
@@ -1516,11 +1511,11 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
             <div className="space-y-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">مبلغ پرداختی (ریال):</label>
-                <input
-                  type="number"
+                <PriceInput
                   value={payAmountIrr}
-                  onChange={(e) => setPayAmountIrr(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-300 p-2 font-mono font-bold text-sm"
+                  onChange={(val) => setPayAmountIrr(val)}
+                  className="w-full"
+                  unit="ریال"
                   required
                 />
               </div>

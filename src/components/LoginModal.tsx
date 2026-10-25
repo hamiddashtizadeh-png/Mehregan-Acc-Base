@@ -50,6 +50,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     handleLogin(undefined, 'admin', 'admin');
   };
 
+  const handleQuickInstallerLogin = () => {
+    setUsername('installer');
+    setPassword('installer123');
+    handleLogin(undefined, 'installer', 'installer123');
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
       <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
@@ -73,28 +79,35 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         </div>
 
         <div className="p-6 space-y-5">
-          {/* Quick Admin Launch Banner */}
+          {/* Quick Launch Banner */}
           <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                 <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
-                <span>راه‌اندازی و ورود سریع (حساب پیش‌فرض):</span>
+                <span>حساب‌های تست دسترسی:</span>
               </span>
               <span className="text-[11px] font-mono text-blue-800 font-semibold" dir="ltr">
-                user: admin | pass: admin
+                admin / installer
               </span>
             </div>
-            <p className="text-[11px] text-slate-600 leading-relaxed">
-              جهت تست و راه‌اندازی سریع اولیه، کلمه عبور پیش‌فرض admin تنظیم شده است که می‌توانید پس از ورود آن را فوراً تغییر دهید.
-            </p>
-            <button
-              type="button"
-              onClick={handleQuickAdminLogin}
-              disabled={loading}
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
-            >
-              ورود تک‌کلیکی با admin / admin
-            </button>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleQuickAdminLogin}
+                disabled={loading}
+                className="inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-2xs"
+              >
+                ورود مدیر (admin)
+              </button>
+              <button
+                type="button"
+                onClick={handleQuickInstallerLogin}
+                disabled={loading}
+                className="inline-flex items-center justify-center gap-1.5 rounded-md bg-cyan-700 py-1.5 text-xs font-semibold text-white hover:bg-cyan-800 transition-colors shadow-2xs"
+              >
+                ورود نصاب (installer)
+              </button>
+            </div>
           </div>
 
           {errorMsg && (

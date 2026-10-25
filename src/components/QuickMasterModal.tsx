@@ -11,6 +11,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { PartyRecord, WarehouseRecord, BankAccountRecord, CashBoxRecord } from '../types/foundation';
+import { PriceInput } from './PriceInput';
 
 export type QuickMasterType = 'PARTY' | 'WAREHOUSE' | 'BANK_ACCOUNT' | 'CASH_BOX';
 
@@ -456,13 +457,13 @@ export function QuickMasterModal({
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">موجودی اولیه (تومان):</label>
-                  <input
-                    type="number"
-                    min="0"
+                  <PriceInput
+                    min={0}
                     placeholder="0"
-                    value={bankInitialBalance ? bankInitialBalance / 10 : ''}
-                    onChange={(e) => setBankInitialBalance(Math.max(0, Number(e.target.value) * 10))}
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-mono text-left focus:outline-none"
+                    value={bankInitialBalance ? bankInitialBalance / 10 : 0}
+                    onChange={(val) => setBankInitialBalance(val * 10)}
+                    className="w-full px-2.5 py-1.5 text-xs"
+                    unit="تومان"
                   />
                 </div>
               </div>
@@ -514,13 +515,13 @@ export function QuickMasterModal({
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">موجودی نقدی اولیه (تومان):</label>
-                <input
-                  type="number"
-                  min="0"
+                <PriceInput
+                  min={0}
                   placeholder="0"
-                  value={cashInitialBalance ? cashInitialBalance / 10 : ''}
-                  onChange={(e) => setCashInitialBalance(Math.max(0, Number(e.target.value) * 10))}
-                  className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-mono text-left focus:outline-none"
+                  value={cashInitialBalance ? cashInitialBalance / 10 : 0}
+                  onChange={(val) => setCashInitialBalance(val * 10)}
+                  className="w-full px-3 py-1.5 text-xs"
+                  unit="تومان"
                 />
               </div>
             </div>

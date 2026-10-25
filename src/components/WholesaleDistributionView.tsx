@@ -24,6 +24,7 @@ import {
   PriceTierCode,
 } from '../types/foundation';
 import { Card, Button } from './ui';
+import { PriceInput } from './PriceInput';
 
 interface WholesaleDistributionViewProps {
   foundationData: FoundationDataResponse;
@@ -672,13 +673,12 @@ export const WholesaleDistributionView: React.FC<WholesaleDistributionViewProps>
 
                 <div className="flex items-center gap-2">
                   <span className="text-slate-600 font-bold">کرایه حمل / توزیع:</span>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={shippingFee}
-                    onChange={(e) => setShippingFee(parseInt(e.target.value) || 0)}
-                    className="w-28 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs text-left font-bold"
+                    onChange={(val) => setShippingFee(val)}
+                    className="w-32 px-2 py-1 text-xs text-left font-bold"
+                    unit="ریال"
                   />
-                  <span className="text-slate-400 text-[10px]">ریال</span>
                 </div>
               </div>
 

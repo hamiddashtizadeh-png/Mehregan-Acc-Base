@@ -21,6 +21,7 @@ import {
   PartyRecord,
   GoldColleagueTrade,
 } from '../types/foundation';
+import { PriceInput } from './PriceInput';
 
 interface GoldColleagueTradeModalProps {
   isOpen: boolean;
@@ -397,11 +398,11 @@ export const GoldColleagueTradeModal: React.FC<GoldColleagueTradeModalProps> = (
                   <label className="block font-semibold text-slate-700 mb-1">
                     مظنه روز هر گرم طلا ۱۸ عیار (تومان):
                   </label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={dailyRateTomanInput}
-                    onChange={(e) => setDailyRateTomanInput(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white p-2 font-mono font-bold text-left text-xs"
+                    onChange={(val) => setDailyRateTomanInput(String(val))}
+                    className="w-full text-xs font-bold"
+                    unit="تومان"
                   />
                 </div>
                 <div>

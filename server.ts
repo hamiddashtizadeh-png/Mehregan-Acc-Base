@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import {
@@ -8,8 +9,9 @@ import {
   STATIC_DIST_DIR,
   ensureRuntimeDirectories,
 } from './src/server/paths';
-import { foundationStore } from './src/server/foundationStore';
+import { foundationStore, UserRecord } from './src/server/foundationStore';
 import { sanitizeForLogAndApi } from './src/server/cryptoVault';
+import { sessionManager, UserSession } from './src/server/sessionManager';
 
 function resolveServerPort(): number {
   // Check CLI arguments for --port <val> or direct numeric argument
@@ -29,11 +31,19 @@ function resolveServerPort(): number {
 
 const PORT = resolveServerPort();
 
+// Helper to resolve the authenticated user for the current request
+function getRequestUser(req: Request): UserRecord {
+  if ((req as any).authenticatedUser) {
+    return (req as any).authenticatedUser;
+  }
+  return foundationStore.getActiveUser();
+}
+
 // Backend RBAC Middleware — Strictly queries database tables (role_permissions, user_permission_overrides)
 // Enforcing: Explicit Deny > Explicit Grant > Role Permission > Default Deny
 function requirePermission(permissionCode: string) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const activeUser = foundationStore.getActiveUser();
+    const activeUser = getRequestUser(req);
     const evaluation = foundationStore.evaluatePermission(activeUser.id, permissionCode);
 
     if (!evaluation.allowed) {
@@ -71,6 +81,63 @@ function requirePermission(permissionCode: string) {
 async function startServer() {
   const app = express();
   app.use(express.json({ limit: '2mb' }));
+
+  // Multi-User Session Extraction & CSRF Defense Middleware
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // 1. Extract session token from cookie, header, or custom session token
+    const cookies = sessionManager.parseCookies(req.headers.cookie);
+    let sessionId = cookies['mehregan_session'];
+
+    if (!sessionId && req.headers.authorization?.startsWith('Bearer ')) {
+      sessionId = req.headers.authorization.substring(7).trim();
+    }
+    if (!sessionId && req.headers['x-session-token']) {
+      sessionId = String(req.headers['x-session-token']).trim();
+    }
+
+    if (sessionId) {
+      const session = sessionManager.getSession(sessionId);
+      if (session) {
+        const user = foundationStore.getUserById(session.userId);
+        if (user && user.status === 'ACTIVE') {
+          (req as any).authenticatedUser = user;
+          (req as any).userSession = session;
+        } else {
+          sessionManager.destroySession(sessionId);
+        }
+      }
+    }
+
+    // 2. CSRF Defense for mutating requests using session cookies
+    if (
+      cookies['mehregan_session'] &&
+      ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) &&
+      !req.path.startsWith('/api/auth/login') &&
+      !req.path.startsWith('/api/sync/') &&
+      !req.path.startsWith('/api/system/remote-tunnel')
+    ) {
+      const csrfHeader = req.headers['x-csrf-token'];
+      const requestedWith = req.headers['x-requested-with'];
+      const secFetchSite = req.headers['sec-fetch-site'];
+      const session = (req as any).userSession;
+
+      if (
+        session &&
+        csrfHeader &&
+        csrfHeader !== session.csrfToken &&
+        !requestedWith &&
+        secFetchSite === 'cross-site'
+      ) {
+        return res.status(403).json({
+          ok: false,
+          errorCode: 'CSRF_BLOCKED',
+          messageFa: 'درخواست به دلیل عدم تطابق توکن امنیتی CSRF مسدود شد.',
+        });
+      }
+    }
+
+    next();
+  });
 
   // Immediate health check endpoints for container/proxy probes
   app.get('/health', (_req: Request, res: Response) => {
@@ -238,15 +305,75 @@ async function startServer() {
   });
 
   // ============================================================================
-  // 2. AUTHENTICATION & SESSION ENDPOINTS (DIRECT DATABASE ONLY)
+  // 2. AUTHENTICATION & SESSION ENDPOINTS (INDEPENDENT SERVER SESSIONS)
   // ============================================================================
   app.post('/api/auth/login', (req: Request, res: Response) => {
     try {
       const { username, password } = req.body || {};
-      const user = foundationStore.authenticateUser(String(username || ''), String(password || ''));
+      const cleanUser = String(username || '').trim();
+
+      const clientIp =
+        (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+        req.socket.remoteAddress ||
+        '127.0.0.1';
+      const rateKey = `${clientIp}:${cleanUser.toLowerCase()}`;
+
+      // Check Rate Limit / Lockout (Max 5 attempts in 15 minutes)
+      const rateCheck = sessionManager.checkRateLimit(rateKey);
+      if (rateCheck.blocked) {
+        return res.status(429).json({
+          ok: false,
+          errorCode: 'AUTH_RATE_LIMIT_EXCEEDED',
+          messageFa: `تعداد دفعات ورود ناموفق بیش از حد مجاز است. لطفاً ${rateCheck.remainingSec} ثانیه دیگر مجدداً تلاش کنید.`,
+        });
+      }
+
+      let user: UserRecord;
+      try {
+        user = foundationStore.authenticateUser(cleanUser, String(password || ''));
+      } catch (authErr) {
+        const failedAttempt = sessionManager.recordFailedAttempt(rateKey);
+        if (failedAttempt.blocked) {
+          return res.status(429).json({
+            ok: false,
+            errorCode: 'AUTH_RATE_LIMIT_EXCEEDED',
+            messageFa: `تلاش‌های ناموفق شما بیش از حد مجاز (۵ بار) بود. حساب برای ۱۵ دقیقه موقتاً مسدود شد.`,
+          });
+        }
+        throw authErr;
+      }
+
+      // Successful login -> Reset failed attempts
+      sessionManager.resetFailedAttempts(rateKey);
+
+      // Create Independent Server-Side Session
+      const roles = foundationStore.getUserRoles(user.id);
+      const session = sessionManager.createSession(
+        user,
+        roles,
+        clientIp,
+        req.headers['user-agent'] || 'unknown'
+      );
+
+      // Attach to request
+      (req as any).authenticatedUser = user;
+      (req as any).userSession = session;
+
+      // Issue HttpOnly Cookie with SameSite=Lax & Secure in HTTPS
+      const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+      res.cookie('mehregan_session', session.sessionId, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: isHttps,
+        path: '/',
+        maxAge: 24 * 60 * 60 * 1000,
+      });
+
       res.json({
         ok: true,
         messageFa: `ورود با موفقیت انجام شد. خوش‌آمدید ${user.fullName}.`,
+        token: session.sessionId,
+        csrfToken: session.csrfToken,
         user: {
           id: user.id,
           username: user.username,
@@ -254,6 +381,8 @@ async function startServer() {
           jobTitle: user.jobTitle,
           status: user.status,
           isInitialAdmin: user.isInitialAdmin,
+          installerPartyId: user.installerPartyId,
+          assignedRoles: roles,
         },
       });
     } catch (err: unknown) {
@@ -264,10 +393,38 @@ async function startServer() {
     }
   });
 
-  app.get('/api/auth/me', (_req: Request, res: Response) => {
-    const user = foundationStore.getActiveUser();
+  app.post('/api/auth/logout', (req: Request, res: Response) => {
+    const cookies = sessionManager.parseCookies(req.headers.cookie);
+    const token =
+      (req as any).userSession?.sessionId ||
+      cookies['mehregan_session'] ||
+      (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.substring(7).trim() : null);
+
+    if (token) {
+      sessionManager.destroySession(token);
+    }
+
+    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+    res.clearCookie('mehregan_session', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: isHttps,
+      path: '/',
+    });
+
     res.json({
       ok: true,
+      messageFa: 'با موفقیت از سامانه خارج شدید.',
+    });
+  });
+
+  app.get('/api/auth/me', (req: Request, res: Response) => {
+    const user = getRequestUser(req);
+    const roles = foundationStore.getUserRoles(user.id);
+    const session = (req as any).userSession;
+    res.json({
+      ok: true,
+      csrfToken: session?.csrfToken || null,
       user: {
         id: user.id,
         username: user.username,
@@ -276,13 +433,15 @@ async function startServer() {
         email: user.email,
         status: user.status,
         isInitialAdmin: user.isInitialAdmin,
+        installerPartyId: user.installerPartyId,
+        assignedRoles: roles,
       },
     });
   });
 
   app.post('/api/auth/change-password', (req: Request, res: Response) => {
     try {
-      const activeUser = foundationStore.getActiveUser();
+      const activeUser = getRequestUser(req);
       const { currentPassword, newPassword } = req.body || {};
       foundationStore.changePassword(activeUser.id, String(currentPassword || ''), String(newPassword || ''));
       res.json({
@@ -301,14 +460,40 @@ async function startServer() {
     try {
       const targetUserId = Number(req.body?.userId);
       const user = foundationStore.switchActiveUser(targetUserId);
+
+      // Create new session for switched user
+      const clientIp =
+        (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+        req.socket.remoteAddress ||
+        '127.0.0.1';
+      const roles = foundationStore.getUserRoles(user.id);
+      const session = sessionManager.createSession(
+        user,
+        roles,
+        clientIp,
+        req.headers['user-agent'] || 'unknown'
+      );
+
+      const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+      res.cookie('mehregan_session', session.sessionId, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: isHttps,
+        path: '/',
+        maxAge: 24 * 60 * 60 * 1000,
+      });
+
       res.json({
         ok: true,
         messageFa: `نشست سیستم به کاربر «${user.fullName}» (@${user.username}) تغییر یافت.`,
+        token: session.sessionId,
+        csrfToken: session.csrfToken,
         user: {
           id: user.id,
           username: user.username,
           fullName: user.fullName,
           jobTitle: user.jobTitle,
+          installerPartyId: user.installerPartyId,
         },
       });
     } catch (err: unknown) {
@@ -322,10 +507,11 @@ async function startServer() {
   // ============================================================================
   // 3. FOUNDATION OVERVIEW & SETTINGS
   // ============================================================================
-  app.get('/api/foundation/overview', (_req: Request, res: Response) => {
+  app.get('/api/foundation/overview', (req: Request, res: Response) => {
+    const user = getRequestUser(req);
     res.json({
       ok: true,
-      data: sanitizeForLogAndApi(foundationStore.getFoundationData()),
+      data: sanitizeForLogAndApi(foundationStore.getFoundationData(user)),
     });
   });
 
@@ -1564,6 +1750,34 @@ async function startServer() {
     }
   );
 
+  // Helper to determine if active user is restricted to a specific installer record
+  function getActiveInstallerPartyId(activeUser: any): number | null {
+    if (!activeUser) return null;
+    if (activeUser.installerPartyId) return Number(activeUser.installerPartyId);
+    if (activeUser.isInitialAdmin) return null;
+    const isInstallerRole =
+      activeUser.jobTitle?.includes('نصاب') ||
+      activeUser.jobTitle?.includes('تکنسین') ||
+      activeUser.username?.includes('نصاب') ||
+      activeUser.username?.toLowerCase().includes('installer') ||
+      activeUser.fullName?.includes('نصاب') ||
+      activeUser.assignedRoles?.includes('INSTALLER');
+    if (isInstallerRole) {
+      const parties = foundationStore.getParties();
+      const installerParty =
+        parties.find(
+          (p) =>
+            (p.primaryType === 'INSTALLER' || p.roles?.includes('INSTALLER')) &&
+            (p.fullName?.includes(activeUser.fullName) || activeUser.fullName?.includes(p.fullName || ''))
+        ) ||
+        parties.find(
+          (p) => p.primaryType === 'INSTALLER' || p.roles?.includes('INSTALLER')
+        );
+      if (installerParty) return installerParty.id;
+    }
+    return null;
+  }
+
   // ============================================================================
   // STAGE 7: INSTALLATION SERVICES & WORK ORDERS
   // ============================================================================
@@ -1571,10 +1785,25 @@ async function startServer() {
   // 36. Get Installation Jobs
   app.get(
     '/api/installation/jobs',
-    requirePermission('installation.jobs.view'),
-    (_req: Request, res: Response) => {
+    (req: Request, res: Response, next: NextFunction) => {
+      const activeUser = getRequestUser(req);
+      const installerPartyId = getActiveInstallerPartyId(activeUser);
+      if (installerPartyId) {
+        return next();
+      }
+      return requirePermission('installation.jobs.view')(req, res, next);
+    },
+    (req: Request, res: Response) => {
       try {
-        const jobs = foundationStore.getInstallationJobs();
+        const activeUser = getRequestUser(req);
+        const installerPartyId = getActiveInstallerPartyId(activeUser);
+        let jobs = foundationStore.getInstallationJobs();
+        if (installerPartyId) {
+          jobs = jobs.filter((j) => j.installerId === installerPartyId);
+        } else if (req.query.installerId) {
+          const filterInstallerId = Number(req.query.installerId);
+          jobs = jobs.filter((j) => j.installerId === filterInstallerId);
+        }
         res.json({ ok: true, jobs });
       } catch (err: unknown) {
         res.status(500).json({
@@ -1591,7 +1820,7 @@ async function startServer() {
     requirePermission('installation.jobs.manage'),
     (req: Request, res: Response) => {
       try {
-        const activeUser = foundationStore.getActiveUser();
+        const activeUser = getRequestUser(req);
         const job = foundationStore.createInstallationJob(req.body || {}, activeUser.id);
         res.status(201).json({
           ok: true,
@@ -1610,13 +1839,42 @@ async function startServer() {
   // 38. Update Installation Job Status
   app.patch(
     '/api/installation/jobs/:id/status',
-    requirePermission('installation.jobs.manage'),
+    (req: Request, res: Response, next: NextFunction) => {
+      const activeUser = getRequestUser(req);
+      const installerPartyId = getActiveInstallerPartyId(activeUser);
+      if (installerPartyId) {
+        return next();
+      }
+      return requirePermission('installation.jobs.manage')(req, res, next);
+    },
     (req: Request, res: Response) => {
       try {
         const jobId = Number(req.params.id);
-        const activeUser = foundationStore.getActiveUser();
+        const activeUser = getRequestUser(req);
+        const installerPartyId = getActiveInstallerPartyId(activeUser);
+
+        const targetJob = foundationStore.getInstallationJobById(jobId);
+        if (!targetJob) {
+          return res.status(404).json({ ok: false, messageFa: 'سفارش نصب مورد نظر یافت نشد.' });
+        }
+
+        // Security check: If caller is an installer, verify this job is assigned to them
+        if (installerPartyId && targetJob.installerId !== installerPartyId) {
+          return res.status(403).json({
+            ok: false,
+            errorCode: 'INSTALLER_JOB_FORBIDDEN',
+            messageFa: 'دسترسی غیرمجاز: شما فقط مجاز به تغییر وضعیت سفارش‌های تخصیص‌یافته به خودتان هستید.',
+          });
+        }
+
+        const payload = { jobId, ...(req.body || {}) };
+        if (installerPartyId) {
+          delete payload.installerId;
+          delete payload.totalCostIrr;
+        }
+
         const job = foundationStore.updateInstallationJobStatus(
-          { jobId, ...(req.body || {}) },
+          payload,
           activeUser.id
         );
         res.json({
@@ -2489,24 +2747,10 @@ async function startServer() {
   // STAGE 11: PROJECTS + INSTALLERS + MATERIAL CONSUMPTION + PROFITABILITY
   // ============================================================================
 
-  // Helper to determine if active user is restricted to a specific installer record
-  function getActiveInstallerPartyId(activeUser: any): number | null {
-    if (activeUser.installerPartyId) return activeUser.installerPartyId;
-    const isInstallerRole = activeUser.jobTitle?.includes('نصاب') || activeUser.assignedRoles?.includes('INSTALLER');
-    if (isInstallerRole) {
-      const installerParty = foundationStore.getParties().find(
-        (p) => (p.primaryType === 'INSTALLER' || p.roles?.includes('INSTALLER')) &&
-               (p.fullName.includes(activeUser.fullName) || activeUser.fullName.includes(p.fullName))
-      );
-      if (installerParty) return installerParty.id;
-    }
-    return null;
-  }
-
   // 77. Get Projects (با پشتیبانی از فیلتر نصاب، مشتری، وضعیت و RBAC اختصاصی نصاب)
   app.get('/api/projects', (req: Request, res: Response) => {
     try {
-      const activeUser = foundationStore.getActiveUser();
+      const activeUser = getRequestUser(req);
       const activeInstallerId = getActiveInstallerPartyId(activeUser);
 
       const { installerId, customerId, status } = req.query;
@@ -2544,7 +2788,7 @@ async function startServer() {
   app.get('/api/projects/:id', (req: Request, res: Response) => {
     try {
       const id = Number(req.params.id);
-      const activeUser = foundationStore.getActiveUser();
+      const activeUser = getRequestUser(req);
       const activeInstallerId = getActiveInstallerPartyId(activeUser);
 
       let project = foundationStore.getProjectById(id);
@@ -2581,48 +2825,78 @@ async function startServer() {
     }
   });
 
-  // 79. Create Project
-  app.post('/api/projects', (req: Request, res: Response) => {
-    try {
-      const activeUser = foundationStore.getActiveUser();
-      const project = foundationStore.createProject(req.body || {}, activeUser.id);
-      res.status(201).json({
-        ok: true,
-        messageFa: `پروژه «${project.titleFa}» با کد ${project.projectCode} با موفقیت ثبت شد.`,
-        project,
-      });
-    } catch (err: unknown) {
-      res.status(400).json({
-        ok: false,
-        messageFa: err instanceof Error ? err.message : 'خطا در ثبت پروژه.',
-      });
+  // 79. Create Project (مدیران و کارشناسان فنی مجاز؛ مسدود برای نصاب)
+  app.post(
+    '/api/projects',
+    (req: Request, res: Response, next: NextFunction) => {
+      const activeUser = getRequestUser(req);
+      const activeInstallerId = getActiveInstallerPartyId(activeUser);
+      if (activeInstallerId) {
+        return res.status(403).json({
+          ok: false,
+          errorCode: 'INSTALLER_ACTION_FORBIDDEN',
+          messageFa: 'دسترسی غیرمجاز: تکنسین و نصاب مجاز به تعریف پروژه جدید نیست.',
+        });
+      }
+      return requirePermission('installation.jobs.manage')(req, res, next);
+    },
+    (req: Request, res: Response) => {
+      try {
+        const activeUser = getRequestUser(req);
+        const project = foundationStore.createProject(req.body || {}, activeUser.id);
+        res.status(201).json({
+          ok: true,
+          messageFa: `پروژه «${project.titleFa}» با کد ${project.projectCode} با موفقیت ثبت شد.`,
+          project,
+        });
+      } catch (err: unknown) {
+        res.status(400).json({
+          ok: false,
+          messageFa: err instanceof Error ? err.message : 'خطا در ثبت پروژه.',
+        });
+      }
     }
-  });
+  );
 
-  // 80. Update Project / Assign Installer
-  app.put('/api/projects/:id', (req: Request, res: Response) => {
-    try {
-      const id = Number(req.params.id);
-      const activeUser = foundationStore.getActiveUser();
-      const project = foundationStore.updateProject(id, req.body || {}, activeUser.id);
-      res.json({
-        ok: true,
-        messageFa: `پروژه «${project.titleFa}» بروزرسانی شد.`,
-        project,
-      });
-    } catch (err: unknown) {
-      res.status(400).json({
-        ok: false,
-        messageFa: err instanceof Error ? err.message : 'خطا در ویرایش پروژه.',
-      });
+  // 80. Update Project / Assign Installer (مسدود برای نصاب)
+  app.put(
+    '/api/projects/:id',
+    (req: Request, res: Response, next: NextFunction) => {
+      const activeUser = getRequestUser(req);
+      const activeInstallerId = getActiveInstallerPartyId(activeUser);
+      if (activeInstallerId) {
+        return res.status(403).json({
+          ok: false,
+          errorCode: 'INSTALLER_ACTION_FORBIDDEN',
+          messageFa: 'دسترسی غیرمجاز: تکنسین و نصاب مجاز به تغییر مشخصات یا اختصاص پروژه نیست.',
+        });
+      }
+      return requirePermission('installation.jobs.manage')(req, res, next);
+    },
+    (req: Request, res: Response) => {
+      try {
+        const id = Number(req.params.id);
+        const activeUser = getRequestUser(req);
+        const project = foundationStore.updateProject(id, req.body || {}, activeUser.id);
+        res.json({
+          ok: true,
+          messageFa: `پروژه «${project.titleFa}» بروزرسانی شد.`,
+          project,
+        });
+      } catch (err: unknown) {
+        res.status(400).json({
+          ok: false,
+          messageFa: err instanceof Error ? err.message : 'خطا در ویرایش پروژه.',
+        });
+      }
     }
-  });
+  );
 
   // 80b. Submit Visit / Progress Report by Installer
   app.post('/api/projects/:id/visit-report', (req: Request, res: Response) => {
     try {
       const id = Number(req.params.id);
-      const activeUser = foundationStore.getActiveUser();
+      const activeUser = getRequestUser(req);
       const activeInstallerId = getActiveInstallerPartyId(activeUser);
 
       const project = foundationStore.getProjectById(id);
@@ -2631,6 +2905,7 @@ async function startServer() {
       if (activeInstallerId && project.installerId !== activeInstallerId) {
         return res.status(403).json({
           ok: false,
+          errorCode: 'INSTALLER_PROJECT_FORBIDDEN',
           messageFa: 'دسترسی غیرمجاز: شما فقط امکان ثبت گزارش برای پروژه‌های تخصیص‌یافته به خود را دارید.',
         });
       }
@@ -2649,31 +2924,46 @@ async function startServer() {
     }
   });
 
-  // 80c. Review Visit Report by Manager (Approve / Reject)
-  app.post('/api/projects/:id/review-visit-report', (req: Request, res: Response) => {
-    try {
-      const id = Number(req.params.id);
-      const activeUser = foundationStore.getActiveUser();
-      const { approved, reviewNotesFa } = req.body || {};
+  // 80c. Review Visit Report by Manager (مسدود برای نصاب)
+  app.post(
+    '/api/projects/:id/review-visit-report',
+    (req: Request, res: Response, next: NextFunction) => {
+      const activeUser = getRequestUser(req);
+      const activeInstallerId = getActiveInstallerPartyId(activeUser);
+      if (activeInstallerId) {
+        return res.status(403).json({
+          ok: false,
+          errorCode: 'INSTALLER_ACTION_FORBIDDEN',
+          messageFa: 'دسترسی غیرمجاز: نصاب مجاز به تأیید یا ارزیابی گزارش کار خود یا دیگران نیست.',
+        });
+      }
+      return requirePermission('installation.jobs.manage')(req, res, next);
+    },
+    (req: Request, res: Response) => {
+      try {
+        const id = Number(req.params.id);
+        const activeUser = getRequestUser(req);
+        const { approved, reviewNotesFa } = req.body || {};
 
-      const updated = foundationStore.reviewProjectVisitReport(id, Boolean(approved), reviewNotesFa, activeUser.id);
-      res.json({
-        ok: true,
-        messageFa: `گزارش بازدید پروژه «${updated.titleFa}» با موفقیت ${approved ? 'تأیید' : 'رد'} گردید.`,
-        project: updated,
-      });
-    } catch (err: unknown) {
-      res.status(400).json({
-        ok: false,
-        messageFa: err instanceof Error ? err.message : 'خطا در برسی گزارش بازدید.',
-      });
+        const updated = foundationStore.reviewProjectVisitReport(id, Boolean(approved), reviewNotesFa, activeUser.id);
+        res.json({
+          ok: true,
+          messageFa: `گزارش بازدید پروژه «${updated.titleFa}» با موفقیت ${approved ? 'تأیید' : 'رد'} گردید.`,
+          project: updated,
+        });
+      } catch (err: unknown) {
+        res.status(400).json({
+          ok: false,
+          messageFa: err instanceof Error ? err.message : 'خطا در بررسی گزارش بازدید.',
+        });
+      }
     }
-  });
+  );
 
   // 81. Get Project Requisitions
   app.get('/api/projects/requisitions', (req: Request, res: Response) => {
     try {
-      const activeUser = foundationStore.getActiveUser();
+      const activeUser = getRequestUser(req);
       const activeInstallerId = getActiveInstallerPartyId(activeUser);
 
       const { projectId, installerId, status } = req.query;
@@ -2699,16 +2989,22 @@ async function startServer() {
   app.post('/api/projects/:id/requisitions', (req: Request, res: Response) => {
     try {
       const projectId = Number(req.params.id);
-      const activeUser = foundationStore.getActiveUser();
+      const activeUser = getRequestUser(req);
       const activeInstallerId = getActiveInstallerPartyId(activeUser);
 
-      const project = foundationStore.getProjectById(projectId);
-      if (!project) return res.status(404).json({ ok: false, messageFa: 'پروژه یافت نشد.' });
+      let project = foundationStore.getProjectById(projectId);
+      let job: any = null;
+      if (!project) {
+        job = foundationStore.getInstallationJobs().find((j) => j.id === projectId);
+      }
+      if (!project && !job) return res.status(404).json({ ok: false, messageFa: 'پروژه یا پرونده نصب یافت نشد.' });
 
-      if (activeInstallerId && project.installerId !== activeInstallerId) {
+      const assignedInstaller = project ? project.installerId : job.installerId;
+      if (activeInstallerId && assignedInstaller !== activeInstallerId) {
         return res.status(403).json({
           ok: false,
-          messageFa: 'دسترسی غیرمجاز: شما فقط امکان ثبت درخواست کالا برای پروژه‌های خود را دارید.',
+          errorCode: 'INSTALLER_ACTION_FORBIDDEN',
+          messageFa: 'دسترسی غیرمجاز: شما فقط امکان ثبت درخواست کالا برای امور محوله خود را دارید.',
         });
       }
 
@@ -2729,51 +3025,81 @@ async function startServer() {
     }
   });
 
-  // 83. Approve Project Requisition (تأیید درخواست توسط مدیر)
-  app.post('/api/projects/requisitions/:reqId/approve', (req: Request, res: Response) => {
-    try {
-      const reqId = Number(req.params.reqId);
-      const activeUser = foundationStore.getActiveUser();
-      const { approvedQty } = req.body || {};
-      const requisition = foundationStore.approveProjectRequisition(reqId, approvedQty, activeUser.id);
-      res.json({
-        ok: true,
-        messageFa: `درخواست ${requisition.requestCode} با تأیید ${requisition.approvedQty} عدد تصویب گردید.`,
-        requisition,
-      });
-    } catch (err: unknown) {
-      res.status(400).json({
-        ok: false,
-        messageFa: err instanceof Error ? err.message : 'خطا در تأیید درخواست کالا.',
-      });
+  // 83. Approve Project Requisition (صرفاً مدیران و انبارداران؛ مسدود برای نصاب)
+  app.post(
+    '/api/projects/requisitions/:reqId/approve',
+    (req: Request, res: Response, next: NextFunction) => {
+      const activeUser = getRequestUser(req);
+      const activeInstallerId = getActiveInstallerPartyId(activeUser);
+      if (activeInstallerId) {
+        return res.status(403).json({
+          ok: false,
+          errorCode: 'INSTALLER_ACTION_FORBIDDEN',
+          messageFa: 'دسترسی غیرمجاز: نصاب مجاز به تأیید درخواست کالا نیست. این عملیات صرفاً در صلاحیت مدیر یا انباردار است.',
+        });
+      }
+      return requirePermission('inventory.transfer.manage')(req, res, next);
+    },
+    (req: Request, res: Response) => {
+      try {
+        const reqId = Number(req.params.reqId);
+        const activeUser = getRequestUser(req);
+        const { approvedQty } = req.body || {};
+        const requisition = foundationStore.approveProjectRequisition(reqId, approvedQty, activeUser.id);
+        res.json({
+          ok: true,
+          messageFa: `درخواست ${requisition.requestCode} با تأیید ${requisition.approvedQty} عدد تصویب گردید.`,
+          requisition,
+        });
+      } catch (err: unknown) {
+        res.status(400).json({
+          ok: false,
+          messageFa: err instanceof Error ? err.message : 'خطا در تأیید درخواست کالا.',
+        });
+      }
     }
-  });
+  );
 
-  // 84. Issue Project Requisition (تحویل فیزیکی از انبار توسط انباردار)
-  app.post('/api/projects/requisitions/:reqId/issue', (req: Request, res: Response) => {
-    try {
-      const reqId = Number(req.params.reqId);
-      const activeUser = foundationStore.getActiveUser();
-      const { issuedQty, warehouseId, serials } = req.body || {};
-      const requisition = foundationStore.issueProjectRequisition(
-        reqId,
-        issuedQty,
-        warehouseId,
-        serials,
-        activeUser.id
-      );
-      res.json({
-        ok: true,
-        messageFa: `تحویل ${requisition.issuedQty} عدد کالا از ${requisition.sourceWarehouseTitleFa} به نصاب پروژه ثبت گردید.`,
-        requisition,
-      });
-    } catch (err: unknown) {
-      res.status(400).json({
-        ok: false,
-        messageFa: err instanceof Error ? err.message : 'خطا در تحویل کالا از انبار.',
-      });
+  // 84. Issue Project Requisition (صرفاً انباردار؛ مسدود برای نصاب)
+  app.post(
+    '/api/projects/requisitions/:reqId/issue',
+    (req: Request, res: Response, next: NextFunction) => {
+      const activeUser = getRequestUser(req);
+      const activeInstallerId = getActiveInstallerPartyId(activeUser);
+      if (activeInstallerId) {
+        return res.status(403).json({
+          ok: false,
+          errorCode: 'INSTALLER_ACTION_FORBIDDEN',
+          messageFa: 'دسترسی غیرمجاز: تحویل فیزیکی کالا از انبار صرفاً در صلاحیت انباردار سیستم است.',
+        });
+      }
+      return requirePermission('inventory.transfer.manage')(req, res, next);
+    },
+    (req: Request, res: Response) => {
+      try {
+        const reqId = Number(req.params.reqId);
+        const activeUser = getRequestUser(req);
+        const { issuedQty, warehouseId, serials } = req.body || {};
+        const requisition = foundationStore.issueProjectRequisition(
+          reqId,
+          issuedQty,
+          warehouseId,
+          serials,
+          activeUser.id
+        );
+        res.json({
+          ok: true,
+          messageFa: `تحویل ${requisition.issuedQty} عدد کالا از ${requisition.sourceWarehouseTitleFa} به نصاب پروژه ثبت گردید.`,
+          requisition,
+        });
+      } catch (err: unknown) {
+        res.status(400).json({
+          ok: false,
+          messageFa: err instanceof Error ? err.message : 'خطا در تحویل کالا از انبار.',
+        });
+      }
     }
-  });
+  );
 
   // 85. Consume Project Requisition (مصرف قطعی در محل پروژه و صدور سند حسابداری خودکار)
   app.post('/api/projects/requisitions/:reqId/consume', (req: Request, res: Response) => {
@@ -4160,6 +4486,544 @@ ${JSON.stringify(foundationDataSummary || {}, null, 2)}"
         messageFa: err instanceof Error ? err.message : 'خطا در محاسبه شاخص‌های کلان مدیریتی BI.',
       });
     }
+  });
+
+  // ============================================================================
+  // PHASE 13: REMOTE CLOUDFLARE TUNNEL & GOOGLE SHEETS / FORMS SYNC ENDPOINTS
+  // ============================================================================
+
+  // 1. Get Remote Tunnel Config & Network Status
+  app.get('/api/system/remote-tunnel', (_req: Request, res: Response) => {
+    try {
+      const config = foundationStore.getRemoteTunnelConfig();
+      const lanIps: string[] = [];
+      try {
+        const nets = os.networkInterfaces();
+        for (const name of Object.keys(nets)) {
+          for (const net of nets[name] || []) {
+            if (net.family === 'IPv4' && !net.internal) {
+              lanIps.push(net.address);
+            }
+          }
+        }
+      } catch {
+        // fallback
+      }
+
+      res.json({
+        ok: true,
+        config,
+        lanIps,
+        localPort: 3000,
+        quickCommands: {
+          windowsPowerShell: `winget install --id Cloudflare.cloudflared -e\ncloudflared tunnel --url http://localhost:3000`,
+          windowsCmd: `cloudflared tunnel --url http://localhost:3000`,
+          linuxBash: `curl -fsSL https://pkg.cloudflare.com/cloudflared-ascii.repo | sudo tee /etc/yum.repos.d/cloudflared.repo\ncloudflared tunnel --url http://localhost:3000`,
+        },
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت تنظیمات تونل اینترنتی.',
+      });
+    }
+  });
+
+  // 2. Save Remote Tunnel Public URL
+  app.post('/api/system/remote-tunnel', (req: Request, res: Response) => {
+    try {
+      const updated = foundationStore.updateRemoteTunnelConfig(req.body || {});
+      res.json({
+        ok: true,
+        config: updated,
+        messageFa: 'تنظیمات آدرس اینترنتی تونل با موفقیت ذخیره شد.',
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ذخیره تنظیمات تونل.',
+      });
+    }
+  });
+
+  // 3. Ping / Test Remote Tunnel URL
+  app.post('/api/system/remote-tunnel/test', async (req: Request, res: Response) => {
+    try {
+      const targetUrl = (req.body?.publicUrl || '').trim();
+      if (!targetUrl) {
+        return res.status(400).json({ ok: false, messageFa: 'آدرس اینترنتی وارد نشده است.' });
+      }
+
+      const cleanUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
+      const pingUrl = `${cleanUrl}/health`;
+
+      const startTime = Date.now();
+      let isReachable = false;
+      let statusText = '';
+
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+        const pingRes = await fetch(pingUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (pingRes.ok || pingRes.status < 500) {
+          isReachable = true;
+          statusText = `پاسخ کد ${pingRes.status} دریافت شد.`;
+        }
+      } catch (pingErr: unknown) {
+        statusText = pingErr instanceof Error ? pingErr.message : 'پاسخ دریافت نشد.';
+      }
+
+      const latencyMs = Date.now() - startTime;
+      const testStatus = isReachable ? 'CONNECTED' : 'DISCONNECTED';
+
+      foundationStore.updateRemoteTunnelConfig({
+        lastTestedAt: new Date().toISOString(),
+        testStatus,
+      });
+
+      res.json({
+        ok: isReachable,
+        latencyMs,
+        testStatus,
+        messageFa: isReachable
+          ? `ارتباط موفقیت‌آمیز بود! آدرس اینترنتی با زمان پاسخگویی ${latencyMs} میلی‌ثانیه در دسترس است.`
+          : `عدم دسترسی به آدرس وارد شده (${statusText}). لطفاً مطمئن شوید دستور cloudflared روی کامپیوتر در حال اجراست.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در آزمایش اتصال تونل.',
+      });
+    }
+  });
+
+  // 4. Get Google Sheets Sync Config & Logs
+  app.get('/api/sync/google-sheets/config', (_req: Request, res: Response) => {
+    try {
+      const config = foundationStore.getGoogleSheetsSyncConfig();
+      const logs = foundationStore.getGoogleSheetsSyncLogs();
+      res.json({ ok: true, config, logs });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در دریافت تنظیمات گوگل شیت.',
+      });
+    }
+  });
+
+  // 5. Update Google Sheets Sync Config
+  app.post('/api/sync/google-sheets/config', (req: Request, res: Response) => {
+    try {
+      const config = foundationStore.updateGoogleSheetsSyncConfig(req.body || {});
+      res.json({
+        ok: true,
+        config,
+        messageFa: 'تنظیمات همگام‌سازی گوگل شیت و فرم‌ها ذخیره شد.',
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ذخیره تنظیمات گوگل شیت.',
+      });
+    }
+  });
+
+  // 6. Export Installer Data for Google Sheets / Excel
+  app.get('/api/sync/google-sheets/export', (_req: Request, res: Response) => {
+    try {
+      const data = foundationStore.exportInstallerDataForSync();
+      res.json({ ok: true, data });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در استخراج اطلاعات.',
+      });
+    }
+  });
+
+  // 7. Push Jobs to Google Apps Script Webhook
+  app.post('/api/sync/google-sheets/push', async (_req: Request, res: Response) => {
+    try {
+      const config = foundationStore.getGoogleSheetsSyncConfig();
+      const exportData = foundationStore.exportInstallerDataForSync();
+
+      let remoteWebhookResponse = null;
+      let remotePushed = false;
+
+      if (config.appsScriptWebhookUrl && config.appsScriptWebhookUrl.startsWith('http')) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 12000);
+          const pushRes = await fetch(config.appsScriptWebhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'pushFromErp',
+              secretToken: 'MEHREGAN_SYNC_TOKEN',
+              data: exportData,
+            }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (pushRes.ok) {
+            remoteWebhookResponse = await pushRes.json().catch(() => null);
+            remotePushed = true;
+          }
+        } catch (fetchErr) {
+          // webhook unreachable, return offline data for manual copy
+        }
+      }
+
+      const totalJobs = exportData.jobs.length + exportData.projects.length;
+      foundationStore.updateGoogleSheetsSyncConfig({
+        lastSyncAt: new Date().toISOString(),
+        lastSyncStatus: 'SUCCESS',
+        lastSyncStats: {
+          jobsPushed: totalJobs,
+          requisitionsPulled: 0,
+          reportsPulled: 0,
+        },
+      });
+
+      foundationStore.addGoogleSheetsSyncLog({
+        type: 'PUSH',
+        status: 'SUCCESS',
+        detailsFa: remotePushed
+          ? `ارسال موفق اطلاعات ${totalJobs} سفارش به وب‌هوک گوگل شیت.`
+          : `آماده‌سازی اطلاعات ${totalJobs} سفارش و پروژه نصابان جهت همگام‌سازی با گوگل شیت.`,
+        stats: { jobsPushed: totalJobs },
+      });
+
+      res.json({
+        ok: true,
+        remotePushed,
+        totalJobs,
+        exportData,
+        messageFa: remotePushed
+          ? `تعداد ${totalJobs} سفارش و پروژه با موفقیت به گوگل شیت ارسال گردید.`
+          : `تعداد ${totalJobs} سفارش و پروژه آماده است؛ در صورت اتصال وب‌هوک، به صورت خودکار درج می‌شود.`,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ارسال اطلاعات به گوگل شیت.',
+      });
+    }
+  });
+
+  // 8. Pull Updates from Google Apps Script Webhook
+  app.post('/api/sync/google-sheets/pull', async (_req: Request, res: Response) => {
+    try {
+      const config = foundationStore.getGoogleSheetsSyncConfig();
+      if (!config.appsScriptWebhookUrl || !config.appsScriptWebhookUrl.startsWith('http')) {
+        return res.status(400).json({
+          ok: false,
+          messageFa:
+            'آدرس وب‌اپلیکیشن گوگل اسکریپت (Apps Script Webhook URL) تنظیم نشده است. ابتدا آدرس وب‌هوک را در تب تنظیمات گوگل شیت وارد نمایید.',
+        });
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      const pullRes = await fetch(`${config.appsScriptWebhookUrl}?action=pullForErp`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!pullRes.ok) {
+        throw new Error(`پاسخ سرور گوگل شیت ناموفق بود (${pullRes.status}).`);
+      }
+
+      const pullJson = await pullRes.json();
+      if (!pullJson.ok || !pullJson.data) {
+        throw new Error(pullJson.message || 'ساختار داده‌های دریافتی از گوگل شیت نامعتبر است.');
+      }
+
+      const activeUser = foundationStore.getActiveUser();
+      const result = foundationStore.importInstallerDataFromSync(pullJson.data, activeUser.id);
+
+      res.json({
+        ok: true,
+        ...result,
+      });
+    } catch (err: unknown) {
+      foundationStore.addGoogleSheetsSyncLog({
+        type: 'PULL',
+        status: 'ERROR',
+        detailsFa: `خطا در دریافت اطلاعات از وب‌هوک گوگل شیت: ${err instanceof Error ? err.message : String(err)}`,
+      });
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ارتباط با گوگل شیت.',
+      });
+    }
+  });
+
+  // 9. Manual Apply / Import from Client (e.g. JSON or parsed table)
+  app.post('/api/sync/google-sheets/import', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const result = foundationStore.importInstallerDataFromSync(req.body || {}, activeUser.id);
+      res.json(result);
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ثبت داده‌های همگام‌سازی.',
+      });
+    }
+  });
+
+  // 10. Inbound Webhook endpoint from Google Sheets / Forms
+  app.post('/api/sync/google-sheets/webhook', (req: Request, res: Response) => {
+    try {
+      const payload = req.body || {};
+      const activeUser = foundationStore.getActiveUser();
+      const result = foundationStore.importInstallerDataFromSync(payload, activeUser.id);
+
+      foundationStore.addGoogleSheetsSyncLog({
+        type: 'WEBHOOK',
+        status: 'SUCCESS',
+        detailsFa: `وب‌هوک دریافتی آنی از گوگل شیت با موفقیت اعمال شد.`,
+      });
+
+      res.json({
+        ok: true,
+        messageFa: 'وب‌هوک با موفقیت دریافت و اعمال گردید.',
+        ...result,
+      });
+    } catch (err: unknown) {
+      foundationStore.addGoogleSheetsSyncLog({
+        type: 'WEBHOOK',
+        status: 'ERROR',
+        detailsFa: `خطا در پردازش وب‌هوک گوگل شیت: ${err instanceof Error ? err.message : String(err)}`,
+      });
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در پردازش وب‌هوک.',
+      });
+    }
+  });
+
+  // 11. 1-Click Ready-to-Paste Google Apps Script Code
+  app.get('/api/sync/google-sheets/apps-script-code', (_req: Request, res: Response) => {
+    const code = `/**
+ * =========================================================================
+ * سامانه جامع ERP مهرگان - اسکریپت همگام‌سازی خودکار گوگل شیت و فرم‌ها
+ * MEHREGAN ERP - GOOGLE SHEETS & GOOGLE FORMS TWO-WAY SYNC APPS SCRIPT
+ * =========================================================================
+ * راهنمای نصب در ۱ دقیقه:
+ * ۱. یک فایل جدید در Google Sheets بسازید (sheets.new).
+ * ۲. از منوی Extensions گزینه Apps Script را انتخاب کنید.
+ * ۳. تمام کدهای این بخش را در فایل Code.gs جایگزین و ذخیره (Save) کنید.
+ * ۴. دکمه آبی Deploy > New deployment را بزنید.
+ * ۵. نوع deployment را Web app انتخاب کنید:
+ *    - Execute as: Me (ایمیل شما)
+ *    - Who has access: Anyone (هر کس که لینک دارد)
+ * ۶. لینک تولید شده (Web app URL) را کپی کرده و در تنظیمات نرم‌افزار مهرگان ثبت کنید!
+ * =========================================================================
+ */
+
+function setupSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // ۱. برگه سفارشات و پروژه‌های نصاب
+  let sheetJobs = ss.getSheetByName('سفارشات_نصاب');
+  if (!sheetJobs) {
+    sheetJobs = ss.insertSheet('سفارشات_نصاب');
+    sheetJobs.setRightToLeft(true);
+    sheetJobs.appendRow([
+      'کد سفارش / پروژه',
+      'عنوان کار',
+      'نام مشتری',
+      'تلفن مشتری',
+      'آدرس پروژه',
+      'نام نصاب مسئول',
+      'تاریخ ارجاع',
+      'وضعیت (در انتظار / در حال اجرا / تکمیل شده)',
+      'توضیحات و گزارش نصاب',
+      'آخرین به‌روزرسانی'
+    ]);
+    sheetJobs.getRange(1, 1, 1, 10).setBackground('#0f172a').setFontColor('#ffffff').setFontWeight('bold');
+  }
+
+  // ۲. برگه درخواست متریال از انبار
+  let sheetReq = ss.getSheetByName('درخواست_کالا_انبار');
+  if (!sheetReq) {
+    sheetReq = ss.insertSheet('درخواست_کالا_انبار');
+    sheetReq.setRightToLeft(true);
+    sheetReq.appendRow([
+      'ردیف',
+      'کد سفارش / پروژه',
+      'نام نصاب',
+      'نام یا کد کالا/قطعه',
+      'تعداد درخواستی',
+      'انبار مقصد',
+      'توضیحات و علت مصرف',
+      'وضعیت تایید انبار',
+      'تاریخ درخواست'
+    ]);
+    sheetReq.getRange(1, 1, 1, 9).setBackground('#0369a1').setFontColor('#ffffff').setFontWeight('bold');
+  }
+
+  // ۳. برگه گزارشات پیشرفت کار
+  let sheetRep = ss.getSheetByName('گزارش_کار_نصاب');
+  if (!sheetRep) {
+    sheetRep = ss.insertSheet('گزارش_کار_نصاب');
+    sheetRep.setRightToLeft(true);
+    sheetRep.appendRow([
+      'کد سفارش / پروژه',
+      'نام نصاب',
+      'تاریخ مراجعه',
+      'وضعیت جدید',
+      'شرح اقدامات انجام‌شده',
+      'تاریخ ثبت'
+    ]);
+    sheetRep.getRange(1, 1, 1, 6).setBackground('#047857').setFontColor('#ffffff').setFontWeight('bold');
+  }
+}
+
+// وب‌سرویس دریافت درخواست‌ها از نرم‌افزار مهرگان (POST)
+function doPost(e) {
+  try {
+    setupSheets();
+    const contents = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // ۱. دریافت کارهای جدید ارجاع شده از مهرگان به شیت
+    if (contents.action === 'pushFromErp' && contents.data) {
+      const sheetJobs = ss.getSheetByName('سفارشات_نصاب');
+      const allJobs = [...(contents.data.jobs || []), ...(contents.data.projects || [])];
+
+      // پاکسازی ردیف‌های قبلی بجز هدر
+      const lastRow = sheetJobs.getLastRow();
+      if (lastRow > 1) {
+        sheetJobs.getRange(2, 1, lastRow - 1, 10).clearContent();
+      }
+
+      // درج رکوردهای جدید
+      allJobs.forEach(job => {
+        sheetJobs.appendRow([
+          job.jobCode || job.projectCode,
+          job.titleFa,
+          job.customerTitleFa || '-',
+          job.phone || '-',
+          job.locationAddressFa || '-',
+          job.installerTitleFa || 'تیم نصب',
+          job.scheduledDateJalali || job.startDateJalali || '1405/01/25',
+          translateStatusToFa(job.status),
+          job.notesFa || '',
+          new Date().toLocaleString('fa-IR')
+        ]);
+      });
+
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: true,
+        message: 'کارهای نصابان با موفقیت در شیت درج شد.',
+        count: allJobs.length
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ۲. دریافت اطلاعات از Google Forms در صورت لینک مستقیم
+    if (contents.action === 'submitFromForm') {
+      const sheetReq = ss.getSheetByName('درخواست_کالا_انبار');
+      sheetReq.appendRow([
+        sheetReq.getLastRow(),
+        contents.projectCode || 'INS-1405-1001',
+        contents.installerName || 'نصاب',
+        contents.itemTitle || 'دوربین داهوا',
+        contents.quantity || 1,
+        contents.warehouseName || 'انبار مرکزی',
+        contents.notes || '',
+        'در انتظار تأیید انبار',
+        new Date().toLocaleDateString('fa-IR')
+      ]);
+
+      return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, message: 'Action not supported' })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// وب‌سرویس فراخوانی توسط مهرگان برای دریافت آپدیت‌ها (GET)
+function doGet(e) {
+  try {
+    setupSheets();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // خواندن ردیف‌های سفارشات و تغییرات وضعیت
+    const sheetJobs = ss.getSheetByName('سفارشات_نصاب');
+    const jobRows = sheetJobs.getDataRange().getValues();
+    const jobUpdates = [];
+
+    for (let i = 1; i < jobRows.length; i++) {
+      const row = jobRows[i];
+      if (row[0]) {
+        jobUpdates.push({
+          jobCode: String(row[0]).trim(),
+          status: translateStatusToEn(row[7]),
+          notesFa: String(row[8] || '').trim()
+        });
+      }
+    }
+
+    // خواندن ردیف‌های درخواست متریال
+    const sheetReq = ss.getSheetByName('درخواست_کالا_انبار');
+    const reqRows = sheetReq.getDataRange().getValues();
+    const newRequisitions = [];
+
+    for (let i = 1; i < reqRows.length; i++) {
+      const row = reqRows[i];
+      if (row[1] && row[3]) {
+        newRequisitions.push({
+          projectCodeOrJobCode: String(row[1]).trim(),
+          installerName: String(row[2] || '').trim(),
+          itemCodeOrTitle: String(row[3]).trim(),
+          requestedQty: Number(row[4]) || 1,
+          notesFa: String(row[6] || '').trim()
+        });
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: true,
+      data: {
+        jobUpdates,
+        newRequisitions,
+        workReports: []
+      }
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function translateStatusToFa(enStatus) {
+  if (enStatus === 'COMPLETED') return 'تکمیل شده';
+  if (enStatus === 'IN_PROGRESS') return 'در حال اجرا';
+  return 'در انتظار اقدام';
+}
+
+function translateStatusToEn(faStatus) {
+  const s = String(faStatus || '').trim();
+  if (s.includes('تکمیل')) return 'COMPLETED';
+  if (s.includes('اجرا')) return 'IN_PROGRESS';
+  return 'PENDING';
+}
+`;
+
+    res.json({ ok: true, code });
+  });
+
+  // Guaranteed JSON 404 response for all unhandled /api/* routes so they never fall through to Vite HTML SPA fallback
+  app.all('/api/*', (req: Request, res: Response) => {
+    res.status(404).json({
+      ok: false,
+      messageFa: `مسیر وب‌سرویس «${req.method} ${req.path}» در سامانه مهرگان یافت نشد.`,
+    });
   });
 
   // ============================================================================

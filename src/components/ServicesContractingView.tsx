@@ -27,6 +27,7 @@ import {
 } from '../types/foundation';
 import { printHtmlContent } from '../utils/printUtils';
 import { Card, Button } from './ui';
+import { PriceInput } from './PriceInput';
 
 interface ServicesContractingViewProps {
   foundationData: FoundationDataResponse;
@@ -472,11 +473,11 @@ export const ServicesContractingView: React.FC<ServicesContractingViewProps> = (
 
             <div className="space-y-1">
               <label className="block font-bold text-slate-700">اجرت و دستمزد تخمینی (ریال):</label>
-              <input
-                type="number"
+              <PriceInput
                 value={laborFeeIrr}
-                onChange={(e) => setLaborFeeIrr(parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-emerald-800 text-left font-mono"
+                onChange={(val) => setLaborFeeIrr(val)}
+                className="w-full font-black text-emerald-800"
+                unit="ریال"
               />
             </div>
 

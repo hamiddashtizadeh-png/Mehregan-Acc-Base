@@ -11,17 +11,17 @@
     "username": "postgres",
     "encryptedPassword": {
       "cipher": "aes-256-gcm",
-      "ivHex": "f4ffb1580743c8169c952e5f",
-      "authTagHex": "06e52f4d68f45506330e15aeb601c054",
-      "ciphertextHex": "a323ef660b1804384ca2546552e74bed23751b2e"
+      "ivHex": "603540c232b12503fcade27d",
+      "authTagHex": "b424509985c17de1f82416d66246e43b",
+      "ciphertextHex": "4cb617f9c695144e590801a075403df18ff0af0d"
     },
     "hasPasswordSaved": true,
     "tlsEnabled": false,
     "tlsMode": "disable",
-    "lastTestedAt": "2026-10-22T06:42:00.673Z",
+    "lastTestedAt": "2026-10-25T13:38:22.506Z",
     "verifiedReady": true
   },
   "stagedCandidateProfile": null,
   "previousProfileForRollback": null,
-  "lastConnectionSwitchAt": "2026-10-22T06:42:00.673Z"
+  "lastConnectionSwitchAt": "2026-10-25T13:38:22.506Z"
 }

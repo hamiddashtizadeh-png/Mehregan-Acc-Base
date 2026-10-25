@@ -29,6 +29,7 @@ import {
   Eye,
   ArrowRight,
   Trash2,
+  Globe,
 } from 'lucide-react';
 import {
   FoundationDataResponse,
@@ -43,7 +44,9 @@ import {
 } from '../types/foundation';
 import { printHtmlContent } from '../utils/printUtils';
 import { QuickMasterModal, QuickAddButton, QuickMasterType } from './QuickMasterModal';
+import { PriceInput } from './PriceInput';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { InstallerRemoteAndSheetHub } from './InstallerRemoteAndSheetHub';
 
 interface InstallationManagementViewProps {
   foundationData: FoundationDataResponse;
@@ -80,7 +83,7 @@ export const InstallationManagementView: React.FC<InstallationManagementViewProp
   }, [foundationData.installationJobs]);
 
   // Stage 11: Module Tab State
-  const [activeModuleTab, setActiveModuleTab] = useState<'PROJECTS' | 'REQUISITIONS' | 'PROFITABILITY' | 'SERVICES'>('PROJECTS');
+  const [activeModuleTab, setActiveModuleTab] = useState<'PROJECTS' | 'REQUISITIONS' | 'PROFITABILITY' | 'SERVICES' | 'REMOTE_SYNC'>('PROJECTS');
   const [projects, setProjects] = useState<ProjectRecord[]>(foundationData.projects || []);
   const [requisitions, setRequisitions] = useState<ProjectMaterialRequisitionRecord[]>(foundationData.projectRequisitions || []);
   const [selectedProfitability, setSelectedProfitability] = useState<ProjectProfitabilityDetail | null>(null);
@@ -771,6 +774,21 @@ export const InstallationManagementView: React.FC<InstallationManagementViewProp
             <Wrench className="h-3.5 w-3.5" />
             <span>سفارشات نصب متفرقه ({localJobs.length})</span>
           </button>
+
+          {!isInstallerUser && (
+            <button
+              type="button"
+              onClick={() => setActiveModuleTab('REMOTE_SYNC')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeModuleTab === 'REMOTE_SYNC'
+                  ? 'bg-sky-600 text-white shadow-xs'
+                  : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <Globe className="h-3.5 w-3.5 text-sky-500" />
+              <span>ارتباط میدانی نصاب‌ها (کلودفلر / گوگل شیت)</span>
+            </button>
+          )}
         </div>
 
         {activeModuleTab === 'PROJECTS' && !isInstallerUser && (
@@ -1420,6 +1438,14 @@ export const InstallationManagementView: React.FC<InstallationManagementViewProp
         </>
       )}
 
+      {/* ------------------- MODULE TAB 5: REMOTE INSTALLER ACCESS & GOOGLE SHEETS SYNC ------------------- */}
+      {activeModuleTab === 'REMOTE_SYNC' && (
+        <InstallerRemoteAndSheetHub
+          foundationData={foundationData}
+          onRefresh={onRefresh}
+        />
+      )}
+
       {/* ------------------- MODALS ------------------- */}
 
       {/* VISIT REPORT MODAL FOR INSTALLER */}
@@ -1731,15 +1757,12 @@ export const InstallationManagementView: React.FC<InstallationManagementViewProp
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       مبلغ کل قرارداد (ریال)
                     </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={newPrjForm.contractAmountIrr}
-                        onChange={(e) => setNewPrjForm({ ...newPrjForm, contractAmountIrr: Number(e.target.value) })}
-                        className="w-full pl-12 pr-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500"
-                      />
-                      <span className="absolute left-3 top-2.5 text-[10px] text-slate-400">ریال</span>
-                    </div>
+                    <PriceInput
+                      value={newPrjForm.contractAmountIrr}
+                      onChange={(val) => setNewPrjForm({ ...newPrjForm, contractAmountIrr: val })}
+                      className="w-full text-xs font-mono font-bold"
+                      unit="ریال"
+                    />
                   </div>
 
                   <div>
@@ -2032,11 +2055,11 @@ export const InstallationManagementView: React.FC<InstallationManagementViewProp
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     اجرت پایه نصب (ریال)
                   </label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={serviceFeeIrr}
-                    onChange={(e) => setServiceFeeIrr(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    onChange={(val) => setServiceFeeIrr(val)}
+                    className="w-full text-xs font-mono font-bold"
+                    unit="ریال"
                   />
                 </div>
 
@@ -2044,11 +2067,11 @@ export const InstallationManagementView: React.FC<InstallationManagementViewProp
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     هزینه‌های جانبی (کابل/داکت/داربست)
                   </label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={additionalExpensesIrr}
-                    onChange={(e) => setAdditionalExpensesIrr(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    onChange={(val) => setAdditionalExpensesIrr(val)}
+                    className="w-full text-xs font-mono font-bold"
+                    unit="ریال"
                   />
                 </div>
               </div>
@@ -2176,11 +2199,11 @@ export const InstallationManagementView: React.FC<InstallationManagementViewProp
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   مبلغ دریافتی بابت اجرت و خدمات (ریال)
                 </label>
-                <input
-                  type="number"
+                <PriceInput
                   value={updatePaidAmountIrr}
-                  onChange={(e) => setUpdatePaidAmountIrr(Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                  onChange={(val) => setUpdatePaidAmountIrr(val)}
+                  className="w-full text-xs font-mono"
+                  unit="ریال"
                 />
               </div>
 

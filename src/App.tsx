@@ -22,6 +22,7 @@ import {
   UtensilsCrossed,
   Truck,
   Smartphone,
+  LogOut,
 } from 'lucide-react';
 import { LayoutDashboard } from 'lucide-react';
 import { FoundationDataResponse, PublicUser, resolveIndustryUiLabels } from './types/foundation';
@@ -46,6 +47,7 @@ import { RestaurantCafeManagementView } from './components/RestaurantCafeManagem
 import { WholesaleDistributionView } from './components/WholesaleDistributionView';
 import { MobileElectronicsManagementView } from './components/MobileElectronicsManagementView';
 import { ServicesContractingView } from './components/ServicesContractingView';
+import { InstallerPortalView } from './components/InstallerPortalView';
 import { Button, Card } from './components/ui';
 
 type WorkspaceTab =
@@ -78,17 +80,34 @@ export default function App() {
   const [isChangePassOpen, setIsChangePassOpen] = useState(false);
   const [isQuickSubmenuOpen, setIsQuickSubmenuOpen] = useState(false);
 
-  const fetchFoundationData = useCallback(async () => {
+  const fetchFoundationData = useCallback(async (retryCount = 0) => {
     try {
       setNetworkError(null);
       const res = await fetch('/api/foundation/overview');
+      const contentType = res.headers.get('content-type') || '';
+
+      if (!res.ok || !contentType.includes('application/json')) {
+        // If server is warming up or during restart, auto-retry up to 3 times
+        if (retryCount < 3) {
+          await new Promise((r) => setTimeout(r, 800));
+          return fetchFoundationData(retryCount + 1);
+        }
+        throw new Error(
+          `پاسخ دریافتی از سرور هنوز در دسترس نیست (${res.status} ${res.statusText}). لطفا روی «تلاش مجدد» کلیک کنید.`
+        );
+      }
+
       const json = await res.json();
-      if (json.ok) {
+      if (json.ok && json.data) {
         setFoundationData(json.data);
       } else {
         setNetworkError(json.messageFa || 'خطا در دریافت اطلاعات دیتابیس.');
       }
     } catch (err: unknown) {
+      if (retryCount < 3) {
+        await new Promise((r) => setTimeout(r, 800));
+        return fetchFoundationData(retryCount + 1);
+      }
       setNetworkError(
         err instanceof Error ? err.message : 'عدم دسترسی به سرور مرکزی Backend روی پورت 3000.'
       );
@@ -132,6 +151,16 @@ export default function App() {
   };
 
   const handleLoginSuccess = async (_user: PublicUser) => {
+    await fetchFoundationData();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // transient
+    }
+    setIsLoginModalOpen(true);
     await fetchFoundationData();
   };
 
@@ -217,6 +246,115 @@ export default function App() {
     headerBrandTitleFa: 'سامانه جامع ERP و نظارت تصویری',
   };
 
+  const isAdmin =
+    activeUser.isInitialAdmin ||
+    activeUser.assignedRoles?.includes('ADMIN') ||
+    activeUser.assignedRoles?.includes('SUPER_ADMIN');
+
+  const isInstaller =
+    !isAdmin &&
+    (Boolean(activeUser.installerPartyId) ||
+      activeUser.assignedRoles?.includes('INSTALLER') ||
+      activeUser.jobTitle?.includes('نصاب') ||
+      activeUser.jobTitle?.includes('تکنسین') ||
+      activeUser.username.toLowerCase().includes('installer') ||
+      activeUser.username.includes('نصاب') ||
+      activeUser.fullName?.includes('نصاب') ||
+      Boolean(
+        foundationData.userRoleAssignments?.some(
+          (a) => a.userId === activeUser.id && a.roleCode === 'INSTALLER'
+        )
+      ));
+
+  // If the logged in user is an installer, strictly isolate them to the Installer Portal
+  if (isInstaller) {
+    return (
+      <div
+        dir="rtl"
+        data-industry-theme="cctv"
+        className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans"
+      >
+        {/* Dedicated Installer Focused Header */}
+        <header className="bg-white border-b border-slate-200/90 sticky top-0 z-40">
+          <div className="h-1.5 w-full bg-cyan-700" />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="bg-slate-900 text-white px-3 py-1.5 rounded-xl font-black text-xs tracking-tight shrink-0">
+                {foundationData.settings?.companyName || 'مهرگان'}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-slate-900 text-sm">
+                  کارتابل اختصاصی تکنسین و نصاب
+                </span>
+                <span className="hidden sm:inline-block font-bold px-2 py-0.5 rounded-full text-[11px] bg-cyan-50 text-cyan-800 border border-cyan-200">
+                  دسترسی محدود میدانی
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl">
+                <UserCheck className="h-3.5 w-3.5 text-cyan-700 shrink-0" />
+                <span className="font-extrabold text-slate-900">{activeUser.fullName}</span>
+                <span className="text-[11px] text-slate-400 font-mono">(@{activeUser.username})</span>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsChangePassOpen(true)}
+                leftIcon={<KeyRound className="h-3.5 w-3.5 text-amber-600" />}
+                title="تغییر کلمه عبور کاربر جاری"
+              >
+                <span className="hidden xs:inline">رمز عبور</span>
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsLoginModalOpen(true)}
+                leftIcon={<UserCheck className="h-3.5 w-3.5" />}
+              >
+                تغییر حساب
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                leftIcon={<LogOut className="h-3.5 w-3.5 text-rose-600" />}
+                className="text-rose-700 hover:bg-rose-50 border-rose-200"
+                title="خروج از حساب کاربری"
+              >
+                خروج
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {/* Dedicated Installer Main Viewport */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+          <InstallerPortalView
+            foundationData={foundationData}
+            onRefresh={fetchFoundationData}
+          />
+        </main>
+
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
+          onLoginSuccess={handleLoginSuccess}
+        />
+
+        <ChangePasswordModal
+          isOpen={isChangePassOpen}
+          onClose={() => setIsChangePassOpen(false)}
+          activeUser={activeUser}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       dir="rtl"
@@ -291,6 +429,17 @@ export default function App() {
               leftIcon={<UserCheck className="h-3.5 w-3.5" />}
             >
               تغییر حساب
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              leftIcon={<LogOut className="h-3.5 w-3.5 text-rose-600" />}
+              className="text-rose-700 hover:bg-rose-50 border-rose-200"
+              title="خروج از حساب کاربری"
+            >
+              خروج
             </Button>
           </div>
         </div>

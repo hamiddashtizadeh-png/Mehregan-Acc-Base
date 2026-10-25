@@ -40,6 +40,7 @@ import {
 } from '../types/foundation';
 import { printHtmlContent } from '../utils/printUtils';
 import { Card, Button } from './ui';
+import { PriceInput } from './PriceInput';
 
 interface RestaurantCafeManagementViewProps {
   foundationData: FoundationDataResponse;
@@ -2307,11 +2308,11 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
               <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-1">
                   <label className="block font-bold text-slate-700">قیمت (تومان):</label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={menuFormPriceToman}
-                    onChange={(e) => setMenuFormPriceToman(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-left font-bold text-orange-950"
+                    onChange={(val) => setMenuFormPriceToman(String(val))}
+                    className="w-full font-bold text-orange-950"
+                    unit="تومان"
                   />
                 </div>
 

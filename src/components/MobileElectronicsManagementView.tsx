@@ -38,6 +38,7 @@ import {
 } from '../types/foundation';
 import { printHtmlContent } from '../utils/printUtils';
 import { Card, Button } from './ui';
+import { PriceInput } from './PriceInput';
 
 interface MobileElectronicsManagementViewProps {
   foundationData: FoundationDataResponse;
@@ -998,11 +999,11 @@ export const MobileElectronicsManagementView: React.FC<MobileElectronicsManageme
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">قیمت فروش (ریال):</label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={newDevice.salePriceIrr}
-                    onChange={(e) => setNewDevice({ ...newDevice, salePriceIrr: Number(e.target.value) })}
-                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    onChange={(val) => setNewDevice({ ...newDevice, salePriceIrr: val })}
+                    className="w-full font-bold"
+                    unit="ریال"
                   />
                 </div>
               </div>
@@ -1112,20 +1113,20 @@ export const MobileElectronicsManagementView: React.FC<MobileElectronicsManageme
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">برآورد اولیه (ریال):</label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={newTicket.estimatedCostIrr}
-                    onChange={(e) => setNewTicket({ ...newTicket, estimatedCostIrr: Number(e.target.value) })}
-                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    onChange={(val) => setNewTicket({ ...newTicket, estimatedCostIrr: val })}
+                    className="w-full font-bold"
+                    unit="ریال"
                   />
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">بیعانه دریافتی (ریال):</label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={newTicket.depositPaidIrr}
-                    onChange={(e) => setNewTicket({ ...newTicket, depositPaidIrr: Number(e.target.value) })}
-                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    onChange={(val) => setNewTicket({ ...newTicket, depositPaidIrr: val })}
+                    className="w-full font-bold"
+                    unit="ریال"
                   />
                 </div>
               </div>
@@ -1176,11 +1177,11 @@ export const MobileElectronicsManagementView: React.FC<MobileElectronicsManageme
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">قیمت قطعه (ریال):</label>
-                  <input
-                    type="number"
+                  <PriceInput
                     value={newPart.partCostIrr}
-                    onChange={(e) => setNewPart({ ...newPart, partCostIrr: Number(e.target.value) })}
-                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    onChange={(val) => setNewPart({ ...newPart, partCostIrr: val })}
+                    className="w-full font-bold"
+                    unit="ریال"
                   />
                 </div>
                 <div>

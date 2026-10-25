@@ -40,6 +40,7 @@ import {
 import { exportToExcel, exportToPdf } from '../utils/exportUtils';
 import { QuickMasterModal, QuickAddButton, QuickMasterType } from './QuickMasterModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { PriceInput } from './PriceInput';
 import {
   FoundationDataResponse,
   ItemRecord,
@@ -2244,23 +2245,23 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
 
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700">قیمت خرید برآورد شده (ریال)</label>
-                  <input
-                    type="number"
-                    min="0"
+                  <PriceInput
+                    min={0}
                     value={itemFormData.purchasePriceIrr}
-                    onChange={(e) => setItemFormData({ ...itemFormData, purchasePriceIrr: Number(e.target.value) })}
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:outline-none"
+                    onChange={(val) => setItemFormData({ ...itemFormData, purchasePriceIrr: val })}
+                    className="w-full"
+                    unit="ریال"
                   />
                 </div>
 
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700">قیمت فروش پیش‌فرض (ریال)</label>
-                  <input
-                    type="number"
-                    min="0"
+                  <PriceInput
+                    min={0}
                     value={itemFormData.salePriceIrr}
-                    onChange={(e) => setItemFormData({ ...itemFormData, salePriceIrr: Number(e.target.value) })}
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:outline-none"
+                    onChange={(val) => setItemFormData({ ...itemFormData, salePriceIrr: val })}
+                    className="w-full"
+                    unit="ریال"
                   />
                 </div>
 
@@ -2611,12 +2612,12 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
 
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700">فی واحد (ریال)</label>
-                  <input
-                    type="number"
-                    min="0"
+                  <PriceInput
+                    min={0}
                     value={docFormData.unitCostIrr}
-                    onChange={(e) => setDocFormData({ ...docFormData, unitCostIrr: Number(e.target.value) })}
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:outline-none"
+                    onChange={(val) => setDocFormData({ ...docFormData, unitCostIrr: val })}
+                    className="w-full"
+                    unit="ریال"
                   />
                 </div>
               </div>
