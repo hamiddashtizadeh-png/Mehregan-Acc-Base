@@ -27,6 +27,9 @@ import {
 import { LayoutDashboard } from 'lucide-react';
 import { FoundationDataResponse, PublicUser, resolveIndustryUiLabels } from './types/foundation';
 import { LoginModal } from './components/LoginModal';
+import { LoginScreen } from './components/LoginScreen';
+import { QuickAccessMobileDrawer } from './components/QuickAccessMobileDrawer';
+import { PWAInstallButton } from './components/PWAInstallButton';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { UserManagementView } from './components/UserManagementView';
 import { RbacConsoleView } from './components/RbacConsoleView';
@@ -83,10 +86,21 @@ export default function App() {
   const fetchFoundationData = useCallback(async (retryCount = 0) => {
     try {
       setNetworkError(null);
-      const res = await fetch('/api/foundation/overview');
+      const token = localStorage.getItem('mehregan_session_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        headers['X-Session-Token'] = token;
+      }
+
+      const res = await fetch('/api/foundation/overview', { headers });
       const contentType = res.headers.get('content-type') || '';
 
       if (!res.ok || !contentType.includes('application/json')) {
+        if (res.status === 401) {
+          setFoundationData(null);
+          return;
+        }
         // If server is warming up or during restart, auto-retry up to 3 times
         if (retryCount < 3) {
           await new Promise((r) => setTimeout(r, 800));
@@ -98,10 +112,18 @@ export default function App() {
       }
 
       const json = await res.json();
-      if (json.ok && json.data) {
-        setFoundationData(json.data);
+      if (json.ok) {
+        if (json.authenticated === false || !json.data) {
+          setFoundationData(null);
+        } else {
+          setFoundationData(json.data);
+        }
       } else {
-        setNetworkError(json.messageFa || 'خطا در دریافت اطلاعات دیتابیس.');
+        if (json.errorCode === 'UNAUTHENTICATED' || json.authenticated === false) {
+          setFoundationData(null);
+        } else {
+          setNetworkError(json.messageFa || 'خطا در دریافت اطلاعات دیتابیس.');
+        }
       }
     } catch (err: unknown) {
       if (retryCount < 3) {
@@ -156,11 +178,18 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      const token = localStorage.getItem('mehregan_session_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      await fetch('/api/auth/logout', { method: 'POST', headers });
     } catch {
       // transient
     }
-    setIsLoginModalOpen(true);
+    localStorage.removeItem('mehregan_session_token');
+    localStorage.removeItem('mehregan_csrf_token');
+    setFoundationData(null);
     await fetchFoundationData();
   };
 
@@ -188,36 +217,40 @@ export default function App() {
     );
   }
 
-  if (networkError || !foundationData) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <Card variant="default" padding="lg" className="w-full max-w-lg border-rose-200 space-y-4">
-          <div className="flex items-center gap-2.5 text-rose-800">
-            <AlertTriangle className="h-6 w-6 text-rose-600 shrink-0" />
-            <div>
-              <h1 className="text-sm font-extrabold">خطا در برقراری ارتباط با سرور دیتابیس</h1>
-              <p className="text-xs text-slate-600 mt-0.5">
-                سرویس مرکزی Backend روی پورت 3000 در دسترس نیست یا خطایی رخ داده است.
-              </p>
+  if (!foundationData || !foundationData.activeUser) {
+    if (networkError && !networkError.includes('وارد حساب')) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+          <Card variant="default" padding="lg" className="w-full max-w-lg border-rose-200 space-y-4">
+            <div className="flex items-center gap-2.5 text-rose-800">
+              <AlertTriangle className="h-6 w-6 text-rose-600 shrink-0" />
+              <div>
+                <h1 className="text-sm font-extrabold">خطا در برقراری ارتباط با سرور دیتابیس</h1>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  سرویس مرکزی Backend روی پورت 3000 در دسترس نیست یا خطایی رخ داده است.
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-950 font-mono">
-            {networkError}
-          </div>
-          <Button
-            variant="primary"
-            size="md"
-            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-            onClick={() => {
-              setLoading(true);
-              fetchFoundationData();
-            }}
-          >
-            تلاش مجدد
-          </Button>
-        </Card>
-      </div>
-    );
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-950 font-mono">
+              {networkError}
+            </div>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+              onClick={() => {
+                setLoading(true);
+                fetchFoundationData();
+              }}
+            >
+              تلاش مجدد
+            </Button>
+          </Card>
+        </div>
+      );
+    }
+
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
   const activeUser = foundationData.activeUser;
@@ -406,6 +439,8 @@ export default function App() {
 
           {/* ZONE 3: Active User Profile & Account Controls */}
           <div className="flex items-center gap-2 shrink-0">
+            <PWAInstallButton variant="compact" />
+
             <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl">
               <UserCheck className="h-3.5 w-3.5 text-blue-600 shrink-0" />
               <span className="font-extrabold text-slate-900">{activeUser.fullName}</span>
@@ -844,7 +879,7 @@ export default function App() {
       )}
 
       {/* Main Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 pb-20 md:pb-6">
         {activeTab === 'DASHBOARD' && (
           <DashboardView
             foundationData={foundationData}
@@ -1024,6 +1059,82 @@ export default function App() {
           }
         }}
       />
+
+      {/* Quick Access Mobile Action Sheet Drawer */}
+      <QuickAccessMobileDrawer
+        isOpen={isQuickSubmenuOpen}
+        onClose={() => setIsQuickSubmenuOpen(false)}
+        onNavigate={(tab) => {
+          if (tab === 'PROFORMA' || tab === 'QUICK_SALE' || tab === 'RETURN') {
+            setActiveTab('SALES');
+          } else if (tab === 'PROJECTS' || tab === 'REQUISITION' || tab === 'INSTALLER') {
+            setActiveTab('INSTALLATION');
+          } else if (tab === 'EXPENSES' || tab === 'CHEQUES' || tab === 'INSTALLMENTS') {
+            setActiveTab('TREASURY');
+          } else if (tab === 'JOURNAL' || tab === 'TRIAL_BALANCE' || tab === 'PROFITABILITY') {
+            setActiveTab('ACCOUNTING');
+          } else {
+            setActiveTab(tab as WorkspaceTab);
+          }
+        }}
+        companyName={foundationData.settings?.companyName}
+      />
+
+      {/* Admin Mobile Web App Bottom Navigation Bar (PWA Anchor) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-1 py-1 shadow-lg grid grid-cols-5 gap-0.5 md:hidden">
+        <button
+          type="button"
+          onClick={() => setActiveTab('DASHBOARD')}
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-colors min-h-[48px] ${
+            activeTab === 'DASHBOARD' ? 'bg-blue-50 text-blue-800 font-bold' : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <LayoutDashboard className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">داشبورد</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('SALES')}
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-colors min-h-[48px] ${
+            activeTab === 'SALES' ? 'bg-blue-50 text-blue-800 font-bold' : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <ShoppingCart className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">فروش</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsQuickSubmenuOpen(true)}
+          className="flex flex-col items-center justify-center py-1 px-1 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-slate-950 font-bold shadow-md active:scale-95 transition-transform min-h-[48px]"
+        >
+          <Zap className="w-5 h-5 mb-0.5 fill-slate-950" />
+          <span className="text-[10px]">دسترسی سریع</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('INVENTORY')}
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-colors min-h-[48px] ${
+            activeTab === 'INVENTORY' ? 'bg-blue-50 text-blue-800 font-bold' : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Package className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">انبار</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('SETTINGS_HEALTH')}
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-colors min-h-[48px] ${
+            activeTab === 'SETTINGS_HEALTH' || (activeTab as string) === 'SETTINGS' ? 'bg-blue-50 text-blue-800 font-bold' : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Settings className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">تنظیمات</span>
+        </button>
+      </nav>
     </div>
   );
 }

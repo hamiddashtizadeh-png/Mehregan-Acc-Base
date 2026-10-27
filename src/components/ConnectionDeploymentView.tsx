@@ -17,6 +17,7 @@ import {
   Check,
 } from 'lucide-react';
 import { ConnectionMode, FoundationDataResponse, TlsMode } from '../types/foundation';
+import { CloudflareDiagnosticPanel } from './CloudflareDiagnosticPanel';
 
 interface ConnectionDeploymentViewProps {
   foundationData: FoundationDataResponse;
@@ -674,6 +675,9 @@ export const ConnectionDeploymentView: React.FC<ConnectionDeploymentViewProps> =
           )}
         </div>
       </div>
+
+      {/* Cloudflare Tunnel Diagnostic Tool for Admin & Installer */}
+      <CloudflareDiagnosticPanel />
 
       {/* 4. Installer, Launcher & Standalone Deployment Inspector */}
       <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">

@@ -34,6 +34,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       if (!res.ok || !data.ok) {
         setErrorMsg(data.messageFa || 'نام کاربری یا کلمه عبور وارد شده نادرست است.');
       } else {
+        if (data.token) {
+          localStorage.setItem('mehregan_session_token', data.token);
+        }
+        if (data.csrfToken) {
+          localStorage.setItem('mehregan_csrf_token', data.csrfToken);
+        }
         onLoginSuccess(data.user);
         onClose();
       }

@@ -7,7 +7,9 @@ const __dirname = path.dirname(__filename);
 
 // Calculated strictly relative to module file location
 export const APP_INSTALL_ROOT = path.resolve(__dirname, '..', '..');
-export const DATA_VAULT_DIR = path.join(APP_INSTALL_ROOT, '.mehregan-data');
+export const DATA_VAULT_DIR = process.env.MEHREGAN_DATA_DIR
+  ? path.resolve(process.env.MEHREGAN_DATA_DIR)
+  : path.join(APP_INSTALL_ROOT, '.mehregan-data');
 export const CONNECTION_VAULT_FILE = path.join(DATA_VAULT_DIR, 'connection-vault.json');
 export const LOCAL_STATE_DB_FILE = path.join(DATA_VAULT_DIR, 'mehregan-foundation-db.json');
 export const STATIC_DIST_DIR = path.join(APP_INSTALL_ROOT, 'dist');

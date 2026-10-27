@@ -1,109 +1,121 @@
 @echo off
-REM ==============================================================================
-REM  Mehregan ERP - Windows Startup Script
-REM ==============================================================================
-
-cd /d "%~dp0"
 chcp 65001 >nul 2>&1
-title Mehregan ERP - سامانه یکپارچه مهرگان
+title Mehregan ERP - راه‌اندازی سامانه یکپارچه مهرگان
 color 0B
 
+cd /d "%~dp0"
+
 echo ==============================================================================
+echo    Mehregans ERP Business Suite - Windows Launcher
 echo    سامانه یکپارچه مدیریت کسب و کار و حسابداری مهرگان
 echo ==============================================================================
 echo.
 
-REM 1. Identify Node.js
-set "NODE_CMD="
+rem 1. Check Node.js
 where node >nul 2>&1
-if %errorlevel% equ 0 (
-    set "NODE_CMD=node"
-) else (
-    if exist "C:\Program Files\nodejs\node.exe" (
-        set "NODE_CMD=C:\Program Files\nodejs\node.exe"
-        set "PATH=%PATH%;C:\Program Files\nodejs"
-    ) else if exist "%LOCALAPPDATA%\Programs\node\node.exe" (
-        set "NODE_CMD=%LOCALAPPDATA%\Programs\node\node.exe"
-        set "PATH=%PATH%;%LOCALAPPDATA%\Programs\node"
-    )
+if %errorlevel% equ 0 goto NODE_FOUND
+
+if exist "C:\Program Files\nodejs\node.exe" (
+    set "PATH=%PATH%;C:\Program Files\nodejs"
+    goto NODE_FOUND
+)
+if exist "%LOCALAPPDATA%\Programs\node\node.exe" (
+    set "PATH=%PATH%;%LOCALAPPDATA%\Programs\node"
+    goto NODE_FOUND
+)
+if exist "%~dp0runtime\node.exe" (
+    set "PATH=%~dp0runtime;%PATH%"
+    goto NODE_FOUND
 )
 
-if "%NODE_CMD%"=="" (
-    echo [خطا] نرم‌افزار Node.js روی ویندوز شما نصب نیست یا در مسیر سیستم قرار ندارد!
-    echo.
-    echo لطفا Node.js را دانلود و نصب نمایید:
-    echo 1. مراجعه به سایت رسمی: https://nodejs.org
-    echo 2. دانلود نسخه پیشنهادی LTS و نصب با تنظیمات پیش‌فرض
-    echo.
-    echo در حال باز کردن صفحه دانلود...
-    start https://nodejs.org
-    echo.
-    echo پس از اتمام نصب، این فایل را مجددا اجرا کنید.
-    echo.
-    pause
-    exit /b 1
-)
+echo [ERROR] Node.js is not installed on this system!
+echo [خطا] نرم‌افزار Node.js روی سیستم شما یافت نشد.
+echo Please install Node.js LTS from official site: https://nodejs.org
+explorer "https://nodejs.org"
+pause
+exit /b 1
 
+:NODE_FOUND
 echo [1/4] موتور اجرایی Node.js تایید شد:
-call %NODE_CMD% -v
+call node -v
 echo.
 
-REM 2. Check dependencies
-if not exist "%~dp0node_modules\" (
-    echo [2/4] در حال نصب خودکار بسته‌های پیش‌نیاز... لطفا شکیبا باشید.
-    call npm install
-    if %errorlevel% neq 0 (
-        echo [خطا] نصب بسته‌های پروژه با خطا مواجه شد. لطفا اتصال اینترنت را چک کنید.
-        echo.
-        pause
-        exit /b 1
-    )
-    echo [2/4] بسته‌ها با موفقیت نصب شدند.
-) else (
-    echo [2/4] بسته‌های پیش‌نیاز آماده هستند.
-)
+rem 2. Check dependencies
+if exist "%~dp0node_modules\" goto DEPS_FOUND
+
+echo [2/4] در حال نصب بسته‌های پیش‌نیاز... لطفاً شکیبا باشید.
+call npm install
+if %errorlevel% neq 0 goto DEPS_ERROR
+goto DEPS_FOUND
+
+:DEPS_ERROR
+echo [خطا] نصب بسته‌های پروژه با خطا مواجه گردید.
+pause
+exit /b 1
+
+:DEPS_FOUND
+echo [2/4] بسته‌های پیش‌نیاز آماده هستند.
 echo.
 
-REM 3. Check frontend build
-if not exist "%~dp0dist\index.html" (
-    echo [3/4] در حال آماده‌سازی فایل‌های رابط کاربری...
-    call npm run build
-) else (
-    echo [3/4] رابط کاربری آماده است.
-)
-echo.
-
-REM 4. Server launch and browser open
-echo [4/4] در حال راه‌اندازی سرور روی پورت 3000...
-echo.
+rem 3. Interactive Launch Mode Selection (Browser vs Standalone Window App)
 echo ==============================================================================
-echo  مشخصات ورود به سامانه:
+echo  انتخاب نحوه نمایش و اجرای سامانه مهرگان:
 echo  ----------------------------------------------------------------------------
-echo  * آدرس مرورگر:          http://localhost:3000
-echo  * نام کاربری مدیر:      admin        ^| رمز عبور: admin
-echo  * نام کاربری نصاب:      installer_ali ^| رمز عبور: ali@123
-echo.
-echo  برای متوقف کردن برنامه، پنجره را ببندید یا دکمه‌های Ctrl+C را بفشارید.
+echo  [1] اجرای در مرورگر وب (Browser Mode)
+echo  [2] اجرای در پنجره مستقل اپلیکیشن ویندوز (Standalone App Window Mode)
+echo  [3] انصراف و خروج
 echo ==============================================================================
 echo.
 
-REM Open browser after short delay
-start "" cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:3000"
+set "RUN_MODE=1"
+set /p RUN_MODE="یک گزینه را انتخاب کنید [1 یا 2 - پیش‌فرض: 1]: "
 
-REM Run server using npx tsx server.ts or npm run dev
-call npx tsx server.ts
-if %errorlevel% neq 0 (
-    echo.
-    echo [تلاش مجدد] اجرای سرور با موتور ثانویه...
-    call npm run dev
-)
+if "%RUN_MODE%"=="2" goto MODE_APP_WINDOW
+if "%RUN_MODE%"=="3" exit /b 0
+goto MODE_BROWSER
 
-if %errorlevel% neq 0 (
-    echo.
-    echo [خطا] اجرای سرور متوقف شد یا با خطا مواجه گردید.
-    echo اطلاعات فوق را برای بررسی خطا مشاهده فرمایید.
-)
-
+:MODE_APP_WINDOW
 echo.
-echo سرور مهرگان خاتمه یافت. برای بستن پنجره کلیدی را فشار دهید...
+echo [3/4] در حال راه‌اندازی در حالت «پنجره مستقل ویندوزی»...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Sleep -Seconds 3; if (Get-Command msedge -ErrorAction SilentlyContinue) { Start-Process msedge '--app=http://localhost:3000' } else if (Get-Command chrome -ErrorAction SilentlyContinue) { Start-Process chrome '--app=http://localhost:3000' } else { Start-Process 'http://localhost:3000' }" >nul 2>&1 &
+goto DISPLAY_INFO
+
+:MODE_BROWSER
+echo.
+echo [3/4] در حال راه‌اندازی در حالت «مرورگر وب»...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Sleep -Seconds 3; Start-Process 'http://localhost:3000'" >nul 2>&1 &
+goto DISPLAY_INFO
+
+:DISPLAY_INFO
+echo.
+echo ==============================================================================
+echo  آدرس سامانه:          http://localhost:3000
+echo  نام کاربری مدیر:      admin        ^| رمز عبور: admin
+echo  نام کاربری نصاب:      installer_ali ^| رمز عبور: ali@123
+echo  برای توقف سرور، این پنجره را ببندید یا Ctrl+C را بفشارید.
+echo ==============================================================================
+echo.
+
+rem 4. Run server
+echo [4/4] در حال راه‌اندازی سرور مرکزی روی پورت 3000...
+call npm run dev
+if %errorlevel% neq 0 goto SERVER_RETRY
+goto SERVER_END
+
+:SERVER_RETRY
+echo.
+echo [تلاش مجدد] اجرای سرور با npm start...
+call npm start
+if %errorlevel% neq 0 goto SERVER_FAIL
+goto SERVER_END
+
+:SERVER_FAIL
+echo.
+echo [خطا] اجرای سرور متوقف شد یا با خطا مواجه گردید.
+pause
+exit /b 1
+
+:SERVER_END
+echo.
+echo سرور مهرگان خاتمه یافت.
 pause

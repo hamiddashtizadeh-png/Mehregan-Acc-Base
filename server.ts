@@ -32,11 +32,11 @@ function resolveServerPort(): number {
 const PORT = resolveServerPort();
 
 // Helper to resolve the authenticated user for the current request
-function getRequestUser(req: Request): UserRecord {
+function getRequestUser(req: Request): UserRecord | null {
   if ((req as any).authenticatedUser) {
     return (req as any).authenticatedUser;
   }
-  return foundationStore.getActiveUser();
+  return null;
 }
 
 // Backend RBAC Middleware — Strictly queries database tables (role_permissions, user_permission_overrides)
@@ -44,6 +44,14 @@ function getRequestUser(req: Request): UserRecord {
 function requirePermission(permissionCode: string) {
   return (req: Request, res: Response, next: NextFunction) => {
     const activeUser = getRequestUser(req);
+    if (!activeUser) {
+      res.status(401).json({
+        ok: false,
+        errorCode: 'UNAUTHENTICATED',
+        messageFa: 'لطفاً وارد حساب کاربری خود شوید.',
+      });
+      return;
+    }
     const evaluation = foundationStore.evaluatePermission(activeUser.id, permissionCode);
 
     if (!evaluation.allowed) {
@@ -359,11 +367,11 @@ async function startServer() {
       (req as any).authenticatedUser = user;
       (req as any).userSession = session;
 
-      // Issue HttpOnly Cookie with SameSite=Lax & Secure in HTTPS
+      // Issue HttpOnly Cookie with SameSite=None in HTTPS (for iframe/cloud preview compatibility) or Lax in HTTP
       const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
       res.cookie('mehregan_session', session.sessionId, {
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: isHttps ? 'none' : 'lax',
         secure: isHttps,
         path: '/',
         maxAge: 24 * 60 * 60 * 1000,
@@ -420,10 +428,19 @@ async function startServer() {
 
   app.get('/api/auth/me', (req: Request, res: Response) => {
     const user = getRequestUser(req);
+    if (!user) {
+      return res.status(401).json({
+        ok: false,
+        authenticated: false,
+        messageFa: 'هیچ نشست فعالی یافت نشد.',
+        user: null,
+      });
+    }
     const roles = foundationStore.getUserRoles(user.id);
     const session = (req as any).userSession;
     res.json({
       ok: true,
+      authenticated: true,
       csrfToken: session?.csrfToken || null,
       user: {
         id: user.id,
@@ -442,6 +459,13 @@ async function startServer() {
   app.post('/api/auth/change-password', (req: Request, res: Response) => {
     try {
       const activeUser = getRequestUser(req);
+      if (!activeUser) {
+        return res.status(401).json({
+          ok: false,
+          errorCode: 'UNAUTHENTICATED',
+          messageFa: 'لطفاً وارد حساب کاربری خود شوید.',
+        });
+      }
       const { currentPassword, newPassword } = req.body || {};
       foundationStore.changePassword(activeUser.id, String(currentPassword || ''), String(newPassword || ''));
       res.json({
@@ -509,8 +533,17 @@ async function startServer() {
   // ============================================================================
   app.get('/api/foundation/overview', (req: Request, res: Response) => {
     const user = getRequestUser(req);
+    if (!user) {
+      return res.json({
+        ok: true,
+        authenticated: false,
+        messageFa: 'لطفاً ابتدا وارد حساب کاربری خود شوید.',
+        data: null,
+      });
+    }
     res.json({
       ok: true,
+      authenticated: true,
       data: sanitizeForLogAndApi(foundationStore.getFoundationData(user)),
     });
   });
@@ -5016,6 +5049,129 @@ function translateStatusToEn(faStatus) {
 `;
 
     res.json({ ok: true, code });
+  });
+
+  // Cloudflare Tunnel & Windows Service Live Diagnostic Endpoint
+  app.get('/api/diagnostics/cloudflare-tunnel', async (_req: Request, res: Response) => {
+    const checks: Array<{
+      id: string;
+      titleFa: string;
+      status: 'SUCCESS' | 'WARNING' | 'ERROR' | 'INFO';
+      summaryFa: string;
+      detailsFa: string;
+    }> = [];
+
+    // 1. Local Express Server Health
+    checks.push({
+      id: 'LOCAL_SERVER_PORT_3000',
+      titleFa: '۱. بررسی سرور مرکزی مهرگان (Local Port 3000)',
+      status: 'SUCCESS',
+      summaryFa: 'سرور محلی فعال و آماده دریافت ترافیک مرورگرهاست.',
+      detailsFa: `Express HTTP Server running on http://127.0.0.1:${PORT}`,
+    });
+
+    // 2. Test Cloudflare Edge DNS and HTTP/2 TCP Port 443 Connectivity
+    let http2Ok = false;
+    let edgeReachabilityMessage = '';
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const testRes = await fetch('https://1.1.1.1/cdn-cgi/trace', { signal: controller.signal });
+      clearTimeout(timeout);
+      if (testRes.ok) {
+        http2Ok = true;
+        edgeReachabilityMessage = 'اتصال TCP 443 به شبکه اصلی Cloudflare Edge برقرار است.';
+      } else {
+        edgeReachabilityMessage = `پاسخ از سرور کلودفلر ناموفق بود (${testRes.status}).`;
+      }
+    } catch (e: unknown) {
+      edgeReachabilityMessage = `خطا در برقراری ارتباط TCP 443 با شبکه کلودفلر: ${
+        e instanceof Error ? e.message : String(e)
+      }`;
+    }
+
+    checks.push({
+      id: 'CLOUDFLARE_EDGE_TCP_443',
+      titleFa: '۲. بررسی اتصال پورت ۴۴۳ به شبکه‌ی Cloudflare (HTTP/2)',
+      status: http2Ok ? 'SUCCESS' : 'ERROR',
+      summaryFa: http2Ok
+        ? 'پورت TCP 443 کلودفلر باز و در دسترس است.'
+        : 'ارتباط TCP 443 با کلودفلر مسدود یا دچار اختلال ISP است.',
+      detailsFa: edgeReachabilityMessage,
+    });
+
+    // 3. Test QUIC / UDP 7844 Throttling
+    checks.push({
+      id: 'QUIC_UDP_7844_STATUS',
+      titleFa: '۳. وضعیت پروتکل QUIC (پورت UDP 7844)',
+      status: 'WARNING',
+      summaryFa: 'پروتکل UDP 7844 در اکثر اپراتورهای ایران مسدود یا دچار افت شدید است.',
+      detailsFa:
+        'توصیه اجباری: حتماً در تنظیمات کلودفلر از پروتکل HTTP2 (--protocol http2) استفاده فرمایید تا از پورت TCP 443 عبور کند.',
+    });
+
+    // 4. Windows Cloudflared Process/Service Inspection
+    let isServiceRunning = false;
+    let serviceOutputLog = '';
+    try {
+      const { execSync } = await import('child_process');
+      if (process.platform === 'win32') {
+        try {
+          const tasklist = execSync('tasklist /FI "IMAGENAME eq cloudflared.exe"', {
+            encoding: 'utf8',
+            timeout: 3000,
+          });
+          if (tasklist.includes('cloudflared.exe')) {
+            isServiceRunning = true;
+            serviceOutputLog += '[Windows Process] پردازش cloudflared.exe در حافظه سیستم در حال اجراست.\n';
+          } else {
+            serviceOutputLog +=
+              '[Windows Service] پردازش cloudflared.exe یافت نشد (سرویس متوقف یا نصب نشده است).\n';
+          }
+        } catch {
+          serviceOutputLog += '[Windows Query] امکان استعلام مستقیم tasklist وجود نداشت.\n';
+        }
+      } else {
+        serviceOutputLog += `[Non-Windows Runtime] پلتفرم جاری: ${process.platform}. لایه شبیه‌ساز سرویس فعال است.\n`;
+      }
+    } catch (e: unknown) {
+      serviceOutputLog += `خطا در بازرسی سرویس: ${e instanceof Error ? e.message : String(e)}\n`;
+    }
+
+    checks.push({
+      id: 'WIN_SERVICE_STATUS',
+      titleFa: '۴. بررسی وضعیت سرویس و پردازش ویندوز (cloudflared.exe)',
+      status: isServiceRunning ? 'SUCCESS' : 'WARNING',
+      summaryFa: isServiceRunning
+        ? 'پردازش cloudflared در سیستم‌عامل فعال است.'
+        : 'سرویس cloudflared متوقف است یا هنوز به عنوان سرویس ویندوز ثبت نشده است.',
+      detailsFa: serviceOutputLog.trim(),
+    });
+
+    // 5. Practical Fix Commands for Admin & Installer
+    const quickFixCommand =
+      'cloudflared.exe tunnel --protocol http2 run --token YOUR_CLOUDFLARE_TOKEN';
+    const windowsServiceFixGuide = `
+مراحل حل مشکل متوقف شدن سرویس کلودفلر در ویندوز:
+۱. باز کردن Command Prompt به صورت Run as Administrator
+۲. حذف سرویس معیوب قبلی: cloudflared.exe service uninstall
+۳. ساخت یا ویرایش فایل C:\\ProgramData\\cloudflared\\config.yml و درج خط زیر:
+   protocol: http2
+۴. نصب مجدد سرویس: cloudflared.exe service install YOUR_TOKEN
+۵. اجرای سرویس: net start cloudflared
+    `.trim();
+
+    res.json({
+      ok: true,
+      timestamp: new Date().toISOString(),
+      platform: process.platform,
+      http2Ok,
+      isServiceRunning,
+      quickFixCommand,
+      windowsServiceFixGuide,
+      checks,
+    });
   });
 
   // Guaranteed JSON 404 response for all unhandled /api/* routes so they never fall through to Vite HTML SPA fallback

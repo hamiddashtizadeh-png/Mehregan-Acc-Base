@@ -38,6 +38,7 @@ import {
   ItemRecord,
   WarehouseRecord,
 } from '../types/foundation';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface InstallerPortalViewProps {
   foundationData: FoundationDataResponse;
@@ -94,7 +95,7 @@ export const InstallerPortalView: React.FC<InstallerPortalViewProps> = ({
   const [jobs, setJobs] = useState<InstallationJobRecord[]>([]);
   const [requisitions, setRequisitions] = useState<ProjectMaterialRequisitionRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'WORKS' | 'REQUISITIONS' | 'REPORTS'>('WORKS');
+  const [activeSubTab, setActiveSubTab] = useState<'WORKS' | 'REQUISITIONS' | 'REPORTS' | 'PROFILE'>('WORKS');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Search & Filter
@@ -514,7 +515,7 @@ export const InstallerPortalView: React.FC<InstallerPortalViewProps> = ({
         <div className="absolute -left-12 -top-12 w-48 h-48 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 px-3 py-1 rounded-full text-[11px] font-extrabold flex items-center gap-1.5">
                 <Wrench className="w-3.5 h-3.5 text-cyan-300" />
                 کارتابل اختصاصی نصاب و تکنسین
@@ -523,6 +524,9 @@ export const InstallerPortalView: React.FC<InstallerPortalViewProps> = ({
               <span className="text-slate-300 text-xs font-semibold">
                 {foundationData.settings?.companyName || 'مهرگان سیستم'}
               </span>
+              <div className="mr-auto">
+                <PWAInstallButton variant="compact" />
+              </div>
             </div>
 
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-3">
@@ -850,7 +854,20 @@ export const InstallerPortalView: React.FC<InstallerPortalViewProps> = ({
             }`}
           >
             <ClipboardList className="w-4 h-4" />
-            <span>ثبت گزارش کار و توضیحات</span>
+            <span>ثبت گزارش کار</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('PROFILE')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+              activeSubTab === 'PROFILE'
+                ? 'bg-cyan-700 text-white shadow-sm'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <User className="w-4 h-4" />
+            <span>پروفایل و حساب نصاب</span>
           </button>
         </div>
 
@@ -1368,6 +1385,108 @@ export const InstallerPortalView: React.FC<InstallerPortalViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* SUB-TAB 4: PROFILE & SECURITY VIEW */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'PROFILE' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-6 shadow-xs">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="p-3 bg-cyan-50 text-cyan-700 rounded-2xl border border-cyan-100">
+                <User className="w-6 h-6 text-cyan-700" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-slate-900">مشخصات حساب کاربری و امنیت نصاب</h2>
+                <p className="text-xs text-slate-500 mt-0.5">اطلاعات پرونده، سمت شغلی و مدیریت کلمه عبور حساب جاری</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-1">
+                <span className="text-slate-500">نام و نام خانوادگی:</span>
+                <div className="font-bold text-sm text-slate-900">{activeUser.fullName}</div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-1">
+                <span className="text-slate-500">نام کاربری سیستم (Username):</span>
+                <div className="font-bold font-mono text-sm text-cyan-800" dir="ltr">@{activeUser.username}</div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-1">
+                <span className="text-slate-500">عنوان شغلی / نقش:</span>
+                <div className="font-bold text-slate-900">{activeUser.jobTitle || 'تکنسین نصب و خدمات میدانی'}</div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-1">
+                <span className="text-slate-500">پرونده طرف‌حساب نصب:</span>
+                <div className="font-bold text-slate-900">
+                  {installerParty ? `${installerParty.fullName} (${installerParty.partyCode || installerParty.id})` : 'تعریف‌شده به عنوان کاربر نصاب'}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-cyan-50/50 border border-cyan-200 text-xs text-cyan-950 space-y-2">
+              <span className="font-bold">امنیت و تفکیک داده‌ها:</span>
+              <p className="leading-relaxed text-slate-700">
+                نشست کاری شما به صورت امن روی سرور با کوکی HttpOnly ثبت گردیده است. شما فقط به اطلاعات کارهای ارجاع‌شده به خودتان دسترسی دارید و ارقام مالی کل مجموعه از دسترسی نصاب‌ها تفکیک گردیده است.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile App Bottom Navigation Bar (Fixed Touch Anchor for SmartPhones) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-2 py-1 shadow-lg grid grid-cols-4 gap-1 md:hidden">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('WORKS')}
+          className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-colors min-h-[48px] ${
+            activeSubTab === 'WORKS' ? 'bg-cyan-50 text-cyan-800 font-bold' : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Briefcase className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">کارهای من</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('REQUISITIONS')}
+          className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-colors min-h-[48px] relative ${
+            activeSubTab === 'REQUISITIONS' ? 'bg-cyan-50 text-cyan-800 font-bold' : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Package className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">درخواست کالا</span>
+          {pendingReqCount > 0 && (
+            <span className="absolute top-1 right-3 bg-amber-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+              {pendingReqCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('REPORTS')}
+          className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-colors min-h-[48px] ${
+            activeSubTab === 'REPORTS' ? 'bg-cyan-700 text-white font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <ClipboardList className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">گزارش کار</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('PROFILE')}
+          className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-colors min-h-[48px] ${
+            activeSubTab === 'PROFILE' ? 'bg-cyan-50 text-cyan-800 font-bold' : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <User className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">پروفایل</span>
+        </button>
+      </nav>
     </div>
   );
 };

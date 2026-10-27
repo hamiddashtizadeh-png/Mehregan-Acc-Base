@@ -15,11 +15,14 @@ echo.
 
 REM 1. Identify Node.js
 set "NODE_CMD="
-where node >nul 2>&1
-if %errorlevel% equ 0 (
-    set "NODE_CMD=node"
+if exist "%~dp0runtime\node.exe" (
+    set "NODE_CMD=%~dp0runtime\node.exe"
+    set "PATH=%~dp0runtime;%PATH%"
 ) else (
-    if exist "C:\Program Files\nodejs\node.exe" (
+    where node >nul 2>&1
+    if %errorlevel% equ 0 (
+        set "NODE_CMD=node"
+    ) else if exist "C:\Program Files\nodejs\node.exe" (
         set "NODE_CMD=C:\Program Files\nodejs\node.exe"
         set "PATH=%PATH%;C:\Program Files\nodejs"
     ) else if exist "%LOCALAPPDATA%\Programs\node\node.exe" (
@@ -87,15 +90,21 @@ echo  برای متوقف کردن برنامه، پنجره را ببندید �
 echo ==============================================================================
 echo.
 
-REM Open browser after short delay
-start "" cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:3000"
+REM Open browser after short delay in background
+start "" cmd /c "ping 127.0.0.1 -n 4 >nul & start http://localhost:3000"
 
-REM Run server using npx tsx server.ts or npm run dev
-call npx tsx server.ts
+REM Run server using npm run dev or npm start
+call npm run dev
 if %errorlevel% neq 0 (
     echo.
-    echo [تلاش مجدد] اجرای سرور با موتور ثانویه...
-    call npm run dev
+    echo [تلاش مجدد] اجرای سرور با موتور ثانویه (npm start)...
+    call npm start
+)
+
+if %errorlevel% neq 0 (
+    echo.
+    echo [تلاش مجدد ۲] اجرای مستقیم با tsx...
+    call npx tsx server.ts
 )
 
 if %errorlevel% neq 0 (

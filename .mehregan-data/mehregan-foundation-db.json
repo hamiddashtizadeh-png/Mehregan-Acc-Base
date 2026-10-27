@@ -1,5 +1,5 @@
 {
-  "activeSessionUserId": 2,
+  "activeSessionUserId": 1,
   "settings": {
     "companyName": "فروشگاه دوربین مداربسته و سیستم‌های امنیتی مهرگان",
     "economicCode": "411-8920-3314",
@@ -31,7 +31,7 @@
     "defaultCashBoxId": 1,
     "defaultBankAccountId": 1,
     "receiptFooterMessageFa": "از خرید شما سپاسگزاریم. کلیه تجهیزات دارای ۲۴ ماه گارانتی طلایی شرکت مهرگان می‌باشند.",
-    "updatedAt": "2026-10-25T13:38:22.516Z"
+    "updatedAt": "2026-10-25T14:30:15.865Z"
   },
   "users": [
     {
@@ -40,14 +40,14 @@
       "fullName": "مدیر کل و راهبر سیستم مهرگان",
       "jobTitle": "مدیر ارشد",
       "email": "admin@mehregan.local",
-      "passwordHash": "578d858255f9f3b63ad8d687f8ca08ad8589e00b06e406fbc81e47b21b8419e1",
-      "passwordSalt": "18a346bc4627b3534e7b76a077e73e1d",
+      "passwordHash": "12ec947b9a6d6f0df0cb033838c013059295431d49f83035d3ed0f733efe23c7",
+      "passwordSalt": "39cee20eed5f391d825db00f256bc199",
       "status": "ACTIVE",
       "isInitialAdmin": true,
       "isDemo": false,
-      "lastLoginAt": "2026-10-25T13:51:38.617Z",
-      "createdAt": "2026-10-25T13:38:22.514Z",
-      "updatedAt": "2026-10-25T13:38:22.514Z"
+      "lastLoginAt": "2026-10-25T14:30:15.863Z",
+      "createdAt": "2026-10-25T14:30:15.863Z",
+      "updatedAt": "2026-10-25T14:30:15.863Z"
     },
     {
       "id": 2,
@@ -55,15 +55,15 @@
       "fullName": "مهندس علیرضا بهرامی (نصاب ارشد)",
       "jobTitle": "تکنسین و نصاب میدانی",
       "email": "installer@mehregan.local",
-      "passwordHash": "34e4c2537055ba40fbdb014049ed0563182336e8460d86207744dada92415fe9",
-      "passwordSalt": "eb46b7826f14bf889afc1b67081203dd",
+      "passwordHash": "6747b9b865fe32bebe42759870b63511cf39469b1ff02457fc28db3f12310889",
+      "passwordSalt": "bfb8a6c8bf94c8c5e8205af8ddf58913",
       "status": "ACTIVE",
       "isInitialAdmin": false,
       "isDemo": false,
       "installerPartyId": 3,
-      "lastLoginAt": "2026-10-25T13:51:46.068Z",
-      "createdAt": "2026-10-25T13:49:27.321Z",
-      "updatedAt": "2026-10-25T13:49:27.321Z"
+      "lastLoginAt": null,
+      "createdAt": "2026-10-25T14:32:00.869Z",
+      "updatedAt": "2026-10-25T14:32:00.869Z"
     }
   ],
   "roles": [
@@ -72,28 +72,28 @@
       "titleFa": "مالک و راهبر کل سیستم (Owner)",
       "descriptionFa": "دسترسی کامل ثبت‌شده در جدول role_permissions دیتابیس بدون دورزدن کنترل دسترسی در کد",
       "isSystemRole": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "code": "CHIEF_ACCOUNTANT",
       "titleFa": "سرپرست حسابداری و مالی",
       "descriptionFa": "مدیریت تنظیمات مالی، نرخ‌های ارز، ممیزی اسناد و گزارش‌های کنترلی",
       "isSystemRole": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "code": "WAREHOUSE_KEEPER",
       "titleFa": "مسئول انبار و تجهیزات دوربین مداربسته",
       "descriptionFa": "دسترسی به بخش‌های لجستیک و رهگیری اقلام با رعایت محدودیت‌های امنیتی",
       "isSystemRole": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "code": "AUDITOR",
       "titleFa": "حسابرس و ناظر امنیتی سیستم",
       "descriptionFa": "دسترسی فقط‌خواندنی به لاگ‌های تغییرناپذیر، تاریخچه تغییرات و ممیزی سیستم",
       "isSystemRole": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     }
   ],
   "permissions": [
@@ -496,609 +496,609 @@
       "roleCode": "OWNER",
       "permissionCode": "foundation.users.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 2,
       "roleCode": "OWNER",
       "permissionCode": "foundation.roles.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 3,
       "roleCode": "OWNER",
       "permissionCode": "foundation.rbac.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 4,
       "roleCode": "OWNER",
       "permissionCode": "foundation.settings.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 5,
       "roleCode": "OWNER",
       "permissionCode": "foundation.audit.read",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 6,
       "roleCode": "OWNER",
       "permissionCode": "foundation.migrations.execute",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 7,
       "roleCode": "OWNER",
       "permissionCode": "foundation.connection.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 8,
       "roleCode": "OWNER",
       "permissionCode": "foundation.currency.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 9,
       "roleCode": "OWNER",
       "permissionCode": "parties.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 10,
       "roleCode": "OWNER",
       "permissionCode": "parties.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 11,
       "roleCode": "OWNER",
       "permissionCode": "parties.edit",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 12,
       "roleCode": "OWNER",
       "permissionCode": "parties.delete",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 13,
       "roleCode": "OWNER",
       "permissionCode": "inventory.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 14,
       "roleCode": "OWNER",
       "permissionCode": "inventory.items.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 15,
       "roleCode": "OWNER",
       "permissionCode": "inventory.documents.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 16,
       "roleCode": "OWNER",
       "permissionCode": "inventory.kardex.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 17,
       "roleCode": "OWNER",
       "permissionCode": "inventory.negative_stock.override",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 18,
       "roleCode": "OWNER",
       "permissionCode": "purchases.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 19,
       "roleCode": "OWNER",
       "permissionCode": "purchases.proforma.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 20,
       "roleCode": "OWNER",
       "permissionCode": "purchases.invoice.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 21,
       "roleCode": "OWNER",
       "permissionCode": "purchases.landed_cost.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 22,
       "roleCode": "OWNER",
       "permissionCode": "purchases.payments.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 23,
       "roleCode": "OWNER",
       "permissionCode": "purchases.returns.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 24,
       "roleCode": "OWNER",
       "permissionCode": "sales.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 25,
       "roleCode": "OWNER",
       "permissionCode": "sales.proforma.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 26,
       "roleCode": "OWNER",
       "permissionCode": "sales.invoice.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 27,
       "roleCode": "OWNER",
       "permissionCode": "sales.quick_pos.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 28,
       "roleCode": "OWNER",
       "permissionCode": "sales.receipts.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 29,
       "roleCode": "OWNER",
       "permissionCode": "sales.returns.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 30,
       "roleCode": "OWNER",
       "permissionCode": "installation.jobs.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 31,
       "roleCode": "OWNER",
       "permissionCode": "installation.jobs.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 32,
       "roleCode": "OWNER",
       "permissionCode": "treasury.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 33,
       "roleCode": "OWNER",
       "permissionCode": "treasury.transactions.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 34,
       "roleCode": "OWNER",
       "permissionCode": "treasury.cheques.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 35,
       "roleCode": "OWNER",
       "permissionCode": "treasury.expenses.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 36,
       "roleCode": "OWNER",
       "permissionCode": "accounting.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 37,
       "roleCode": "OWNER",
       "permissionCode": "accounting.documents.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 38,
       "roleCode": "OWNER",
       "permissionCode": "accounting.documents.approve",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 39,
       "roleCode": "OWNER",
       "permissionCode": "accounting.documents.permanent",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 40,
       "roleCode": "OWNER",
       "permissionCode": "accounting.reports.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 41,
       "roleCode": "OWNER",
       "permissionCode": "accounting.chart.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 42,
       "roleCode": "OWNER",
       "permissionCode": "accounting.fiscal.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 43,
       "roleCode": "OWNER",
       "permissionCode": "accounting.periods.close",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 44,
       "roleCode": "OWNER",
       "permissionCode": "accounting.profitability.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 45,
       "roleCode": "OWNER",
       "permissionCode": "costcenters.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 46,
       "roleCode": "OWNER",
       "permissionCode": "projects.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 47,
       "roleCode": "OWNER",
       "permissionCode": "projects.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 48,
       "roleCode": "OWNER",
       "permissionCode": "projects.requisitions.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 49,
       "roleCode": "OWNER",
       "permissionCode": "projects.profitability.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 50,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "foundation.audit.read",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 51,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "foundation.currency.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 52,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "foundation.settings.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 53,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "parties.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 54,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "parties.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 55,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "parties.edit",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 56,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "inventory.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 57,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "inventory.kardex.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 58,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "purchases.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 59,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "purchases.proforma.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 60,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "purchases.invoice.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 61,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "purchases.landed_cost.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 62,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "purchases.payments.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 63,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "purchases.returns.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 64,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "sales.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 65,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "sales.proforma.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 66,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "sales.invoice.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 67,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "sales.quick_pos.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 68,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "sales.receipts.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 69,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "sales.returns.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 70,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "installation.jobs.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 71,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "installation.jobs.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 72,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "treasury.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 73,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "treasury.transactions.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 74,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "treasury.cheques.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 75,
       "roleCode": "CHIEF_ACCOUNTANT",
       "permissionCode": "treasury.expenses.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 76,
       "roleCode": "AUDITOR",
       "permissionCode": "foundation.audit.read",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 77,
       "roleCode": "AUDITOR",
       "permissionCode": "parties.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 78,
       "roleCode": "AUDITOR",
       "permissionCode": "inventory.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 79,
       "roleCode": "AUDITOR",
       "permissionCode": "inventory.kardex.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 80,
       "roleCode": "AUDITOR",
       "permissionCode": "purchases.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 81,
       "roleCode": "AUDITOR",
       "permissionCode": "sales.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 82,
       "roleCode": "WAREHOUSE_KEEPER",
       "permissionCode": "parties.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 83,
       "roleCode": "WAREHOUSE_KEEPER",
       "permissionCode": "inventory.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 84,
       "roleCode": "WAREHOUSE_KEEPER",
       "permissionCode": "inventory.items.manage",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 85,
       "roleCode": "WAREHOUSE_KEEPER",
       "permissionCode": "inventory.documents.create",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 86,
       "roleCode": "WAREHOUSE_KEEPER",
       "permissionCode": "inventory.kardex.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 87,
       "roleCode": "WAREHOUSE_KEEPER",
       "permissionCode": "purchases.view",
       "grantedBy": "SYSTEM_SEED",
-      "grantedAt": "2026-10-25T13:38:22.485Z"
+      "grantedAt": "2026-10-25T14:30:15.838Z"
     }
   ],
   "userRoleAssignments": [
@@ -1106,14 +1106,14 @@
       "id": 1,
       "userId": 1,
       "roleCode": "OWNER",
-      "assignedAt": "2026-10-25T13:38:22.514Z",
+      "assignedAt": "2026-10-25T14:30:15.863Z",
       "assignedBy": "SYSTEM_ZERO_RESET"
     },
     {
       "id": 2,
       "userId": 2,
       "roleCode": "INSTALLER",
-      "assignedAt": "2026-10-25T13:49:27.321Z",
+      "assignedAt": "2026-10-25T14:32:00.869Z",
       "assignedBy": "SYSTEM"
     }
   ],
@@ -1127,7 +1127,7 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 14,
-      "appliedAt": "2026-10-25T13:38:22.485Z"
+      "appliedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "version": "0002",
@@ -1137,7 +1137,7 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 18,
-      "appliedAt": "2026-10-25T13:38:22.485Z"
+      "appliedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "version": "0003",
@@ -1147,7 +1147,7 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 16,
-      "appliedAt": "2026-10-25T13:38:22.485Z"
+      "appliedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "version": "0004",
@@ -1157,7 +1157,7 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 15,
-      "appliedAt": "2026-10-25T13:38:22.485Z"
+      "appliedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "version": "0005",
@@ -1167,7 +1167,7 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 18,
-      "appliedAt": "2026-10-25T13:38:22.485Z"
+      "appliedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "version": "0006",
@@ -1177,7 +1177,7 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 20,
-      "appliedAt": "2026-10-25T13:49:27.306Z"
+      "appliedAt": "2026-10-25T14:32:00.854Z"
     },
     {
       "version": "0007",
@@ -1187,7 +1187,7 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 17,
-      "appliedAt": "2026-10-25T13:49:27.306Z"
+      "appliedAt": "2026-10-25T14:32:00.854Z"
     },
     {
       "version": "0008",
@@ -1197,7 +1197,7 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 22,
-      "appliedAt": "2026-10-25T13:49:27.306Z"
+      "appliedAt": "2026-10-25T14:32:00.854Z"
     },
     {
       "version": "0009",
@@ -1207,7 +1207,7 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 24,
-      "appliedAt": "2026-10-25T13:49:27.306Z"
+      "appliedAt": "2026-10-25T14:32:00.854Z"
     },
     {
       "version": "0010",
@@ -1217,7 +1217,7 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 22,
-      "appliedAt": "2026-10-25T13:49:27.306Z"
+      "appliedAt": "2026-10-25T14:32:00.854Z"
     },
     {
       "version": "0011",
@@ -1227,64 +1227,14 @@
       "isDestructive": false,
       "status": "APPLIED",
       "executionMs": 25,
-      "appliedAt": "2026-10-25T13:49:27.306Z"
+      "appliedAt": "2026-10-25T14:32:00.854Z"
     }
   ],
   "auditLogs": [
     {
-      "id": 26,
-      "traceId": "TRC-313883-1E20",
-      "timestamp": "2026-10-25T13:51:53.883Z",
-      "actorUserId": 2,
-      "actorUsername": "installer",
-      "actorRoleSummary": "INSTALLER",
-      "action": "ACCESS_DENIED_BLOCKED",
-      "category": "SECURITY",
-      "targetEntity": "/api/treasury/cash-boxes",
-      "targetId": "treasury.view",
-      "status": "DENIED",
-      "detailsFa": "درخواست کاربر «installer» برای متد [GET] در مسیر [/api/treasury/cash-boxes] به دلیل عدم دسترسی به مجوز [treasury.view] مسدود گردید. قاعده حاکم: DEFAULT_DENY",
-      "sanitizedMetadata": {
-        "endpoint": "/api/treasury/cash-boxes",
-        "method": "GET",
-        "permissionCode": "treasury.view",
-        "matchedRule": "DEFAULT_DENY"
-      }
-    },
-    {
-      "id": 25,
-      "traceId": "TRC-306070-D4AA",
-      "timestamp": "2026-10-25T13:51:46.070Z",
-      "actorUserId": 2,
-      "actorUsername": "installer",
-      "actorRoleSummary": "INSTALLER",
-      "action": "AUTH_LOGIN_SUCCESS",
-      "category": "AUTH",
-      "targetEntity": "users",
-      "targetId": "2",
-      "status": "SUCCESS",
-      "detailsFa": "ورود موفق کاربر «مهندس علیرضا بهرامی (نصاب ارشد)» (installer) به سیستم",
-      "sanitizedMetadata": {}
-    },
-    {
-      "id": 24,
-      "traceId": "TRC-298619-29DC",
-      "timestamp": "2026-10-25T13:51:38.619Z",
-      "actorUserId": 1,
-      "actorUsername": "admin",
-      "actorRoleSummary": "OWNER",
-      "action": "AUTH_LOGIN_SUCCESS",
-      "category": "AUTH",
-      "targetEntity": "users",
-      "targetId": "1",
-      "status": "SUCCESS",
-      "detailsFa": "ورود موفق کاربر «مدیر کل و راهبر سیستم مهرگان» (admin) به سیستم",
-      "sanitizedMetadata": {}
-    },
-    {
       "id": 23,
-      "traceId": "TRC-502595-68E2",
-      "timestamp": "2026-10-25T13:38:22.595Z",
+      "traceId": "TRC-615945-300E",
+      "timestamp": "2026-10-25T14:30:15.945Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1298,8 +1248,8 @@
     },
     {
       "id": 22,
-      "traceId": "TRC-502593-F36B",
-      "timestamp": "2026-10-25T13:38:22.593Z",
+      "traceId": "TRC-615943-145E",
+      "timestamp": "2026-10-25T14:30:15.943Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1313,8 +1263,8 @@
     },
     {
       "id": 21,
-      "traceId": "TRC-502591-1435",
-      "timestamp": "2026-10-25T13:38:22.591Z",
+      "traceId": "TRC-615941-93A4",
+      "timestamp": "2026-10-25T14:30:15.941Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1334,8 +1284,8 @@
     },
     {
       "id": 20,
-      "traceId": "TRC-502587-011A",
-      "timestamp": "2026-10-25T13:38:22.587Z",
+      "traceId": "TRC-615936-7159",
+      "timestamp": "2026-10-25T14:30:15.936Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1349,8 +1299,8 @@
     },
     {
       "id": 19,
-      "traceId": "TRC-502586-C54C",
-      "timestamp": "2026-10-25T13:38:22.586Z",
+      "traceId": "TRC-615935-5741",
+      "timestamp": "2026-10-25T14:30:15.935Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1370,8 +1320,8 @@
     },
     {
       "id": 18,
-      "traceId": "TRC-502581-4574",
-      "timestamp": "2026-10-25T13:38:22.581Z",
+      "traceId": "TRC-615931-A432",
+      "timestamp": "2026-10-25T14:30:15.931Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1385,8 +1335,8 @@
     },
     {
       "id": 17,
-      "traceId": "TRC-502580-B391",
-      "timestamp": "2026-10-25T13:38:22.580Z",
+      "traceId": "TRC-615930-D552",
+      "timestamp": "2026-10-25T14:30:15.930Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1406,8 +1356,8 @@
     },
     {
       "id": 16,
-      "traceId": "TRC-502575-1805",
-      "timestamp": "2026-10-25T13:38:22.575Z",
+      "traceId": "TRC-615924-B93F",
+      "timestamp": "2026-10-25T14:30:15.924Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1427,8 +1377,8 @@
     },
     {
       "id": 15,
-      "traceId": "TRC-502571-D78D",
-      "timestamp": "2026-10-25T13:38:22.571Z",
+      "traceId": "TRC-615921-CB19",
+      "timestamp": "2026-10-25T14:30:15.921Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1445,8 +1395,8 @@
     },
     {
       "id": 14,
-      "traceId": "TRC-502568-58EB",
-      "timestamp": "2026-10-25T13:38:22.568Z",
+      "traceId": "TRC-615919-6D3A",
+      "timestamp": "2026-10-25T14:30:15.919Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1464,8 +1414,8 @@
     },
     {
       "id": 13,
-      "traceId": "TRC-502565-2A28",
-      "timestamp": "2026-10-25T13:38:22.565Z",
+      "traceId": "TRC-615916-EBD6",
+      "timestamp": "2026-10-25T14:30:15.916Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1485,8 +1435,8 @@
     },
     {
       "id": 12,
-      "traceId": "TRC-502560-1461",
-      "timestamp": "2026-10-25T13:38:22.561Z",
+      "traceId": "TRC-615911-451A",
+      "timestamp": "2026-10-25T14:30:15.911Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1500,8 +1450,8 @@
     },
     {
       "id": 11,
-      "traceId": "TRC-502559-E4AE",
-      "timestamp": "2026-10-25T13:38:22.559Z",
+      "traceId": "TRC-615910-226C",
+      "timestamp": "2026-10-25T14:30:15.910Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1521,8 +1471,8 @@
     },
     {
       "id": 10,
-      "traceId": "TRC-502557-FF6C",
-      "timestamp": "2026-10-25T13:38:22.557Z",
+      "traceId": "TRC-615907-488A",
+      "timestamp": "2026-10-25T14:30:15.907Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1542,8 +1492,8 @@
     },
     {
       "id": 9,
-      "traceId": "TRC-502553-E963",
-      "timestamp": "2026-10-25T13:38:22.553Z",
+      "traceId": "TRC-615903-ADBC",
+      "timestamp": "2026-10-25T14:30:15.903Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1563,8 +1513,8 @@
     },
     {
       "id": 8,
-      "traceId": "TRC-502533-D809",
-      "timestamp": "2026-10-25T13:38:22.533Z",
+      "traceId": "TRC-615882-3594",
+      "timestamp": "2026-10-25T14:30:15.882Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1583,8 +1533,8 @@
     },
     {
       "id": 7,
-      "traceId": "TRC-502531-93D6",
-      "timestamp": "2026-10-25T13:38:22.531Z",
+      "traceId": "TRC-615880-D983",
+      "timestamp": "2026-10-25T14:30:15.880Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1603,8 +1553,8 @@
     },
     {
       "id": 6,
-      "traceId": "TRC-502528-766E",
-      "timestamp": "2026-10-25T13:38:22.529Z",
+      "traceId": "TRC-615877-08CB",
+      "timestamp": "2026-10-25T14:30:15.877Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1627,8 +1577,8 @@
     },
     {
       "id": 5,
-      "traceId": "TRC-502526-5D76",
-      "timestamp": "2026-10-25T13:38:22.526Z",
+      "traceId": "TRC-615875-5E55",
+      "timestamp": "2026-10-25T14:30:15.875Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1651,8 +1601,8 @@
     },
     {
       "id": 4,
-      "traceId": "TRC-502523-7E26",
-      "timestamp": "2026-10-25T13:38:22.523Z",
+      "traceId": "TRC-615872-9FCB",
+      "timestamp": "2026-10-25T14:30:15.872Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1666,8 +1616,8 @@
     },
     {
       "id": 3,
-      "traceId": "TRC-502519-C48C",
-      "timestamp": "2026-10-25T13:38:22.519Z",
+      "traceId": "TRC-615867-A42F",
+      "timestamp": "2026-10-25T14:30:15.867Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1684,8 +1634,8 @@
     },
     {
       "id": 2,
-      "traceId": "TRC-502517-8D9F",
-      "timestamp": "2026-10-25T13:38:22.517Z",
+      "traceId": "TRC-615865-E837",
+      "timestamp": "2026-10-25T14:30:15.865Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1699,8 +1649,8 @@
     },
     {
       "id": 1,
-      "traceId": "TRC-502515-6811",
-      "timestamp": "2026-10-25T13:38:22.515Z",
+      "traceId": "TRC-615864-EB66",
+      "timestamp": "2026-10-25T14:30:15.864Z",
       "actorUserId": 1,
       "actorUsername": "admin",
       "actorRoleSummary": "OWNER",
@@ -1740,8 +1690,8 @@
       "installerSkills": null,
       "notes": null,
       "isDemo": false,
-      "createdAt": "2026-10-25T13:38:22.525Z",
-      "updatedAt": "2026-10-25T13:38:22.525Z"
+      "createdAt": "2026-10-25T14:30:15.874Z",
+      "updatedAt": "2026-10-25T14:30:15.874Z"
     },
     {
       "id": 2,
@@ -1769,8 +1719,8 @@
       "installerSkills": null,
       "notes": null,
       "isDemo": false,
-      "createdAt": "2026-10-25T13:38:22.527Z",
-      "updatedAt": "2026-10-25T13:38:22.527Z",
+      "createdAt": "2026-10-25T14:30:15.876Z",
+      "updatedAt": "2026-10-25T14:30:15.876Z",
       "transactionsSummary": {
         "totalSalesCount": 0,
         "totalSalesIrr": 0,
@@ -1795,7 +1745,7 @@
       "dateJalali": "1405/01/01",
       "status": "COMPLETED",
       "notesFa": "سند مانده افتتاحیه اول دوره",
-      "createdAt": "2026-10-25T13:38:22.560Z"
+      "createdAt": "2026-10-25T14:30:15.911Z"
     },
     {
       "id": 2,
@@ -1807,7 +1757,7 @@
       "dateJalali": "1405/01/18",
       "status": "COMPLETED",
       "notesFa": "ثبت فاکتور قطعی فروش به مبلغ 850,000,000 ریال",
-      "createdAt": "2026-10-25T13:38:22.573Z"
+      "createdAt": "2026-10-25T14:30:15.923Z"
     },
     {
       "id": 3,
@@ -1819,7 +1769,7 @@
       "dateJalali": "1405/01/18",
       "status": "COMPLETED",
       "notesFa": "دریافت وجه بابت فاکتور فروش [INV-1405-1001] - کسر بدهکار مشتری",
-      "createdAt": "2026-10-25T13:38:22.573Z"
+      "createdAt": "2026-10-25T14:30:15.923Z"
     }
   ],
   "itemCategories": [
@@ -1831,7 +1781,7 @@
       "titleFa": "کالای عمومی",
       "prefix": "GEN",
       "isActive": true,
-      "createdAt": "2026-10-25T13:38:22.509Z"
+      "createdAt": "2026-10-25T14:30:15.859Z"
     }
   ],
   "itemBrands": [
@@ -1842,7 +1792,7 @@
       "nameFa": "داهوا تکنولوژی",
       "originCountryFa": "چین",
       "isActive": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 2,
@@ -1851,7 +1801,7 @@
       "nameFa": "هایک‌ویژن",
       "originCountryFa": "چین",
       "isActive": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 3,
@@ -1860,7 +1810,7 @@
       "nameFa": "وسترن دیجیتال",
       "originCountryFa": "آمریکا",
       "isActive": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 4,
@@ -1869,7 +1819,7 @@
       "nameFa": "سیگیت",
       "originCountryFa": "آمریکا",
       "isActive": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 5,
@@ -1878,7 +1828,7 @@
       "nameFa": "تیاندی",
       "originCountryFa": "چین",
       "isActive": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 6,
@@ -1887,7 +1837,7 @@
       "nameFa": "لگراند",
       "originCountryFa": "فرانسه",
       "isActive": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     }
   ],
   "itemUnits": [
@@ -1896,35 +1846,35 @@
       "code": "UNIT-PCS",
       "nameFa": "عدد",
       "allowDecimals": false,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 2,
       "code": "UNIT-DEV",
       "nameFa": "دستگاه",
       "allowDecimals": false,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 3,
       "code": "UNIT-MTR",
       "nameFa": "متر",
       "allowDecimals": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 4,
       "code": "UNIT-ROLL",
       "nameFa": "حلقه (۳۰۵ متر)",
       "allowDecimals": false,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 5,
       "code": "UNIT-BOX",
       "nameFa": "کارتن",
       "allowDecimals": false,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     }
   ],
   "items": [
@@ -1947,8 +1897,8 @@
       "status": "ACTIVE",
       "notes": null,
       "isDemo": false,
-      "createdAt": "2026-10-25T13:38:22.530Z",
-      "updatedAt": "2026-10-25T13:38:22.530Z"
+      "createdAt": "2026-10-25T14:30:15.879Z",
+      "updatedAt": "2026-10-25T14:30:15.879Z"
     },
     {
       "id": 2,
@@ -1969,8 +1919,8 @@
       "status": "ACTIVE",
       "notes": null,
       "isDemo": false,
-      "createdAt": "2026-10-25T13:38:22.532Z",
-      "updatedAt": "2026-10-25T13:38:22.532Z"
+      "createdAt": "2026-10-25T14:30:15.881Z",
+      "updatedAt": "2026-10-25T14:30:15.881Z"
     }
   ],
   "warehouses": [
@@ -1983,8 +1933,8 @@
       "managerNameFa": "مسئول انبار",
       "status": "ACTIVE",
       "isDefault": true,
-      "createdAt": "2026-10-25T13:38:22.509Z",
-      "updatedAt": "2026-10-25T13:38:22.509Z"
+      "createdAt": "2026-10-25T14:30:15.859Z",
+      "updatedAt": "2026-10-25T14:30:15.859Z"
     },
     {
       "id": 2,
@@ -1998,8 +1948,8 @@
       "locationAddressFa": "شیراز، شهرک صنعتی بزرگ، بلوار صادرات",
       "status": "ACTIVE",
       "isDefault": false,
-      "createdAt": "2026-10-25T13:38:22.518Z",
-      "updatedAt": "2026-10-25T13:38:22.518Z"
+      "createdAt": "2026-10-25T14:30:15.867Z",
+      "updatedAt": "2026-10-25T14:30:15.867Z"
     }
   ],
   "itemSerials": [],
@@ -2031,7 +1981,7 @@
       "notesFa": "موجودی اولیه سند افتتاحیه موجودی انبار مرکزی - سرورها [OPENING-STOCK]",
       "actorUserId": 1,
       "actorUsername": "admin",
-      "createdAt": "2026-10-25T13:38:22.555Z"
+      "createdAt": "2026-10-25T14:30:15.905Z"
     },
     {
       "id": 2,
@@ -2060,7 +2010,7 @@
       "notesFa": "موجودی اولیه سند افتتاحیه موجودی انبار مرکزی - سوئیچ‌ها [OPENING-STOCK]",
       "actorUserId": 1,
       "actorUsername": "admin",
-      "createdAt": "2026-10-25T13:38:22.558Z"
+      "createdAt": "2026-10-25T14:30:15.908Z"
     },
     {
       "id": 3,
@@ -2102,7 +2052,7 @@
       "notesFa": "حواله ترانزیت کالا TRN-1405-0001 از انبار مرکزی به انبار شعبه و مرکز توزیع شیراز",
       "actorUserId": 1,
       "actorUsername": "admin",
-      "createdAt": "2026-10-25T13:38:22.564Z"
+      "createdAt": "2026-10-25T14:30:15.914Z"
     },
     {
       "id": 4,
@@ -2144,7 +2094,7 @@
       "notesFa": "خروج قطعی کالا بابت فاکتور فروش [INV-1405-1001] برای مشتری «سازمان توسعه زیرساخت‌های ارتباطی شیراز»",
       "actorUserId": 1,
       "actorUsername": "admin",
-      "createdAt": "2026-10-25T13:38:22.573Z"
+      "createdAt": "2026-10-25T14:30:15.923Z"
     }
   ],
   "purchaseProformas": [],
@@ -2215,8 +2165,8 @@
       },
       "notesFa": "فاکتور تجهیزات سرور و سوئیچ شعبه شیراز",
       "actorUserId": 1,
-      "createdAt": "2026-10-25T13:38:22.573Z",
-      "updatedAt": "2026-10-25T13:38:22.573Z"
+      "createdAt": "2026-10-25T14:30:15.923Z",
+      "updatedAt": "2026-10-25T14:30:15.923Z"
     }
   ],
   "salesReceipts": [
@@ -2231,10 +2181,10 @@
       "amountIrr": 600000000,
       "paymentMethod": "BANK_TRANSFER",
       "destinationBankOrCash": "بانک ملی - حساب جاری مرکزی هولدینگ",
-      "trackingReference": "POS-1792935502576",
+      "trackingReference": "POS-1792938615926",
       "notesFa": "دریافت وجه هنگام صدور فاکتور INV-1405-1001",
       "actorUserId": 1,
-      "createdAt": "2026-10-25T13:38:22.573Z"
+      "createdAt": "2026-10-25T14:30:15.923Z"
     }
   ],
   "salesReturns": [],
@@ -2246,7 +2196,7 @@
       "titleFa": "صندوق اصلی فروشگاه",
       "balanceIrr": 0,
       "status": "ACTIVE",
-      "createdAt": "2026-10-25T13:38:22.509Z"
+      "createdAt": "2026-10-25T14:30:15.859Z"
     },
     {
       "id": 2,
@@ -2254,7 +2204,7 @@
       "titleFa": "صندوق مرکزی دفتر تهران",
       "balanceIrr": 200000000,
       "status": "ACTIVE",
-      "createdAt": "2026-10-25T13:38:22.521Z"
+      "createdAt": "2026-10-25T14:30:15.869Z"
     },
     {
       "id": 3,
@@ -2262,7 +2212,7 @@
       "titleFa": "صندوق تنخواه‌گردان شعبه شیراز",
       "balanceIrr": 50000000,
       "status": "ACTIVE",
-      "createdAt": "2026-10-25T13:38:22.521Z"
+      "createdAt": "2026-10-25T14:30:15.870Z"
     }
   ],
   "bankAccounts": [
@@ -2274,7 +2224,7 @@
       "shabaNumber": "IR000000000000000000000000",
       "balanceIrr": 0,
       "status": "ACTIVE",
-      "createdAt": "2026-10-25T13:38:22.509Z"
+      "createdAt": "2026-10-25T14:30:15.859Z"
     },
     {
       "id": 2,
@@ -2284,7 +2234,7 @@
       "shabaNumber": "IR010170000000010044556677",
       "balanceIrr": 2600000000,
       "status": "ACTIVE",
-      "createdAt": "2026-10-25T13:38:22.520Z"
+      "createdAt": "2026-10-25T14:30:15.868Z"
     }
   ],
   "cheques": [],
@@ -2305,7 +2255,7 @@
       "chequeId": null,
       "notesFa": "دریافت وجه هنگام صدور فاکتور فروش INV-1405-1001",
       "actorUserId": 1,
-      "createdAt": "2026-10-25T13:38:22.576Z"
+      "createdAt": "2026-10-25T14:30:15.926Z"
     },
     {
       "id": 2,
@@ -2323,7 +2273,7 @@
       "chequeId": null,
       "notesFa": "هزینه عملیاتی [80104] - هزینه ترخیص و لجستیک محموله انبار شیراز",
       "actorUserId": 1,
-      "createdAt": "2026-10-25T13:38:22.588Z"
+      "createdAt": "2026-10-25T14:30:15.938Z"
     }
   ],
   "installments": [],
@@ -2339,7 +2289,7 @@
       "sourceBankOrCash": "صندوق",
       "notesFa": "پرداخت هزینه لجستیک و انبارداری منطقه شیراز از صندوق تنخواه",
       "actorUserId": 1,
-      "createdAt": "2026-10-25T13:38:22.588Z"
+      "createdAt": "2026-10-25T14:30:15.938Z"
     }
   ],
   "operationalIncomes": [],
@@ -2354,7 +2304,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 2,
@@ -2366,7 +2316,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 3,
@@ -2378,7 +2328,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 4,
@@ -2390,7 +2340,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 5,
@@ -2402,7 +2352,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 6,
@@ -2414,7 +2364,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 7,
@@ -2426,7 +2376,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 8,
@@ -2438,7 +2388,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 9,
@@ -2450,7 +2400,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 10,
@@ -2462,7 +2412,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 11,
@@ -2474,7 +2424,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 12,
@@ -2486,7 +2436,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 13,
@@ -2498,7 +2448,7 @@
       "groupCode": "1",
       "groupTitleFa": "دارایی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 14,
@@ -2510,7 +2460,7 @@
       "groupCode": "2",
       "groupTitleFa": "دارایی‌های غیرجاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 15,
@@ -2522,7 +2472,7 @@
       "groupCode": "2",
       "groupTitleFa": "دارایی‌های غیرجاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 16,
@@ -2534,7 +2484,7 @@
       "groupCode": "2",
       "groupTitleFa": "دارایی‌های غیرجاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 17,
@@ -2546,7 +2496,7 @@
       "groupCode": "3",
       "groupTitleFa": "بدهی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 18,
@@ -2558,7 +2508,7 @@
       "groupCode": "3",
       "groupTitleFa": "بدهی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 19,
@@ -2570,7 +2520,7 @@
       "groupCode": "3",
       "groupTitleFa": "بدهی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 20,
@@ -2582,7 +2532,7 @@
       "groupCode": "3",
       "groupTitleFa": "بدهی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 21,
@@ -2594,7 +2544,7 @@
       "groupCode": "3",
       "groupTitleFa": "بدهی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 22,
@@ -2606,7 +2556,7 @@
       "groupCode": "3",
       "groupTitleFa": "بدهی‌های جاری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 23,
@@ -2618,7 +2568,7 @@
       "groupCode": "5",
       "groupTitleFa": "حقوق صاحبان سرمایه",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 24,
@@ -2630,7 +2580,7 @@
       "groupCode": "5",
       "groupTitleFa": "حقوق صاحبان سرمایه",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 25,
@@ -2642,7 +2592,7 @@
       "groupCode": "5",
       "groupTitleFa": "حقوق صاحبان سرمایه",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 26,
@@ -2654,7 +2604,7 @@
       "groupCode": "6",
       "groupTitleFa": "درآمدها و فروش",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 27,
@@ -2666,7 +2616,7 @@
       "groupCode": "6",
       "groupTitleFa": "درآمدها و فروش",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 28,
@@ -2678,7 +2628,7 @@
       "groupCode": "6",
       "groupTitleFa": "درآمدها و فروش",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 29,
@@ -2690,7 +2640,7 @@
       "groupCode": "6",
       "groupTitleFa": "درآمدها و فروش",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 30,
@@ -2702,7 +2652,7 @@
       "groupCode": "6",
       "groupTitleFa": "درآمدها و فروش",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 31,
@@ -2714,7 +2664,7 @@
       "groupCode": "7",
       "groupTitleFa": "بهای تمام‌شده",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 32,
@@ -2726,7 +2676,7 @@
       "groupCode": "7",
       "groupTitleFa": "بهای تمام‌شده",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 33,
@@ -2738,7 +2688,7 @@
       "groupCode": "7",
       "groupTitleFa": "بهای تمام‌شده",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 34,
@@ -2750,7 +2700,7 @@
       "groupCode": "7",
       "groupTitleFa": "بهای تمام‌شده",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 35,
@@ -2762,7 +2712,7 @@
       "groupCode": "7",
       "groupTitleFa": "بهای تمام‌شده",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 36,
@@ -2774,7 +2724,7 @@
       "groupCode": "8",
       "groupTitleFa": "هزینه‌های عملیاتی و اداری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 37,
@@ -2786,7 +2736,7 @@
       "groupCode": "8",
       "groupTitleFa": "هزینه‌های عملیاتی و اداری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 38,
@@ -2798,7 +2748,7 @@
       "groupCode": "8",
       "groupTitleFa": "هزینه‌های عملیاتی و اداری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 39,
@@ -2810,7 +2760,7 @@
       "groupCode": "8",
       "groupTitleFa": "هزینه‌های عملیاتی و اداری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 40,
@@ -2822,7 +2772,7 @@
       "groupCode": "8",
       "groupTitleFa": "هزینه‌های عملیاتی و اداری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 41,
@@ -2834,7 +2784,7 @@
       "groupCode": "8",
       "groupTitleFa": "هزینه‌های عملیاتی و اداری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 42,
@@ -2846,7 +2796,7 @@
       "groupCode": "8",
       "groupTitleFa": "هزینه‌های عملیاتی و اداری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 43,
@@ -2858,7 +2808,7 @@
       "groupCode": "8",
       "groupTitleFa": "هزینه‌های عملیاتی و اداری",
       "isSystem": true,
-      "createdAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z"
     }
   ],
   "accountingDocuments": [
@@ -2867,7 +2817,7 @@
       "docNumber": "DOC-OPENING-101",
       "referenceNumber": "EXCEL-IMPORT-101",
       "dateJalali": "1405/01/01",
-      "dateIso": "2026-10-25T13:38:22.535Z",
+      "dateIso": "2026-10-25T14:30:15.884Z",
       "docType": "CLOSING",
       "sourceDocType": "CLOSING_PERIOD",
       "sourceDocId": 101,
@@ -2967,15 +2917,15 @@
       "approvedByName": "مدیر کل و راهبر سیستم مهرگان",
       "permanentByUserId": 1,
       "permanentByName": "مدیر کل و راهبر سیستم مهرگان",
-      "createdAt": "2026-10-25T13:38:22.535Z",
-      "updatedAt": "2026-10-25T13:38:22.535Z"
+      "createdAt": "2026-10-25T14:30:15.884Z",
+      "updatedAt": "2026-10-25T14:30:15.884Z"
     },
     {
       "id": 2,
       "docNumber": "DOC-1405-0002",
       "referenceNumber": "TRN-1405-1001",
       "dateJalali": "1405/01/18",
-      "dateIso": "2026-10-25T13:38:22.579Z",
+      "dateIso": "2026-10-25T14:30:15.929Z",
       "docType": "AUTO",
       "sourceDocType": "TREASURY_RECEIPT",
       "sourceDocId": 1,
@@ -3015,15 +2965,15 @@
       "approvedByName": "مدیر کل و راهبر سیستم مهرگان",
       "permanentByUserId": null,
       "permanentByName": null,
-      "createdAt": "2026-10-25T13:38:22.579Z",
-      "updatedAt": "2026-10-25T13:38:22.579Z"
+      "createdAt": "2026-10-25T14:30:15.929Z",
+      "updatedAt": "2026-10-25T14:30:15.929Z"
     },
     {
       "id": 3,
       "docNumber": "DOC-1405-0003",
       "referenceNumber": "INV-1405-1001",
       "dateJalali": "1405/01/18",
-      "dateIso": "2026-10-25T13:38:22.584Z",
+      "dateIso": "2026-10-25T14:30:15.934Z",
       "docType": "AUTO",
       "sourceDocType": "SALES_INVOICE",
       "sourceDocId": 1,
@@ -3099,15 +3049,15 @@
       "approvedByName": "مدیر کل و راهبر سیستم مهرگان",
       "permanentByUserId": null,
       "permanentByName": null,
-      "createdAt": "2026-10-25T13:38:22.584Z",
-      "updatedAt": "2026-10-25T13:38:22.584Z"
+      "createdAt": "2026-10-25T14:30:15.934Z",
+      "updatedAt": "2026-10-25T14:30:15.934Z"
     },
     {
       "id": 4,
       "docNumber": "DOC-1405-0004",
       "referenceNumber": "TRN-1405-1002",
       "dateJalali": "1405/01/20",
-      "dateIso": "2026-10-25T13:38:22.590Z",
+      "dateIso": "2026-10-25T14:30:15.940Z",
       "docType": "AUTO",
       "sourceDocType": "TREASURY_PAYMENT",
       "sourceDocId": 2,
@@ -3147,8 +3097,8 @@
       "approvedByName": "مدیر کل و راهبر سیستم مهرگان",
       "permanentByUserId": null,
       "permanentByName": null,
-      "createdAt": "2026-10-25T13:38:22.590Z",
-      "updatedAt": "2026-10-25T13:38:22.590Z"
+      "createdAt": "2026-10-25T14:30:15.940Z",
+      "updatedAt": "2026-10-25T14:30:15.940Z"
     }
   ],
   "fiscalYears": [
@@ -3165,8 +3115,8 @@
       "closedAt": "2025-03-20T18:30:00.000Z",
       "closedByUserId": 1,
       "closedByNameFa": "مدیر ارشد مهرگان",
-      "createdAt": "2026-10-25T13:38:22.485Z",
-      "updatedAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z",
+      "updatedAt": "2026-10-25T14:30:15.838Z"
     },
     {
       "id": 2,
@@ -3181,8 +3131,8 @@
       "closedAt": null,
       "closedByUserId": null,
       "closedByNameFa": null,
-      "createdAt": "2026-10-25T13:38:22.485Z",
-      "updatedAt": "2026-10-25T13:38:22.485Z"
+      "createdAt": "2026-10-25T14:30:15.838Z",
+      "updatedAt": "2026-10-25T14:30:15.838Z"
     }
   ],
   "accountingPeriods": [
@@ -3364,7 +3314,7 @@
       "budgetIrr": 2000000000,
       "isActive": true,
       "descriptionFa": "هزینه‌های اداری، حمل و توزیع منطقه جنوب",
-      "createdAt": "2026-10-25T13:38:22.522Z"
+      "createdAt": "2026-10-25T14:30:15.871Z"
     }
   ],
   "projects": [],
@@ -3480,8 +3430,8 @@
       "outgoingInventoryDocId": 3,
       "incomingInventoryDocId": 3,
       "actorUserId": 1,
-      "createdAt": "2026-10-25T13:38:22.567Z",
-      "receivedAt": "2026-10-25T13:38:22.570Z",
+      "createdAt": "2026-10-25T14:30:15.917Z",
+      "receivedAt": "2026-10-25T14:30:15.920Z",
       "receivedByUserId": 1
     }
   ]

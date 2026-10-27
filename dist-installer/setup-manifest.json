@@ -2,15 +2,15 @@
   "product": "Mehregan Business Accounting Suite",
   "version": "2.0.0",
   "stage": "Stage 2: Setup & Deployment System",
-  "builtAt": "2026-10-17T14:20:51.264Z",
+  "builtAt": "2026-10-25T14:31:21.647Z",
   "targetPlatform": "Windows x64 / Linux x64 Standalone",
   "launcherExecutable": "MehreganLauncher.bat / MehreganLauncher.sh",
   "zeroNodeDependency": true,
   "pathResolutionStrategy": "INSTALL_DIR_RELATIVE (path.dirname(import.meta.url))",
-  "totalFilesCount": 27,
-  "totalSizeBytes": 2743577,
-  "totalSizeFormatted": "2.62 MB",
-  "manifestSignature": "af753b0b45b30a83ede8e81a7cff51fbb35e52cce9e492f82e29d8c2e89139e6",
+  "totalFilesCount": 28,
+  "totalSizeBytes": 3611146,
+  "totalSizeFormatted": "3.44 MB",
+  "manifestSignature": "d30a2c320768772192c5fc9827003005f2a1b41fe0c536825d9508646929dfc0",
   "criticalDirectories": {
     "frontendBuild": "dist/",
     "backendServer": "server.ts",
@@ -22,13 +22,13 @@
   "files": [
     {
       "path": ".env.example",
-      "size": 1215,
-      "sha256": "83774499475452199065f258253e14894cf93c0d261a6c491aef0fe22f49242b"
+      "size": 103,
+      "sha256": "edf6a6d222005ce9c8616cbcda05bb7b3d01749420636df7d8f08f0d31a3acdd"
     },
     {
       "path": "MehreganLauncher.bat",
-      "size": 1795,
-      "sha256": "380cb52d114abb3a5ff9815b3c3cdca122b562176bf1077626ec061e24e411c8"
+      "size": 4609,
+      "sha256": "7b6f45dc253d9bc7fa33167c01f95d805bdcbdbfe7c4ab3f0c1b927231b04d5a"
     },
     {
       "path": "MehreganLauncher.sh",
@@ -42,8 +42,8 @@
     },
     {
       "path": "START_MEHREGAN.bat",
-      "size": 4099,
-      "sha256": "1d117796724ba07b54055617f1d51f414f6a022c893d8096707c406cae81266f"
+      "size": 4369,
+      "sha256": "dffae299a4d820b3a08dfe851b005acf90be8c10d39df9c5459bae65e56141bf"
     },
     {
       "path": "START_MEHREGAN.sh",
@@ -51,24 +51,24 @@
       "sha256": "0b9a25bf512a5d0a69586bb6b66bf0a0aa236cf5e276b3f1763e6609c0e71dc4"
     },
     {
-      "path": "dist/assets/index-Cx1TzBBw.css",
-      "size": 96268,
-      "sha256": "fefbda8dba63d44c897831ad3fbd52a5504ad0f464e4e805ddda398a7cb5ff0b"
+      "path": "dist/assets/index-BcSfwteC.js",
+      "size": 2555197,
+      "sha256": "e8110b2573f42dcc321a7b0ca979fee2fb846a6e7bc02243efec8b758fc6ca5f"
     },
     {
-      "path": "dist/assets/index-DUcDTQdl.js",
-      "size": 1979602,
-      "sha256": "539220db5748183c99ccb0939fc8d7231161903d8ab23b16dc0c285f8b98e813"
+      "path": "dist/assets/index-DYNopmkB.css",
+      "size": 138507,
+      "sha256": "605a2dc11e49ef35fa3803d89e4388165b882251ca65bd83d068a5b160a67da2"
     },
     {
       "path": "dist/index.html",
       "size": 1900,
-      "sha256": "d02f57e4c31dda222fcc638d14c62ba754c9735d5fd37fae38edefd6a79b9c5f"
+      "sha256": "ec813d6b99b911b8c93621e0c538cd5026e78547abd692a43cd362391edd6455"
     },
     {
       "path": "launcher/mehregan-launcher.bat",
-      "size": 1795,
-      "sha256": "380cb52d114abb3a5ff9815b3c3cdca122b562176bf1077626ec061e24e411c8"
+      "size": 4609,
+      "sha256": "7b6f45dc253d9bc7fa33167c01f95d805bdcbdbfe7c4ab3f0c1b927231b04d5a"
     },
     {
       "path": "launcher/mehregan-launcher.sh",
@@ -77,8 +77,8 @@
     },
     {
       "path": "package.json",
-      "size": 1394,
-      "sha256": "4fe7b66c58d6647e5ae142018975d9f9d83a42ef8615e45b41772cff17f5f59c"
+      "size": 1110,
+      "sha256": "eb2f84f4283e098afbb32258c3d2835582174846d0b1105d1f62b950b2515583"
     },
     {
       "path": "runtime/node",
@@ -92,8 +92,8 @@
     },
     {
       "path": "server.ts",
-      "size": 131264,
-      "sha256": "0880005b6e06a4fdb16b1110221068c784f03b3119375568ef2dc280ab906282"
+      "size": 191535,
+      "sha256": "3f0ef75c0f3e778fab575a6dd934e311eaff3b90350a02e26f3834f7f6b1a2b5"
     },
     {
       "path": "src/db/migrations/0001_foundation_core.sql",
@@ -142,13 +142,18 @@
     },
     {
       "path": "src/server/foundationStore.ts",
-      "size": 473300,
-      "sha256": "1cd9b6fddaf85d0c138f4354fc85db4a8aed576d30e9a17973eddd19830804e9"
+      "size": 652876,
+      "sha256": "00099efe6cb780ad0de0cde59f76b782b357870e118c2fb2d402bf6f43c7dc42"
     },
     {
       "path": "src/server/paths.ts",
       "size": 2490,
       "sha256": "43d6dc797cac3838121cd137e00c3f143d407e61f73e15798b3307fedd0b631b"
+    },
+    {
+      "path": "src/server/sessionManager.ts",
+      "size": 5386,
+      "sha256": "fc8a424e3e5962fc8acfbb5f1c2de7ecdb953bb334bbffb8508ac5d610a443c5"
     },
     {
       "path": "راهنمای_جامع_اجرا_در_هر_سیستم.txt",
