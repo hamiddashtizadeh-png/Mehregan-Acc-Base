@@ -455,3 +455,78 @@ body.mehregan-printing #mehregan-print-mount {
     margin: 6mm;
   }
 }
+
+/* ==========================================================================
+   Dynamic UI Theme Selectors & Tokens (14 User Reference Presets)
+   ========================================================================== */
+[data-ui-theme="acru_lime_financial"] {
+  --theme-top-bar: #84cc16;
+  --theme-primary: #65a30d;
+  --theme-primary-hover: #4d7c0f;
+}
+
+[data-ui-theme="conceptzilla_orange_crm"] {
+  --theme-top-bar: #ea580c;
+  --theme-primary: #ea580c;
+  --theme-primary-hover: #c2410c;
+}
+
+[data-ui-theme="salesforce_glass_gradient"] {
+  --theme-top-bar: #6366f1;
+  --theme-primary: #4f46e5;
+  --theme-primary-hover: #4338ca;
+}
+
+[data-ui-theme="chaapline_print_mobile"] {
+  --theme-top-bar: #ef4444;
+  --theme-primary: #dc2626;
+  --theme-primary-hover: #b91c1c;
+}
+
+[data-ui-theme="bingx_education_blue"] {
+  --theme-top-bar: #2563eb;
+  --theme-primary: #1d4ed8;
+  --theme-primary-hover: #1e40af;
+}
+
+[data-ui-theme="workspace_lime_timeline"] {
+  --theme-top-bar: #a3e635;
+  --theme-primary: #84cc16;
+  --theme-primary-hover: #65a30d;
+}
+
+[data-ui-theme="volvo_luxury_minimalist"] {
+  --theme-top-bar: #059669;
+  --theme-primary: #047857;
+  --theme-primary-hover: #065f46;
+}
+
+[data-ui-theme="cyber_dark_neon"] {
+  --theme-top-bar: #06b6d4;
+  --theme-primary: #06b6d4;
+  --theme-primary-hover: #0891b2;
+}
+
+[data-ui-theme="sugarcrm_journey_nodes"] {
+  --theme-top-bar: #0f172a;
+  --theme-primary: #1e293b;
+  --theme-primary-hover: #0f172a;
+}
+
+[data-ui-theme="isee_smart_hub"] {
+  --theme-top-bar: #0284c7;
+  --theme-primary: #0369a1;
+  --theme-primary-hover: #075985;
+}
+
+[data-ui-theme="khodrox_retail_shop"] {
+  --theme-top-bar: #2563eb;
+  --theme-primary: #1d4ed8;
+  --theme-primary-hover: #1e40af;
+}
+
+[data-ui-theme="mobile_service_portal"] {
+  --theme-top-bar: #0f172a;
+  --theme-primary: #059669;
+  --theme-primary-hover: #047857;
+}

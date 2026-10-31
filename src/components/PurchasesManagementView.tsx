@@ -40,6 +40,8 @@ import { printHtmlContent, downloadInvoiceHtml } from '../utils/printUtils';
 import { QuickMasterModal, QuickAddButton, QuickMasterType } from './QuickMasterModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { PriceInput } from './PriceInput';
+import { useColumnResizable } from '../hooks/useColumnResizable';
+import { ResizableTh } from './ui/ResizableTh';
 
 interface PurchasesManagementViewProps {
   foundationData: FoundationDataResponse;
@@ -57,6 +59,29 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
   const [activeTab, setActiveTab] = useState<TabType>('INVOICES');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+
+  // Resizable columns
+  const { columnWidths: purchaseInvColWidths, startResizing: startPurchaseInvResize } = useColumnResizable({
+    invoiceNumber: 140,
+    supplier: 160,
+    warehouse: 130,
+    date: 110,
+    currency: 100,
+    baseVal: 130,
+    landed: 120,
+    debt: 120,
+    status: 100,
+    actions: 140,
+  });
+
+  const { columnWidths: purchasePoColWidths, startResizing: startPurchasePoResize } = useColumnResizable({
+    poNumber: 140,
+    supplier: 180,
+    date: 130,
+    currency: 120,
+    total: 140,
+    status: 120,
+  });
 
   // Modals & Selected Records
   const [selectedInvoice, setSelectedInvoice] = useState<PurchaseInvoiceRecord | null>(null);
@@ -529,16 +554,16 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
               <table className="w-full text-right text-xs">
                 <thead className="bg-slate-50 border-b border-slate-200 font-bold text-slate-700">
                   <tr>
-                    <th className="px-4 py-3">شماره فاکتور</th>
-                    <th className="px-4 py-3">تأمین‌کننده</th>
-                    <th className="px-4 py-3">انبار مقصد</th>
-                    <th className="px-4 py-3">تاریخ / سررسید</th>
-                    <th className="px-4 py-3">ارز / نرخ</th>
-                    <th className="px-4 py-3">ارزش پایه اقلام</th>
-                    <th className="px-4 py-3">هزینه سربار</th>
-                    <th className="px-4 py-3">مانده بدهی</th>
-                    <th className="px-4 py-3 text-center">وضعیت</th>
-                    <th className="px-4 py-3 text-center">عملیات</th>
+                    <ResizableTh colKey="invoiceNumber" width={purchaseInvColWidths.invoiceNumber} onStartResize={startPurchaseInvResize}>شماره فاکتور</ResizableTh>
+                    <ResizableTh colKey="supplier" width={purchaseInvColWidths.supplier} onStartResize={startPurchaseInvResize}>تأمین‌کننده</ResizableTh>
+                    <ResizableTh colKey="warehouse" width={purchaseInvColWidths.warehouse} onStartResize={startPurchaseInvResize}>انبار مقصد</ResizableTh>
+                    <ResizableTh colKey="date" width={purchaseInvColWidths.date} onStartResize={startPurchaseInvResize}>تاریخ / سررسید</ResizableTh>
+                    <ResizableTh colKey="currency" width={purchaseInvColWidths.currency} onStartResize={startPurchaseInvResize}>ارز / نرخ</ResizableTh>
+                    <ResizableTh colKey="baseVal" width={purchaseInvColWidths.baseVal} onStartResize={startPurchaseInvResize}>ارزش پایه اقلام</ResizableTh>
+                    <ResizableTh colKey="landed" width={purchaseInvColWidths.landed} onStartResize={startPurchaseInvResize}>هزینه سربار</ResizableTh>
+                    <ResizableTh colKey="debt" width={purchaseInvColWidths.debt} onStartResize={startPurchaseInvResize}>مانده بدهی</ResizableTh>
+                    <ResizableTh colKey="status" width={purchaseInvColWidths.status} onStartResize={startPurchaseInvResize} className="text-center">وضعیت</ResizableTh>
+                    <ResizableTh colKey="actions" width={purchaseInvColWidths.actions} onStartResize={startPurchaseInvResize} className="text-center">عملیات</ResizableTh>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -669,12 +694,12 @@ export function PurchasesManagementView({ foundationData, onRefresh }: Purchases
               <table className="w-full text-right text-xs">
                 <thead className="bg-slate-50 border-b border-slate-200 font-bold text-slate-700">
                   <tr>
-                    <th className="px-4 py-3">شماره سفارش</th>
-                    <th className="px-4 py-3">تأمین‌کننده</th>
-                    <th className="px-4 py-3">تاریخ / اعتبار</th>
-                    <th className="px-4 py-3">ارز / نرخ تبدیل</th>
-                    <th className="px-4 py-3">مبلغ کل (ریال)</th>
-                    <th className="px-4 py-3 text-center">وضعیت</th>
+                    <ResizableTh colKey="poNumber" width={purchasePoColWidths.poNumber} onStartResize={startPurchasePoResize}>شماره سفارش</ResizableTh>
+                    <ResizableTh colKey="supplier" width={purchasePoColWidths.supplier} onStartResize={startPurchasePoResize}>تأمین‌کننده</ResizableTh>
+                    <ResizableTh colKey="date" width={purchasePoColWidths.date} onStartResize={startPurchasePoResize}>تاریخ / اعتبار</ResizableTh>
+                    <ResizableTh colKey="currency" width={purchasePoColWidths.currency} onStartResize={startPurchasePoResize}>ارز / نرخ تبدیل</ResizableTh>
+                    <ResizableTh colKey="total" width={purchasePoColWidths.total} onStartResize={startPurchasePoResize}>مبلغ کل (ریال)</ResizableTh>
+                    <ResizableTh colKey="status" width={purchasePoColWidths.status} onStartResize={startPurchasePoResize} className="text-center">وضعیت</ResizableTh>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">

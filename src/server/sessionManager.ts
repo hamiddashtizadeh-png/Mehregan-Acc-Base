@@ -1,4 +1,7 @@
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { DATA_VAULT_DIR } from './paths';
 import { UserRecord } from './foundationStore';
 
 export interface UserSession {
@@ -27,10 +30,48 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours of inactivity
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes lockout
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const SESSION_VAULT_FILE = path.join(DATA_VAULT_DIR, 'sessions-vault.json');
 
 class SessionManager {
   private sessions = new Map<string, UserSession>();
   private failedAttempts = new Map<string, FailedLoginAttempt>();
+
+  constructor() {
+    this.loadFromDisk();
+  }
+
+  private loadFromDisk(): void {
+    try {
+      if (!fs.existsSync(DATA_VAULT_DIR)) {
+        fs.mkdirSync(DATA_VAULT_DIR, { recursive: true });
+      }
+      if (fs.existsSync(SESSION_VAULT_FILE)) {
+        const raw = fs.readFileSync(SESSION_VAULT_FILE, 'utf-8');
+        const list: UserSession[] = JSON.parse(raw);
+        const now = Date.now();
+        this.sessions.clear();
+        for (const sess of list) {
+          if (sess.expiresAt > now) {
+            this.sessions.set(sess.sessionId, sess);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[SessionManager] Error loading sessions from disk vault:', err);
+    }
+  }
+
+  private saveToDisk(): void {
+    try {
+      if (!fs.existsSync(DATA_VAULT_DIR)) {
+        fs.mkdirSync(DATA_VAULT_DIR, { recursive: true });
+      }
+      const list = Array.from(this.sessions.values());
+      fs.writeFileSync(SESSION_VAULT_FILE, JSON.stringify(list, null, 2), 'utf-8');
+    } catch (err) {
+      console.warn('[SessionManager] Error saving sessions to disk vault:', err);
+    }
+  }
 
   // Generate cryptographically secure token (64 hex characters / 256 bits)
   private generateToken(): string {
@@ -79,6 +120,7 @@ class SessionManager {
     };
 
     this.sessions.set(sessionId, session);
+    this.saveToDisk();
     return session;
   }
 
@@ -91,19 +133,25 @@ class SessionManager {
     const now = Date.now();
     if (now > session.expiresAt) {
       this.sessions.delete(sessionId);
+      this.saveToDisk();
       return null;
     }
 
     // Touch session for sliding window expiration
     session.lastActiveAt = now;
     session.expiresAt = now + SESSION_TTL_MS;
+    this.saveToDisk();
     return session;
   }
 
   // Terminate session (Logout)
   public destroySession(sessionId?: string): boolean {
     if (!sessionId) return false;
-    return this.sessions.delete(sessionId);
+    const deleted = this.sessions.delete(sessionId);
+    if (deleted) {
+      this.saveToDisk();
+    }
+    return deleted;
   }
 
   // Terminate all sessions for a specific user (Password change / suspension)
@@ -114,6 +162,9 @@ class SessionManager {
         this.sessions.delete(sId);
         destroyed++;
       }
+    }
+    if (destroyed > 0) {
+      this.saveToDisk();
     }
     return destroyed;
   }
@@ -181,6 +232,9 @@ class SessionManager {
         this.sessions.delete(id);
         cleaned++;
       }
+    }
+    if (cleaned > 0) {
+      this.saveToDisk();
     }
     return cleaned;
   }

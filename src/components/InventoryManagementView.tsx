@@ -41,6 +41,8 @@ import { exportToExcel, exportToPdf } from '../utils/exportUtils';
 import { QuickMasterModal, QuickAddButton, QuickMasterType } from './QuickMasterModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { PriceInput } from './PriceInput';
+import { useColumnResizable } from '../hooks/useColumnResizable';
+import { ResizableTh } from './ui/ResizableTh';
 import {
   FoundationDataResponse,
   ItemRecord,
@@ -118,6 +120,20 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
   const [subTab, setSubTab] = useState<SubTab>('ITEMS');
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Resizable columns
+  const { columnWidths: itemColWidths, startResizing: startItemResize } = useColumnResizable({
+    code: 110,
+    title: 220,
+    model: 130,
+    catBrand: 140,
+    tracking: 100,
+    stock: 120,
+    buyPrice: 130,
+    sellPrice: 130,
+    status: 90,
+    actions: 110,
+  });
 
   // Delete State
   const [itemToDelete, setItemToDelete] = useState<ItemRecord | null>(null);
@@ -1037,16 +1053,16 @@ export function InventoryManagementView({ foundationData, onRefresh }: Inventory
             <table className="w-full text-right text-xs">
               <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold">
                 <tr>
-                  <th className="p-3">کد / بارکد</th>
-                  <th className="p-3">عنوان و مشخصات کالا</th>
-                  <th className="p-3">مدل سخت‌افزاری</th>
-                  <th className="p-3">دسته‌بندی / برند</th>
-                  <th className="p-3 text-center">نوع رهگیری</th>
-                  <th className="p-3 text-center">موجودی لحظه‌ای کل</th>
-                  <th className="p-3 text-left">قیمت خرید (ریال)</th>
-                  <th className="p-3 text-left">قیمت فروش (ریال)</th>
-                  <th className="p-3 text-center">وضعیت</th>
-                  <th className="p-3 text-center">عملیات</th>
+                  <ResizableTh colKey="code" width={itemColWidths.code} onStartResize={startItemResize}>کد / بارکد</ResizableTh>
+                  <ResizableTh colKey="title" width={itemColWidths.title} onStartResize={startItemResize}>عنوان و مشخصات کالا</ResizableTh>
+                  <ResizableTh colKey="model" width={itemColWidths.model} onStartResize={startItemResize}>مدل سخت‌افزاری</ResizableTh>
+                  <ResizableTh colKey="catBrand" width={itemColWidths.catBrand} onStartResize={startItemResize}>دسته‌بندی / برند</ResizableTh>
+                  <ResizableTh colKey="tracking" width={itemColWidths.tracking} onStartResize={startItemResize} className="text-center">نوع رهگیری</ResizableTh>
+                  <ResizableTh colKey="stock" width={itemColWidths.stock} onStartResize={startItemResize} className="text-center">موجودی لحظه‌ای کل</ResizableTh>
+                  <ResizableTh colKey="buyPrice" width={itemColWidths.buyPrice} onStartResize={startItemResize} className="text-left">قیمت خرید (ریال)</ResizableTh>
+                  <ResizableTh colKey="sellPrice" width={itemColWidths.sellPrice} onStartResize={startItemResize} className="text-left">قیمت فروش (ریال)</ResizableTh>
+                  <ResizableTh colKey="status" width={itemColWidths.status} onStartResize={startItemResize} className="text-center">وضعیت</ResizableTh>
+                  <ResizableTh colKey="actions" width={itemColWidths.actions} onStartResize={startItemResize} className="text-center">عملیات</ResizableTh>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-800">

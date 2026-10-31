@@ -1464,9 +1464,27 @@ export interface ProjectRecord {
   updatedAt: string;
 }
 
+export interface RequisitionLineItem {
+  id: string;
+  itemId?: number | null;
+  itemCode?: string | null;
+  itemNameFa: string;
+  requestedQty: number;
+  unitFa: string;
+  approvedQty?: number;
+  actualConsumedQty?: number;
+  unitPriceIrr?: number;
+  totalPriceIrr?: number;
+  serials?: string[];
+  notesFa?: string | null;
+}
+
 export type ProjectMaterialRequisitionStatus =
   | 'REQUESTED' // ثبت درخواست کالا توسط نصاب
-  | 'APPROVED' // تأیید مدیر فنی
+  | 'APPROVED' // تأیید و تصویب اقلام توسط مدیر
+  | 'READY_FOR_INSTALL' // اعلام آمادگی و زمان‌بندی نصب توسط نصاب
+  | 'CONSUMPTION_SUBMITTED' // ثبت گزارش/اصلاحیه اقلام مصرفی نهایی توسط نصاب
+  | 'PRICED_AND_INVOICED' // قیمت‌گذاری مدیر + صدور فاکتور نهایی فروش و تسویه پروژه
   | 'ISSUED' // تحویل انباردار به نصاب
   | 'CONSUMED' // مصرف قطعی در محل پروژه
   | 'RETURNED' // برگشت اقلام مازاد به انبار
@@ -1478,9 +1496,13 @@ export interface ProjectMaterialRequisitionRecord {
   projectId: number;
   projectCode: string;
   projectTitleFa: string;
-  itemId: number;
-  itemCode: string;
-  itemTitleFa: string;
+  itemId?: number | null;
+  itemCode?: string | null;
+  itemTitleFa?: string | null;
+  items?: RequisitionLineItem[];
+  scheduledInstallDateJalali?: string | null;
+  finalInvoiceId?: number | null;
+  finalInvoiceNumber?: string | null;
   sourceWarehouseId: number;
   sourceWarehouseTitleFa: string;
   requestedQty: number;

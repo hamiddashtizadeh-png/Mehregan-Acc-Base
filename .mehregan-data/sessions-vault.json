@@ -1,0 +1,147 @@
+[
+  {
+    "sessionId": "f9f378bb7b6fd387fb83009579d503d621bb622e1181daf658496c04865a4b84",
+    "userId": 1,
+    "username": "admin",
+    "roleCodes": [
+      "OWNER"
+    ],
+    "ip": "192.168.1.10",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "csrfToken": "362c3039a4c351ee32d9044f0da714e2f95a8873da4995c97b65594be330f3fc",
+    "createdAt": 1793121766796,
+    "lastActiveAt": 1793121766797,
+    "expiresAt": 1793208166797
+  },
+  {
+    "sessionId": "362a8bd5ca7179fcfd417e5370183b4f4c659fbf634bc9fef6ff949036f846dd",
+    "userId": 2,
+    "username": "installer",
+    "roleCodes": [
+      "INSTALLER"
+    ],
+    "installerPartyId": 3,
+    "ip": "5.120.30.40",
+    "userAgent": "Mozilla/5.0 (Linux; Android 14; Mobile)",
+    "csrfToken": "167cb3292481f88dcfce24939eb8fc50324d79b03bd3b8dd0dc15b6e6e4e3098",
+    "createdAt": 1793121766797,
+    "lastActiveAt": 1793121766797,
+    "expiresAt": 1793208166797
+  },
+  {
+    "sessionId": "7694a54fd32917908cf6ce0a5be3cc652e0b46971a639a67c491a8f7f855c4d2",
+    "userId": 1,
+    "username": "admin",
+    "roleCodes": [
+      "OWNER"
+    ],
+    "ip": "192.168.1.10",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "csrfToken": "b680d83a5b1775284aecd23ad54e3b7e5493fa78e75112df5734d095b11c61b1",
+    "createdAt": 1793163133719,
+    "lastActiveAt": 1793163133720,
+    "expiresAt": 1793249533720
+  },
+  {
+    "sessionId": "738283cbb6eb62a33f51862aacd526b57d6092cf926d9146de9758d95ee2fa4a",
+    "userId": 2,
+    "username": "installer",
+    "roleCodes": [
+      "INSTALLER"
+    ],
+    "installerPartyId": 3,
+    "ip": "5.120.30.40",
+    "userAgent": "Mozilla/5.0 (Linux; Android 14; Mobile)",
+    "csrfToken": "ffe37c2d2db7b090e750575ce1906c5fea567de07bc42cd1d1a11b258a6b7dbf",
+    "createdAt": 1793163133720,
+    "lastActiveAt": 1793163133720,
+    "expiresAt": 1793249533720
+  },
+  {
+    "sessionId": "78e3ad52b52ece10fb089a8505e69f38446a42f0877e1b14d0098c496d98420b",
+    "userId": 1,
+    "username": "admin",
+    "roleCodes": [
+      "OWNER"
+    ],
+    "ip": "192.168.1.10",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "csrfToken": "15bbc9f3f4b0ba2f632c666518fd278398938f70d19929c8809f63eff54305a1",
+    "createdAt": 1793163397975,
+    "lastActiveAt": 1793163397975,
+    "expiresAt": 1793249797975
+  },
+  {
+    "sessionId": "864c9fcfe342d90bf28063add117837724024e3edef602d98b3b4a3cad96bb3d",
+    "userId": 2,
+    "username": "installer",
+    "roleCodes": [
+      "INSTALLER"
+    ],
+    "installerPartyId": 3,
+    "ip": "5.120.30.40",
+    "userAgent": "Mozilla/5.0 (Linux; Android 14; Mobile)",
+    "csrfToken": "aa560f74e1e47105e9f425b1d2efc5287d46da93b967c11d54add3c766cafa99",
+    "createdAt": 1793163397975,
+    "lastActiveAt": 1793163397975,
+    "expiresAt": 1793249797975
+  },
+  {
+    "sessionId": "6d78aa3adb93c20fa0d91501179772919f3abbfd3175f761b07d0ecb78aa9b63",
+    "userId": 1,
+    "username": "admin",
+    "roleCodes": [
+      "OWNER"
+    ],
+    "ip": "192.168.1.10",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "csrfToken": "69ece84daaaf0cd5af77e68d2899611294e96c7a77a2b1662cc2bffac8e43a58",
+    "createdAt": 1793164492292,
+    "lastActiveAt": 1793164492293,
+    "expiresAt": 1793250892293
+  },
+  {
+    "sessionId": "da233f8896792cbed2b079f1c54499d88c1e0152c8a94afb33d1ca61f1a08d31",
+    "userId": 2,
+    "username": "installer",
+    "roleCodes": [
+      "INSTALLER"
+    ],
+    "installerPartyId": 3,
+    "ip": "5.120.30.40",
+    "userAgent": "Mozilla/5.0 (Linux; Android 14; Mobile)",
+    "csrfToken": "f98a328000fa6320384ebc25ef3ad9af61edb0f0eede7fd2faa5f90982f99e27",
+    "createdAt": 1793164492293,
+    "lastActiveAt": 1793164492293,
+    "expiresAt": 1793250892293
+  },
+  {
+    "sessionId": "6002fbddaef729e001d70f86801e857b0257768c0b9dc3a1a82f46c535bee6de",
+    "userId": 1,
+    "username": "admin",
+    "roleCodes": [
+      "OWNER"
+    ],
+    "ip": "192.168.1.10",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "csrfToken": "dbe8a87addd95d76a19b234e3f324d14b2da5e7656ef6e11b61da4293353e6f2",
+    "createdAt": 1793165238859,
+    "lastActiveAt": 1793165238861,
+    "expiresAt": 1793251638861
+  },
+  {
+    "sessionId": "f6d13ea68dd611c059912138ef9d6426031dde60c592f4cd1ae6b9c961daca51",
+    "userId": 2,
+    "username": "installer",
+    "roleCodes": [
+      "INSTALLER"
+    ],
+    "installerPartyId": 3,
+    "ip": "5.120.30.40",
+    "userAgent": "Mozilla/5.0 (Linux; Android 14; Mobile)",
+    "csrfToken": "c1b75a7c7f983aa17b6702780c87c6a162c87500dc2461c22c89c8f8926294a8",
+    "createdAt": 1793165238860,
+    "lastActiveAt": 1793165238861,
+    "expiresAt": 1793251638861
+  }
+]

@@ -19,6 +19,7 @@ export type AgentIntentType =
   | 'ACTION_CREATE_INVOICE'
   | 'ACTION_CREATE_JOURNAL_VOUCHER'
   | 'ACTION_CREATE_PAYMENT_RECEIPT'
+  | 'ACTION_UPDATE_PROJECT_STATUS'
   | 'NEED_CLARIFICATION'
   | 'ACTION_NAVIGATE'
   | 'QUERY_BANK_BALANCES'
@@ -51,6 +52,7 @@ export interface InvoiceItemPreview {
 
 export interface InvoicePreviewPayload {
   type: 'SALES' | 'PURCHASE';
+  isProforma?: boolean;
   partyId?: number;
   partyName: string;
   items: InvoiceItemPreview[];
@@ -88,6 +90,18 @@ export interface PaymentReceiptPreviewPayload {
   dateJalali: string;
 }
 
+export interface ProjectStatusPreviewPayload {
+  projectId: number;
+  projectTitle: string;
+  projectNumber?: string;
+  customerName: string;
+  currentStatus: string;
+  newStatus: string;
+  newStatusFa: string;
+  notes?: string;
+  dateJalali: string;
+}
+
 export interface ClarificationOption {
   label: string;
   actionPrompt: string;
@@ -105,6 +119,7 @@ export interface AgentCardAction {
     | 'INVOICE_CONFIRMATION'
     | 'JOURNAL_VOUCHER_CONFIRMATION'
     | 'PAYMENT_RECEIPT_CONFIRMATION'
+    | 'PROJECT_STATUS_CONFIRMATION'
     | 'CLARIFICATION'
     | 'NAVIGATE'
     | 'PARTY_LEDGER'
@@ -114,6 +129,7 @@ export interface AgentCardAction {
   invoicePayload?: InvoicePreviewPayload;
   journalVoucherPayload?: JournalVoucherPreviewPayload;
   paymentReceiptPayload?: PaymentReceiptPreviewPayload;
+  projectStatusPayload?: ProjectStatusPreviewPayload;
   clarificationPayload?: ClarificationPayload;
   navigateTab?: string;
   partyId?: number;
@@ -212,7 +228,59 @@ export function extractAmountFromPersianText(text: string): number | null {
   return null;
 }
 
-// Current Jalali date helper
+export interface ExtractedCurrencyAmount {
+  amountToman: number;
+  amountRial: number;
+  detectedCurrency: 'TOMAN' | 'RIAL' | 'UNSPECIFIED';
+  formattedToman: string;
+  formattedRial: string;
+}
+
+// Precise Toman vs Rial disambiguation and mathematical converter
+export function extractAmountWithCurrency(text: string): ExtractedCurrencyAmount | null {
+  if (!text) return null;
+  const normalized = parsePersianDigits(text).replace(/,/g, '');
+  const isRial = normalized.includes('ریال');
+  const isToman = normalized.includes('تومان') || normalized.includes('تومن');
+
+  const baseToman = extractAmountFromPersianText(text);
+  if (baseToman === null || baseToman <= 0) return null;
+
+  let amountToman = baseToman;
+  let amountRial = baseToman * 10;
+  let detectedCurrency: 'TOMAN' | 'RIAL' | 'UNSPECIFIED' = 'UNSPECIFIED';
+
+  if (isRial && !isToman) {
+    detectedCurrency = 'RIAL';
+    // If the user specified e.g. "۵۰ میلیون ریال", the multiplier regex in extractAmountFromPersianText
+    // evaluated 50 * 1,000,000 = 50,000,000. In Rial terms, that means 50,000,000 Rials = 5,000,000 Tomans.
+    const multiplierRegex = /(\d+(?:\.\d+)?)\s*(هزار|میلیون|میلیارد|k|m)\s*ریال/i;
+    const matchMultRial = normalized.match(multiplierRegex);
+    if (matchMultRial) {
+      amountRial = baseToman;
+      amountToman = Math.round(baseToman / 10);
+    } else {
+      amountRial = baseToman * 10;
+      amountToman = baseToman;
+    }
+  } else if (isToman) {
+    detectedCurrency = 'TOMAN';
+    amountToman = baseToman;
+    amountRial = baseToman * 10;
+  } else {
+    detectedCurrency = 'UNSPECIFIED';
+    amountToman = baseToman;
+    amountRial = baseToman * 10;
+  }
+
+  return {
+    amountToman,
+    amountRial,
+    detectedCurrency,
+    formattedToman: format3Digit(amountToman),
+    formattedRial: parsePersianDigits(amountRial.toLocaleString('en-US')),
+  };
+}
 export function getCurrentJalaliDate(): string {
   try {
     const now = new Date();
@@ -575,7 +643,21 @@ export function processAgentCommand(
       lower.includes('شخص') ||
       matchedParties.length === 1);
 
-  if (isPartyQuery && !amount) {
+  const isActionVerb =
+    lower.includes('فاکتور') ||
+    lower.includes('پیش‌فاکتور') ||
+    lower.includes('پیش فاکتور') ||
+    lower.includes('پروژه') ||
+    lower.includes('نصب') ||
+    lower.includes('هزینه') ||
+    lower.includes('دریافت') ||
+    lower.includes('پرداخت') ||
+    lower.includes('واریز') ||
+    lower.includes('سند') ||
+    lower.includes('ایجاد') ||
+    lower.includes('ثبت');
+
+  if (isPartyQuery && !amount && !isActionVerb) {
     if (matchedParties.length === 1) {
       const p = matchedParties[0];
       const bal = Number(p.transactionsSummary?.netBalanceIrr || 0);
@@ -668,7 +750,7 @@ export function processAgentCommand(
       matchedItems.length > 0) &&
     !amount;
 
-  if (isInventoryQuery) {
+  if (isInventoryQuery && !isActionVerb) {
     const itemsToReport = matchedItems.length > 0 ? matchedItems.slice(0, 5) : items.slice(0, 5);
 
     if (itemsToReport.length > 0) {
@@ -723,7 +805,7 @@ export function processAgentCommand(
     matchedBanks.length > 0 ||
     matchedCashBoxes.length > 0;
 
-  if (isBankQuery && !amount) {
+  if (isBankQuery && !amount && !isActionVerb) {
     if (matchedBanks.length === 1 && matchedCashBoxes.length === 0) {
       const ba = matchedBanks[0];
       const bal = Number(ba.balanceIrr || 0);
@@ -866,6 +948,119 @@ export function processAgentCommand(
         type: 'BANK',
         title: 'گزارش نقدینگی به تفکیک بانک و صندوق',
         items: reportItems,
+      },
+    };
+  }
+
+  // =========================================================================
+  // 4a. SMART PROFORMA / PRE-INVOICE INTENT (پیش‌فاکتور فروش)
+  // =========================================================================
+  const isProformaRequest =
+    lower.includes('پیش‌فاکتور') ||
+    lower.includes('پیش فاکتور') ||
+    lower.includes('استعلام قیمت') ||
+    (lower.includes('فاکتور') && lower.includes('پیش'));
+
+  if (isProformaRequest) {
+    const partyName = matchedParty ? matchedParty.fullName : 'مشتری عمومی (پیش‌فاکتور)';
+    const partyId = matchedParty ? matchedParty.id : 1;
+    const itemTitle = matchedItem ? matchedItem.titleFa : 'اقلام و تجهیزات پیش‌فاکتور';
+    const itemId = matchedItem ? matchedItem.id : 1;
+    const estAmount = amount && amount > 0 ? amount : 1500000;
+    const formattedAmt = format3Digit(estAmount);
+
+    return {
+      id: msgId,
+      sender: 'AGENT',
+      text: `پیش‌نویس **پیش‌فاکتور فروش** برای طرف حساب **«${partyName}»** آماده ثبت گردید.\nشما می‌توانید اقلام، مبالغ و شرایط معامله را در فرم زیر بررسی یا ویرایش نمایید:`,
+      timestamp: timeStr,
+      intent: 'ACTION_CREATE_INVOICE',
+      cardAction: {
+        type: 'INVOICE_CONFIRMATION',
+        title: `تایید صدور پیش‌فاکتور برای ${partyName}`,
+        invoicePayload: {
+          type: 'SALES',
+          isProforma: true,
+          partyId,
+          partyName,
+          items: [
+            {
+              itemId,
+              title: itemTitle,
+              quantity: 1,
+              unitPrice: estAmount,
+              totalPrice: estAmount,
+            },
+          ],
+          totalAmount: estAmount,
+          totalAmountFormatted: formattedAmt,
+          warehouseId: 1,
+          warehouseTitle: 'انبار مرکزی',
+          dateJalali: getCurrentJalaliDate(),
+        },
+      },
+    };
+  }
+
+  // =========================================================================
+  // 4b. SMART INSTALLATION PROJECT STATUS INTENT (وضعیت نصب پروژه مشتری)
+  // =========================================================================
+  const isProjectStatusRequest =
+    lower.includes('وضعیت نصب') ||
+    lower.includes('نصب پروژه') ||
+    lower.includes('پروژه مشتری') ||
+    lower.includes('پیشرفت پروژه') ||
+    lower.includes('گزارش نصب');
+
+  if (isProjectStatusRequest) {
+    const projects = foundationData?.projects || [];
+    const matchedProject =
+      projects.find((p) => {
+        const pCust = normalizePersianText(p.customerTitleFa || '');
+        const pTitle = normalizePersianText(p.titleFa || '');
+        return (
+          (matchedParty && p.customerId === matchedParty.id) ||
+          (matchedParty && pCust.includes(normalizePersianText(matchedParty.fullName))) ||
+          pTitle.includes(lower)
+        );
+      }) || projects[0];
+
+    const customerName = matchedProject ? matchedProject.customerTitleFa : (matchedParty?.fullName || 'مشتری پروژه');
+    const projectTitle = matchedProject ? matchedProject.titleFa : 'پروژه نصب دوربین و سیستم نظارتی';
+    const projectCode = matchedProject ? matchedProject.projectCode : 'PRJ-1405-001';
+    const projectId = matchedProject ? matchedProject.id : 1;
+    const currentStatus = matchedProject ? matchedProject.status : 'IN_PROGRESS';
+
+    let newStatus = 'IN_PROGRESS';
+    let newStatusFa = 'در حال اجرا و پیشرفت';
+    if (lower.includes('تکمیل') || lower.includes('پایان') || lower.includes('تمام')) {
+      newStatus = 'COMPLETED';
+      newStatusFa = 'تکمیل شده و پایان یافته';
+    } else if (lower.includes('قطعه') || lower.includes('کسری')) {
+      newStatus = 'NEED_PARTS';
+      newStatusFa = 'نیازمند قطعات و متریال';
+    }
+
+    return {
+      id: msgId,
+      sender: 'AGENT',
+      text: `پیش‌نمایش **ثبت وضعیت نصب پروژه «${projectTitle}»** مربوط به مشتری **«${customerName}»** تنظیم گردید.\nجهت ثبت قطعی در کارتابل، کارت زیر را بررسی و تایید فرمایید:`,
+      timestamp: timeStr,
+      intent: 'ACTION_UPDATE_PROJECT_STATUS',
+      cardAction: {
+        type: 'PROJECT_STATUS_CONFIRMATION',
+        title: `تایید تغییر وضعیت پروژه: ${projectTitle}`,
+        projectStatusPayload: {
+          projectId,
+          projectTitle,
+          projectNumber: projectCode,
+          customerName,
+          currentStatus,
+          newStatus,
+          newStatusFa,
+          notes: `ثبت وضعیت از طریق دستیار هوشمند: ${rawInput}`,
+          dateJalali: getCurrentJalaliDate(),
+        },
       },
     };
   }
@@ -1476,6 +1671,21 @@ export async function processAgentCommandOnline(
           paymentReceiptPayload: {
             ...res.paymentReceiptPayload,
             amountFormatted: format3Digit(res.paymentReceiptPayload.amount || 0),
+            dateJalali: getCurrentJalaliDate(),
+          },
+        };
+      } else if (res.intent === 'ACTION_UPDATE_PROJECT_STATUS' && res.projectPayload) {
+        cardAction = {
+          type: 'PROJECT_STATUS_CONFIRMATION',
+          title: `تایید تغییر وضعیت پروژه: ${res.projectPayload.projectTitle || 'پروژه'}`,
+          projectStatusPayload: {
+            projectId: res.projectPayload.projectId || 1,
+            projectTitle: res.projectPayload.projectTitle || 'پروژه نصب',
+            customerName: res.projectPayload.customerName || 'مشتری',
+            currentStatus: 'IN_PROGRESS',
+            newStatus: res.projectPayload.newStatus || 'IN_PROGRESS',
+            newStatusFa: res.projectPayload.statusFa || 'در حال اجرا',
+            notes: res.projectPayload.notes || '',
             dateJalali: getCurrentJalaliDate(),
           },
         };

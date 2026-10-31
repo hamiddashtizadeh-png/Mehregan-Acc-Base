@@ -339,9 +339,23 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
   const [cartLines, setCartLines] = useState<RestaurantOrderLine[]>([]);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
   const [orderFeedback, setOrderFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [recentToast, setRecentToast] = useState<{ title: string; time: number } | null>(null);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState<boolean>(false);
 
   // Table filter
   const [tableSectionFilter, setTableSectionFilter] = useState<string>('ALL');
+
+  // Table Management Modals (Add / Delete)
+  const [isAddingTableModalOpen, setIsAddingTableModalOpen] = useState<boolean>(false);
+  const [newTableNumber, setNewTableNumber] = useState<string>('');
+  const [newTableTitleFa, setNewTableTitleFa] = useState<string>('');
+  const [newTableCapacity, setNewTableCapacity] = useState<number>(4);
+  const [newTableSectionFa, setNewTableSectionFa] = useState<string>('سالن اصلی');
+  const [isSubmittingTable, setIsSubmittingTable] = useState<boolean>(false);
+  const [tableModalError, setTableModalError] = useState<string | null>(null);
+
+  const [deletingTable, setDeletingTable] = useState<RestaurantTableRecord | null>(null);
+  const [isDeletingTableLoading, setIsDeletingTableLoading] = useState<boolean>(false);
 
   // Inspection Modal for Order Accounting & Sales Record
   const [inspectedOrder, setInspectedOrder] = useState<RestaurantOrderRecord | null>(null);
@@ -463,9 +477,18 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
   const vatAmountIrr = Math.round((subtotalIrr + serviceChargeIrr) * 0.1);
   const totalPayableIrr = subtotalIrr + serviceChargeIrr + vatAmountIrr;
   const totalPayableToman = Math.round(totalPayableIrr / 10);
+  const totalItemsCount = useMemo(() => cartLines.reduce((sum, l) => sum + l.quantity, 0), [cartLines]);
+
+  // Auto-dismiss floating toast feedback after 2.5 seconds
+  useEffect(() => {
+    if (!recentToast) return;
+    const t = setTimeout(() => setRecentToast(null), 2500);
+    return () => clearTimeout(t);
+  }, [recentToast]);
 
   // Direct Cart operations
   const handleAddToCart = (item: MenuItem) => {
+    setRecentToast({ title: item.titleFa, time: Date.now() });
     setCartLines((prev) => {
       const idx = prev.findIndex((l) => l.itemId === item.id);
       if (idx >= 0) {
@@ -553,6 +576,7 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
       setCartLines([]);
       setCustomerName('');
       setCustomerPhone('');
+      setIsMobileCartOpen(false);
       await fetchTablesAndOrders();
       await onRefresh();
     } catch (err: unknown) {
@@ -565,7 +589,7 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
     }
   };
 
-  // Kitchen Ticket Print - Premium Thermal Formatting
+  // Kitchen Ticket Print - Optimized & Clean Thermal Ticket Layout (No clipping or overflow)
   const handlePrintKitchenTicket = async (orderId: number) => {
     try {
       const res = await fetch(`/api/restaurant/kitchen-ticket/${orderId}`);
@@ -576,12 +600,12 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
       const linesHtml = t.items
         .map(
           (i: { titleFa: string; quantity: number; notesFa?: string }) => `
-        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; border-bottom: 1px dashed #334155; padding: 7px 0; align-items: center;">
-          <div style="text-align: right; flex: 1; padding-left: 8px;">
-            <span style="color: #0f172a; font-size: 14px;">${i.titleFa}</span>
-            ${i.notesFa ? `<div style="color: #ea580c; font-size: 11px; font-weight: bold; margin-top: 2px;">👈 توضیحات: ${i.notesFa}</div>` : ''}
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed #64748b; padding: 6px 0; gap: 6px; box-sizing: border-box;">
+          <div style="text-align: right; flex: 1; min-width: 0; word-break: break-word; overflow-wrap: break-word;">
+            <div style="color: #0f172a; font-size: 13px; font-weight: 900; line-height: 1.35;">${i.titleFa}</div>
+            ${i.notesFa ? `<div style="color: #c2410c; font-size: 11px; font-weight: 800; margin-top: 3px; background: #fff7ed; padding: 2px 4px; border-radius: 4px; border: 1px solid #fdba74; display: inline-block;">👈 توضیحات: ${i.notesFa}</div>` : ''}
           </div>
-          <div style="font-family: monospace, Tahoma; font-size: 18px; font-weight: 900; background: #0f172a; color: #ffffff; padding: 2px 8px; border-radius: 6px; min-width: 32px; text-align: center;">
+          <div style="font-family: monospace, Tahoma, sans-serif; font-size: 16px; font-weight: 900; background: #0f172a; color: #ffffff; padding: 2px 6px; border-radius: 6px; text-align: center; flex-shrink: 0; min-width: 30px;">
             ×${i.quantity}
           </div>
         </div>
@@ -590,31 +614,31 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
         .join('');
 
       const html = `
-        <div style="font-family: 'Vazirmatn', Tahoma, sans-serif; direction: rtl; width: 300px; margin: 0 auto; padding: 8px; color: #0f172a;">
-          <div style="text-align: center; border-bottom: 3px double #0f172a; padding-bottom: 8px; margin-bottom: 8px;">
-            <div style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase;">مجموعه رستوران و کافه مهرگان</div>
-            <h2 style="margin: 4px 0 0; font-size: 19px; font-weight: 900; color: #c2410c;">🔥 بن پخت آشپزخانه و بار</h2>
-            <div style="margin-top: 6px; font-size: 15px; font-weight: 900; background: #fff7ed; border: 1px solid #fdba74; padding: 4px; border-radius: 8px; color: #9a3412;">
-              شماره سفارش: ${t.orderNumber}
+        <div style="font-family: 'Vazirmatn', Tahoma, sans-serif; direction: rtl; width: 100%; max-width: 72mm; margin: 0 auto; padding: 2px; box-sizing: border-box; color: #0f172a; overflow: hidden; word-break: break-word;">
+          <div style="text-align: center; border-bottom: 2px dashed #0f172a; padding-bottom: 6px; margin-bottom: 6px;">
+            <div style="font-size: 9px; font-weight: 800; color: #64748b; letter-spacing: 0.5px;">مجموعه رستوران و کافه مهرگان</div>
+            <h2 style="margin: 2px 0 0; font-size: 16px; font-weight: 900; color: #c2410c;">🔥 بن آماده‌سازی آشپزخانه</h2>
+            <div style="margin-top: 4px; font-size: 14px; font-weight: 900; background: #fff7ed; border: 1px solid #fdba74; padding: 3px; border-radius: 6px; color: #9a3412; font-family: monospace, Tahoma;">
+              ${t.orderNumber}
             </div>
           </div>
 
-          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px; background: #f8fafc; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-            <span>نوع سفارش: <strong style="color: #0369a1;">${t.orderTypeFa}</strong></span>
-            <span>موقعیت / میز: <strong style="font-size: 16px; color: #c2410c;">${t.tableNumber}</strong></span>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px; background: #f8fafc; padding: 4px 6px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <span>سفارش: <strong style="color: #0369a1;">${t.orderTypeFa}</strong></span>
+            <span>میز سالن: <strong style="font-size: 15px; color: #c2410c;">${t.tableNumber}</strong></span>
           </div>
 
-          <div style="font-size: 11px; margin-bottom: 10px; color: #475569; text-align: center;">
-            📅 تاریخ: ${t.dateJalali} | ⏰ ساعت: ${t.time}
+          <div style="font-size: 10px; margin-bottom: 6px; color: #475569; text-align: center; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;">
+            تاریخ: ${t.dateJalali} | ساعت: ${t.time}
           </div>
 
-          <div style="border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: 4px 0; margin-bottom: 12px;">
+          <div style="margin-bottom: 8px;">
             ${linesHtml}
           </div>
 
-          <div style="text-align: center; border-top: 2px dashed #0f172a; padding-top: 8px; font-size: 10px; color: #475569; space-y: 2px;">
-            <strong>سرآشپز محترم:</strong> لطفاً طبق توضیحات و ترجیحات میهمان آماده‌سازی نمایید.<br/>
-            سامانه یکپارچه مدیریت رستوران مهرگان
+          <div style="text-align: center; border-top: 2px dashed #0f172a; padding-top: 6px; font-size: 9px; color: #475569; line-height: 1.4;">
+            <strong>سرآشپز گرامی:</strong> لطفاً با دقت به توضیحات آماده شود.<br/>
+            سامانه یکپارچه مهرگان
           </div>
         </div>
       `;
@@ -625,19 +649,19 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
     }
   };
 
-  // Customer Receipt Print - High Quality Styled Invoice Layout
+  // Customer Receipt Print - Optimized & Clean Thermal Invoice Layout
   const handlePrintCustomerReceipt = async (order: RestaurantOrderRecord) => {
     const linesHtml = order.lines
       .map(
         (l) => `
       <tr>
-        <td style="padding: 7px 5px; text-align: right; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">
+        <td style="padding: 5px 2px; text-align: right; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #1e293b; font-size: 10px; word-break: break-word;">
           ${l.itemTitleFa}
-          ${l.notesFa ? `<div style="font-size: 9px; color: #64748b; font-weight: normal;">${l.notesFa}</div>` : ''}
+          ${l.notesFa ? `<div style="font-size: 8px; color: #64748b; font-weight: normal;">${l.notesFa}</div>` : ''}
         </td>
-        <td style="padding: 7px 5px; text-align: center; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-weight: bold; font-size: 13px;">${l.quantity}</td>
-        <td style="padding: 7px 5px; text-align: left; border-bottom: 1px solid #e2e8f0; color: #475569;">${l.unitPriceIrr.toLocaleString('fa-IR')}</td>
-        <td style="padding: 7px 5px; text-align: left; border-bottom: 1px solid #e2e8f0; font-weight: 900; color: #0f172a;">${(l.quantity * l.unitPriceIrr).toLocaleString('fa-IR')}</td>
+        <td style="padding: 5px 2px; text-align: center; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-weight: bold; font-size: 11px;">${l.quantity}</td>
+        <td style="padding: 5px 2px; text-align: left; border-bottom: 1px solid #e2e8f0; color: #475569; font-size: 9px;">${l.unitPriceIrr.toLocaleString('fa-IR')}</td>
+        <td style="padding: 5px 2px; text-align: left; border-bottom: 1px solid #e2e8f0; font-weight: 900; color: #0f172a; font-size: 10px;">${(l.quantity * l.unitPriceIrr).toLocaleString('fa-IR')}</td>
       </tr>
     `
       )
@@ -646,32 +670,30 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
     const totalToman = Math.round(order.totalPayableIrr / 10);
 
     const html = `
-      <div style="font-family: 'Vazirmatn', Tahoma, sans-serif; direction: rtl; width: 340px; margin: 0 auto; padding: 12px; color: #0f172a; background: #ffffff;">
-        {/* Header Branding */}
-        <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px;">
-          <div style="font-size: 10px; font-weight: 900; letter-spacing: 1px; color: #c2410c; text-transform: uppercase;">MEHREGAN RESTAURANT & CAFE</div>
-          <h2 style="margin: 2px 0 0; font-size: 20px; font-weight: 900; color: #0f172a;">مجموعه رستوران و کافه مهرگان</h2>
-          <p style="margin: 3px 0 0; font-size: 11px; color: #64748b; font-weight: bold;">صورت‌حساب رسمی فروش غذا و خدمات پذیرایی</p>
+      <div style="font-family: 'Vazirmatn', Tahoma, sans-serif; direction: rtl; width: 100%; max-width: 72mm; margin: 0 auto; padding: 2px; color: #0f172a; background: #ffffff; box-sizing: border-box; overflow: hidden; word-break: break-word;">
+        <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 6px;">
+          <div style="font-size: 8px; font-weight: 900; letter-spacing: 0.5px; color: #c2410c; text-transform: uppercase;">MEHREGAN RESTAURANT</div>
+          <h2 style="margin: 2px 0 0; font-size: 15px; font-weight: 900; color: #0f172a;">مجموعه رستوران و کافه مهرگان</h2>
+          <p style="margin: 2px 0 0; font-size: 9px; color: #64748b; font-weight: bold;">صورت‌حساب فروش غذا و خدمات</p>
           
-          <div style="margin-top: 10px; font-size: 11px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 8px; display: flex; justify-content: space-between;">
-            <span>شماره فاکتور: <strong style="color: #0284c7;">${order.salesInvoiceNumber || order.orderNumber}</strong></span>
-            <span>میز / بخش: <strong>${order.tableNumber || 'بیرون‌بر'}</strong></span>
+          <div style="margin-top: 6px; font-size: 10px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 6px; border-radius: 6px; display: flex; justify-content: space-between;">
+            <span>فاکتور: <strong style="color: #0284c7;">${order.salesInvoiceNumber || order.orderNumber}</strong></span>
+            <span>میز: <strong>${order.tableNumber || 'بیرون‌بر'}</strong></span>
           </div>
 
-          <div style="font-size: 11px; text-align: right; margin-top: 6px; color: #334155; display: flex; justify-content: space-between;">
+          <div style="font-size: 9px; text-align: right; margin-top: 4px; color: #334155; display: flex; justify-content: space-between;">
             <span>مشتری: <strong>${order.customerNameFa || 'میهمان گرامی'}</strong></span>
             <span>تاریخ: <strong>${order.dateJalali}</strong></span>
           </div>
         </div>
 
-        {/* Items Table */}
-        <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 8px;">
           <thead>
-            <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; color: #334155;">
-              <th style="padding: 6px 5px; text-align: right; border: none;">شرح غذا / نوشیدنی</th>
-              <th style="padding: 6px 5px; text-align: center; border: none;">تعداد</th>
-              <th style="padding: 6px 5px; text-align: left; border: none;">فی (ریال)</th>
-              <th style="padding: 6px 5px; text-align: left; border: none;">جمع (ریال)</th>
+            <tr style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1; color: #334155;">
+              <th style="padding: 4px 2px; text-align: right; border: none; font-size: 9px;">شرح قلم</th>
+              <th style="padding: 4px 2px; text-align: center; border: none; font-size: 9px;">تعداد</th>
+              <th style="padding: 4px 2px; text-align: left; border: none; font-size: 9px;">فی</th>
+              <th style="padding: 4px 2px; text-align: left; border: none; font-size: 9px;">جمع</th>
             </tr>
           </thead>
           <tbody>
@@ -679,49 +701,45 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
           </tbody>
         </table>
 
-        {/* Price Totals Breakdown */}
-        <div style="border-top: 2px solid #0f172a; padding-top: 8px; font-size: 11px; line-height: 1.8;">
+        <div style="border-top: 1px solid #0f172a; padding-top: 6px; font-size: 10px; line-height: 1.6;">
           <div style="display: flex; justify-content: space-between; color: #475569;">
-            <span>جمع اقلام غذا و نوشیدنی:</span>
+            <span>جمع اقلام:</span>
             <span style="font-weight: bold;">${order.subtotalIrr.toLocaleString('fa-IR')} ریال</span>
           </div>
           ${
             order.serviceChargeIrr > 0
               ? `<div style="display: flex; justify-content: space-between; color: #475569;">
-                  <span>حق سرویس پذیرایی سالن (۵٪):</span>
+                  <span>سرویس سالن (۵٪):</span>
                   <span style="font-weight: bold;">${order.serviceChargeIrr.toLocaleString('fa-IR')} ریال</span>
                 </div>`
               : ''
           }
           <div style="display: flex; justify-content: space-between; color: #475569;">
-            <span>مالیات بر ارزش افزوده قانونی (۱۰٪):</span>
+            <span>ارزش افزوده (۱۰٪):</span>
             <span style="font-weight: bold;">${order.vatAmountIrr.toLocaleString('fa-IR')} ریال</span>
           </div>
           
-          <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; margin-top: 8px; border-top: 2px solid #0f172a; padding-top: 8px; background: #fff7ed; padding: 8px; border-radius: 8px; color: #7c2d12; border: 1px solid #ffedd5;">
-            <span>مبلغ قابل پرداخت:</span>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 900; margin-top: 4px; border-top: 1px dashed #0f172a; padding-top: 4px; background: #fff7ed; padding: 4px 6px; border-radius: 6px; color: #7c2d12; border: 1px solid #ffedd5;">
+            <span>مبلغ پرداخت:</span>
             <span>${order.totalPayableIrr.toLocaleString('fa-IR')} ریال</span>
           </div>
 
-          <div style="text-align: left; font-size: 11px; font-weight: 900; color: #c2410c; margin-top: 4px; padding-left: 4px;">
-            (معادل ${totalToman.toLocaleString('fa-IR')} تومان)
+          <div style="text-align: left; font-size: 10px; font-weight: 900; color: #c2410c; margin-top: 2px;">
+            (${totalToman.toLocaleString('fa-IR')} تومان)
           </div>
         </div>
 
-        {/* Footer Info */}
-        <div style="text-align: center; border-top: 1px dashed #cbd5e1; margin-top: 14px; padding-top: 10px; font-size: 10px; color: #64748b; line-height: 1.6;">
-          روش تسویه: <strong style="color: #0f172a;">${
+        <div style="text-align: center; border-top: 1px dashed #cbd5e1; margin-top: 8px; padding-top: 6px; font-size: 8px; color: #64748b; line-height: 1.5;">
+          تسویه: <strong style="color: #0f172a;">${
             order.paymentMethod === 'POS'
               ? 'کارتخوان بانکی'
               : order.paymentMethod === 'CASH'
               ? 'نقدی'
-              : 'حساب دفتری اعتباری'
+              : 'اعتباری دفتری'
+          }</strong> | سند: <strong style="color: #4f46e5;">${
+            order.accountingDocNumber || 'DOC-REST'
           }</strong><br/>
-          کد رهگیری سند حسابداری: <strong style="color: #4f46e5;">${
-            order.accountingDocNumber || 'DOC-REST-AUTO'
-          }</strong><br/>
-          آدرس: تهران، خیابان ولیعصر، بالاتر از پارک وی، پلاک ۱۲۸۸<br/>
-          <span style="font-weight: bold; color: #0f172a; display: block; margin-top: 4px;">از حضور گرم و انتخاب شما صمیمانه سپاسگزاریم! ❤️</span>
+          <span style="font-weight: bold; color: #0f172a; display: block; margin-top: 2px;">از حضور گرم شما صمیمانه سپاسگزاریم!</span>
         </div>
       </div>
     `;
@@ -741,6 +759,86 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
       await fetchTablesAndOrders();
     } catch {
       // ignore
+    }
+  };
+
+  // Table Management Actions (Add & Delete Tables)
+  const handleOpenAddTableModal = () => {
+    // Generate next table number hint like T-09
+    const existingNums = tables.map((t) => t.tableNumber);
+    let nextNum = 'T-01';
+    for (let i = 1; i <= 99; i++) {
+      const candidate = `T-${String(i).padStart(2, '0')}`;
+      if (!existingNums.includes(candidate)) {
+        nextNum = candidate;
+        break;
+      }
+    }
+    setNewTableNumber(nextNum);
+    setNewTableTitleFa(`میز ${nextNum}`);
+    setNewTableCapacity(4);
+    setNewTableSectionFa('سالن اصلی');
+    setTableModalError(null);
+    setIsAddingTableModalOpen(true);
+  };
+
+  const handleSaveNewTable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTableNumber.trim()) {
+      setTableModalError('لطفاً شماره یا کد میز را وارد کنید.');
+      return;
+    }
+    setIsSubmittingTable(true);
+    setTableModalError(null);
+    try {
+      const res = await fetch('/api/restaurant/tables', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableNumber: newTableNumber.trim(),
+          titleFa: newTableTitleFa.trim() || `میز ${newTableNumber.trim()}`,
+          capacity: Number(newTableCapacity) || 4,
+          sectionFa: newTableSectionFa.trim() || 'سالن اصلی',
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.messageFa || 'خطا در ثبت میز جدید.');
+      }
+      setTables((prev) => [...prev, json.table]);
+      setOrderFeedback({ type: 'success', message: `میز ${json.table.titleFa} با موفقیت افزوده شد.` });
+      setIsAddingTableModalOpen(false);
+      await onRefresh();
+    } catch (err: unknown) {
+      setTableModalError(err instanceof Error ? err.message : 'خطا در افزودن میز.');
+    } finally {
+      setIsSubmittingTable(false);
+    }
+  };
+
+  const handleConfirmDeleteTable = async () => {
+    if (!deletingTable) return;
+    setIsDeletingTableLoading(true);
+    try {
+      const res = await fetch(`/api/restaurant/tables/${deletingTable.id}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.messageFa || 'خطا در حذف میز.');
+      }
+      setTables((prev) => prev.filter((t) => t.id !== deletingTable.id));
+      if (selectedTableNumber === deletingTable.tableNumber) {
+        const remaining = tables.filter((t) => t.id !== deletingTable.id);
+        if (remaining.length > 0) setSelectedTableNumber(remaining[0].tableNumber);
+      }
+      setOrderFeedback({ type: 'success', message: `میز «${deletingTable.titleFa}» با موفقیت حذف گردید.` });
+      setDeletingTable(null);
+      await onRefresh();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'خطا در حذف میز.');
+    } finally {
+      setIsDeletingTableLoading(false);
     }
   };
 
@@ -925,6 +1023,301 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
     }
   };
 
+  // Floating Live Cart & Invoice Panel Renderer (Used in Sticky Desktop Sidebar & Mobile Drawer)
+  const renderCartCardContent = (isDrawer = false) => (
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
+      {/* Top Header & Table/Customer Selection - Fixed Top */}
+      <div className="shrink-0 space-y-2 pb-2.5 border-b border-slate-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center text-orange-700 shrink-0">
+              <Receipt className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-xs font-black text-slate-900">
+                  کاردکس فاکتور و صدور سفارش
+                </h3>
+                {totalItemsCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-orange-600 text-white text-[10px] font-black">
+                    {totalItemsCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] text-slate-500 block">
+                {cartLines.length > 0 ? `${cartLines.length} ردیف کالا انتخاب شده` : 'در انتظار انتخاب غذا'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {cartLines.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setCartLines([])}
+                className="text-[11px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer hover:underline px-1"
+              >
+                پاک کردن
+              </button>
+            )}
+            {isDrawer && (
+              <button
+                type="button"
+                onClick={() => setIsMobileCartOpen(false)}
+                className="w-7 h-7 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Order Type Toggle */}
+        <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl text-xs font-bold text-center">
+          <button
+            type="button"
+            onClick={() => setOrderType('DINE_IN')}
+            className={`py-1 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px] ${
+              orderType === 'DINE_IN'
+                ? 'bg-white text-orange-950 shadow-xs font-black'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <UtensilsCrossed className="w-3 h-3" />
+            <span>سالن</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setOrderType('TAKEAWAY')}
+            className={`py-1 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px] ${
+              orderType === 'TAKEAWAY'
+                ? 'bg-white text-orange-950 shadow-xs font-black'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <ShoppingBag className="w-3 h-3" />
+            <span>بیرون‌بر</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setOrderType('DELIVERY')}
+            className={`py-1 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px] ${
+              orderType === 'DELIVERY'
+                ? 'bg-white text-orange-950 shadow-xs font-black'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Bike className="w-3 h-3" />
+            <span>پیک</span>
+          </button>
+        </div>
+
+        {/* Table or Customer selector */}
+        <div>
+          {orderType === 'DINE_IN' ? (
+            <div className="space-y-1 text-xs">
+              <div className="flex items-center justify-between">
+                <label className="block font-bold text-slate-700 text-[11px]">شماره میز سالن:</label>
+                <button
+                  type="button"
+                  onClick={handleOpenAddTableModal}
+                  className="text-[10px] text-orange-600 hover:text-orange-800 font-bold flex items-center gap-0.5 cursor-pointer hover:underline"
+                  title="افزودن میز جدید به سالن"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>افزودن میز</span>
+                </button>
+              </div>
+              <select
+                value={selectedTableNumber}
+                onChange={(e) => setSelectedTableNumber(e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:bg-white text-xs"
+              >
+                {tables.map((t) => (
+                  <option key={t.id} value={t.tableNumber}>
+                    {t.titleFa} - {t.capacity} نفره ({t.sectionFa}) {t.status === 'OCCUPIED' ? '⚠️ اشغال' : '✔ آزاد'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-1.5 text-xs">
+              <div className="space-y-0.5">
+                <label className="block font-bold text-slate-700 text-[10px]">نام مشتری:</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="آقای احمدی"
+                  className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+                />
+              </div>
+              <div className="space-y-0.5">
+                <label className="block font-bold text-slate-700 text-[10px]">شماره تماس:</label>
+                <input
+                  type="text"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="0912..."
+                  className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-xl text-left font-mono text-xs"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cart Items List - Scrollable middle flex section */}
+      <div className={`space-y-1.5 overflow-y-auto overflow-x-hidden pr-1 flex-1 min-h-0 my-1.5 ${isDrawer ? 'max-h-[38vh]' : ''}`}>
+        {cartLines.length === 0 ? (
+          <div className="py-6 text-center text-slate-400 space-y-1.5 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 my-auto">
+            <UtensilsCrossed className="w-7 h-7 mx-auto opacity-30 text-orange-600" />
+            <p className="text-xs font-bold text-slate-600">سبد سفارش خالی است.</p>
+            <p className="text-[10px] text-slate-400 max-w-[200px] mx-auto">
+              روی هر غذا در منو کلیک کنید تا بلافاصله به این فاکتور اضافه شود.
+            </p>
+          </div>
+        ) : (
+          cartLines.map((line) => (
+            <div
+              key={line.itemId}
+              className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1 hover:bg-orange-50/30 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-black text-slate-800 line-clamp-1 text-[11px]">{line.itemTitleFa}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveLine(line.itemId)}
+                  className="text-slate-400 hover:text-rose-600 cursor-pointer p-0.5"
+                  title="حذف قلم"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between pt-0.5">
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateQty(line.itemId, -1)}
+                    className="w-4 h-4 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded cursor-pointer font-bold"
+                  >
+                    <Minus className="w-2.5 h-2.5" />
+                  </button>
+                  <span className="font-black px-1 text-[11px] text-slate-900">{line.quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateQty(line.itemId, 1)}
+                    className="w-4 h-4 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded cursor-pointer font-bold"
+                  >
+                    <Plus className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+
+                <div className="text-left font-black text-slate-900 text-xs">
+                  {(line.quantity * line.unitPriceIrr).toLocaleString('fa-IR')}{' '}
+                  <span className="text-[9px] font-normal text-slate-500">ریال</span>
+                </div>
+              </div>
+
+              {/* Kitchen Note */}
+              <input
+                type="text"
+                value={line.notesFa || ''}
+                onChange={(e) => handleUpdateNote(line.itemId, e.target.value)}
+                placeholder="یادداشت سرآشپز (مثلاً: کم‌نمک، سس جدا...)"
+                className="w-full text-[10px] px-2 py-0.5 bg-white border border-slate-200 rounded-lg text-slate-700 focus:ring-1 focus:ring-orange-400"
+              />
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Payment Method Selector & Totals Breakdown & SUBMIT BUTTON - Always visible pinned bottom */}
+      <div className="shrink-0 mt-auto pt-2 border-t border-slate-200 bg-white/95 space-y-2">
+        <div className="space-y-1 text-xs">
+          <div className="grid grid-cols-3 gap-1 text-[10px] font-bold text-center">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('POS')}
+              className={`py-1 rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                paymentMethod === 'POS'
+                  ? 'bg-emerald-50 text-emerald-950 border-emerald-400 ring-2 ring-emerald-300 font-black'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <CreditCard className="w-3 h-3 text-emerald-600" />
+              <span>کارتخوان</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('CASH')}
+              className={`py-1 rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                paymentMethod === 'CASH'
+                  ? 'bg-emerald-50 text-emerald-950 border-emerald-400 ring-2 ring-emerald-300 font-black'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <DollarSign className="w-3 h-3 text-emerald-600" />
+              <span>نقدی</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('OPEN_CREDIT')}
+              className={`py-1 rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                paymentMethod === 'OPEN_CREDIT'
+                  ? 'bg-amber-50 text-amber-950 border-amber-400 ring-2 ring-amber-300 font-black'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <FileText className="w-3 h-3 text-amber-600" />
+              <span>حساب باز</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Totals Breakdown */}
+        <div className="space-y-1 text-xs bg-slate-50 p-2 rounded-xl border border-slate-200">
+          <div className="flex justify-between text-slate-600 text-[10px]">
+            <span>جمع اقلام ({totalItemsCount} عدد):</span>
+            <span className="font-bold">{subtotalIrr.toLocaleString('fa-IR')} ریال</span>
+          </div>
+          {(serviceChargeIrr > 0 || vatAmountIrr > 0) && (
+            <div className="flex justify-between text-slate-500 text-[10px]">
+              <span>مالیات (۱۰٪){serviceChargeIrr > 0 ? ' + سرویس (۵٪)' : ''}:</span>
+              <span className="font-semibold">{(vatAmountIrr + serviceChargeIrr).toLocaleString('fa-IR')} ریال</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center font-black text-slate-900 pt-1 border-t border-slate-200 text-xs">
+            <span>مبلغ نهایی فاکتور:</span>
+            <div className="text-left">
+              <span className="text-orange-950 font-black text-sm">
+                {totalPayableIrr.toLocaleString('fa-IR')}
+              </span>{' '}
+              <span className="text-[9px] text-slate-500 font-normal">ریال</span>
+              <span className="block text-[10px] font-black text-orange-600">
+                (معادل {totalPayableToman.toLocaleString('fa-IR')} تومان)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit & Send to Kitchen Button - Pinned at bottom, always fully visible */}
+        <Button
+          variant="primary"
+          onClick={handleSubmitOrder}
+          disabled={isSubmittingOrder || cartLines.length === 0}
+          className="w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 hover:from-orange-700 hover:to-amber-800 text-white font-black py-2.5 px-3 rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer text-xs flex items-center justify-center gap-1.5"
+          leftIcon={<Printer className="w-4 h-4 shrink-0" />}
+        >
+          <span className="truncate">
+            {isSubmittingOrder ? 'در حال صدور فاکتور و ارسال به آشپزخانه...' : 'ثبت فاکتور، کسر انبار و ارسال به آشپزخانه'}
+          </span>
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {/* Top Header Card */}
@@ -1065,7 +1458,7 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
       {/* SECTION 1: POS TOUCH ORDER & VISUAL MENU (کاردکس تصویری غذا و نوشیدنی) */}
       {/* ========================================================================= */}
       {activeTabSection === 'POS_ORDER' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
           {/* Main Visual Food Menu (8 cols) */}
           <div className="lg:col-span-8 space-y-4">
             {/* Search and Category Filter Toolbar */}
@@ -1085,6 +1478,22 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
                 <div className="text-xs text-slate-500 font-bold shrink-0 flex items-center gap-2">
                   <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
                   <span>نمایش {filteredMenuItems.length} آیتم فعال در منو</span>
+                  {totalItemsCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.innerWidth < 1024) {
+                          setIsMobileCartOpen(true);
+                        } else {
+                          document.getElementById('restaurant-cart-sidebar')?.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-orange-600 text-white font-black text-[11px] hover:bg-orange-700 transition-all shadow-xs cursor-pointer mr-2 animate-in fade-in"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      <span>فاکتور جاری ({totalItemsCount} قلم)</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setActiveTabSection('MENU_CUSTOMIZATION')}
@@ -1154,11 +1563,17 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
 
                       {/* Badges */}
-                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 flex-wrap">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-white/90 text-slate-800 shadow-xs backdrop-blur-xs flex items-center gap-1">
                           <span>{item.iconText}</span>
                           <span>{item.categoryFa}</span>
                         </span>
+                        {countInCart > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-orange-600 text-white shadow-md flex items-center gap-1 animate-in zoom-in-75">
+                            <CheckCircle2 className="w-3 h-3 text-white" />
+                            <span>{countInCart} در فاکتور</span>
+                          </span>
+                        )}
                       </div>
 
                       {item.badgeFa && (
@@ -1251,263 +1666,67 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
             </div>
           </div>
 
-          {/* Sidebar POS Order Cart (4 cols) */}
-          <div className="lg:col-span-4 space-y-4">
-            <Card className="p-5 border-orange-200 shadow-xl space-y-4 sticky top-4 rounded-3xl bg-white/95 backdrop-blur-md">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center text-orange-700">
-                    <Receipt className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-black text-slate-900">
-                      کاردکس زنده فاکتور و صدور سفارش
-                    </h3>
-                    <span className="text-[10px] text-slate-500">
-                      {cartLines.length > 0 ? `${cartLines.length} قلم در سبد انتخاب شده` : 'در انتظار انتخاب غذا'}
-                    </span>
-                  </div>
-                </div>
-
-                {cartLines.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setCartLines([])}
-                    className="text-[11px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer hover:underline"
-                  >
-                    پاک کردن
-                  </button>
-                )}
-              </div>
-
-              {/* Order Type Toggle */}
-              <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl text-xs font-bold text-center">
-                <button
-                  type="button"
-                  onClick={() => setOrderType('DINE_IN')}
-                  className={`py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    orderType === 'DINE_IN'
-                      ? 'bg-white text-orange-950 shadow-sm font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <UtensilsCrossed className="w-3.5 h-3.5" />
-                  <span>سالن</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrderType('TAKEAWAY')}
-                  className={`py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    orderType === 'TAKEAWAY'
-                      ? 'bg-white text-orange-950 shadow-sm font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  <span>بیرون‌بر</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrderType('DELIVERY')}
-                  className={`py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    orderType === 'DELIVERY'
-                      ? 'bg-white text-orange-950 shadow-sm font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Bike className="w-3.5 h-3.5" />
-                  <span>پیک</span>
-                </button>
-              </div>
-
-              {/* Table or Customer selector */}
-              {orderType === 'DINE_IN' ? (
-                <div className="space-y-1 text-xs">
-                  <label className="block font-bold text-slate-700">انتخاب شماره میز سالن:</label>
-                  <select
-                    value={selectedTableNumber}
-                    onChange={(e) => setSelectedTableNumber(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:bg-white"
-                  >
-                    {tables.map((t) => (
-                      <option key={t.id} value={t.tableNumber}>
-                        {t.titleFa} - {t.capacity} نفره ({t.sectionFa}) {t.status === 'OCCUPIED' ? '⚠️ اشغال' : '✔ آزاد'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="space-y-1">
-                    <label className="block font-bold text-slate-700">نام مشتری:</label>
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="آقای احمدی"
-                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block font-bold text-slate-700">شماره تماس:</label>
-                    <input
-                      type="text"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      placeholder="0912..."
-                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-left font-mono"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Cart Items List */}
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {cartLines.length === 0 ? (
-                  <div className="py-10 text-center text-slate-400 space-y-2.5 border-2 border-dashed border-slate-200 rounded-2xl">
-                    <UtensilsCrossed className="w-9 h-9 mx-auto opacity-30 text-orange-600" />
-                    <p className="text-xs font-bold text-slate-600">سبد سفارش در حال حاضر خالی است.</p>
-                    <p className="text-[11px] text-slate-400 max-w-[200px] mx-auto">
-                      روی هر کدام از تصاویر یا کارت‌های منو کلیک کنید تا بلافاصله افزوده شود.
-                    </p>
-                  </div>
-                ) : (
-                  cartLines.map((line) => (
-                    <div
-                      key={line.itemId}
-                      className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 hover:bg-orange-50/20 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-black text-slate-800 line-clamp-1">{line.itemTitleFa}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveLine(line.itemId)}
-                          className="text-slate-400 hover:text-rose-600 cursor-pointer p-0.5"
-                          title="حذف قلم"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-0.5">
-                        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-0.5 shadow-xs">
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateQty(line.itemId, -1)}
-                            className="w-5 h-5 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="font-black px-1 text-slate-900">{line.quantity}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateQty(line.itemId, 1)}
-                            className="w-5 h-5 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        </div>
-
-                        <div className="text-left font-black text-slate-900">
-                          {(line.quantity * line.unitPriceIrr).toLocaleString('fa-IR')}{' '}
-                          <span className="text-[10px] font-normal text-slate-500">ریال</span>
-                        </div>
-                      </div>
-
-                      {/* Kitchen Note */}
-                      <input
-                        type="text"
-                        value={line.notesFa || ''}
-                        onChange={(e) => handleUpdateNote(line.itemId, e.target.value)}
-                        placeholder="یادداشت آشپزخانه (مثلاً: کم‌نمک، سس اضافه...)"
-                        className="w-full text-[11px] px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-slate-700 focus:ring-1 focus:ring-orange-400"
-                      />
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Payment Method Selector */}
-              <div className="space-y-1.5 text-xs pt-2 border-t border-slate-200">
-                <span className="block font-bold text-slate-700">روش تسویه فاکتور:</span>
-                <div className="grid grid-cols-3 gap-1.5 text-[11px] font-bold text-center">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('POS')}
-                    className={`py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                      paymentMethod === 'POS'
-                        ? 'bg-emerald-50 text-emerald-950 border-emerald-400 ring-2 ring-emerald-300 font-black'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>کارتخوان</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('CASH')}
-                    className={`py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                      paymentMethod === 'CASH'
-                        ? 'bg-emerald-50 text-emerald-950 border-emerald-400 ring-2 ring-emerald-300 font-black'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>نقدی</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('OPEN_CREDIT')}
-                    className={`py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                      paymentMethod === 'OPEN_CREDIT'
-                        ? 'bg-amber-50 text-amber-950 border-amber-400 ring-2 ring-amber-300 font-black'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <FileText className="w-3.5 h-3.5 text-amber-600" />
-                    <span>حساب باز</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Totals Breakdown */}
-              <div className="space-y-1.5 text-xs bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                <div className="flex justify-between text-slate-600">
-                  <span>جمع اقلام غذا و نوشیدنی:</span>
-                  <span className="font-bold">{subtotalIrr.toLocaleString('fa-IR')} ریال</span>
-                </div>
-                {serviceChargeIrr > 0 && (
-                  <div className="flex justify-between text-slate-600">
-                    <span>حق سرویس سالن (۵٪):</span>
-                    <span className="font-bold">{serviceChargeIrr.toLocaleString('fa-IR')} ریال</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-slate-600">
-                  <span>مالیات بر ارزش افزوده (۱۰٪):</span>
-                  <span className="font-bold">{vatAmountIrr.toLocaleString('fa-IR')} ریال</span>
-                </div>
-                <div className="flex justify-between font-black text-slate-900 pt-2 border-t border-slate-200 text-sm">
-                  <span>جمع کل فاکتور:</span>
-                  <span className="text-orange-950 font-black">
-                    {totalPayableIrr.toLocaleString('fa-IR')} ریال
-                  </span>
-                </div>
-                <div className="text-left text-[11px] font-black text-orange-700">
-                  معادل {totalPayableToman.toLocaleString('fa-IR')} تومان
-                </div>
-              </div>
-
-              {/* Submit & Send to Kitchen Button */}
-              <Button
-                variant="primary"
-                onClick={handleSubmitOrder}
-                disabled={isSubmittingOrder || cartLines.length === 0}
-                className="w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 hover:from-orange-700 hover:to-amber-800 text-white font-black py-3.5 rounded-2xl shadow-lg transition-all cursor-pointer"
-                leftIcon={<Printer className="w-4 h-4" />}
-              >
-                {isSubmittingOrder ? 'در حال ثبت فاکتور و ارسال به آشپزخانه...' : 'ثبت فاکتور، کسر انبار و ارسال به آشپزخانه'}
-              </Button>
+          {/* Sidebar POS Order Cart (4 cols) - Sticky & Floating alongside scrolling menu */}
+          <div id="restaurant-cart-sidebar" className="lg:col-span-4 lg:sticky lg:top-24 lg:self-start z-20 space-y-4">
+            <Card className="p-3.5 sm:p-4 border-orange-200/90 shadow-2xl rounded-3xl bg-white/95 backdrop-blur-md h-[calc(100vh-6.5rem)] max-h-[840px] min-h-[460px] flex flex-col overflow-hidden ring-1 ring-orange-500/10">
+              {renderCartCardContent(false)}
             </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Real-time Added Item Floating Toast Confirmation */}
+      {recentToast && activeTabSection === 'POS_ORDER' && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white px-4 py-2.5 rounded-full shadow-2xl border border-orange-500/50 backdrop-blur-md flex items-center gap-2.5 animate-in fade-in slide-in-from-top-3 duration-200 text-xs font-bold pointer-events-none">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-orange-300 font-black">«{recentToast.title}»</span>
+          <span className="text-slate-200">به فاکتور اضافه شد</span>
+          <span className="bg-orange-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black mr-1">
+            {totalItemsCount} قلم
+          </span>
+        </div>
+      )}
+
+      {/* Mobile / Tablet Floating Order Bar (when scrolling down menu) */}
+      {cartLines.length > 0 && activeTabSection === 'POS_ORDER' && (
+        <div className="lg:hidden fixed bottom-4 inset-x-3 z-40 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-2xl shadow-2xl border border-orange-500/40 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="relative">
+                <div className="w-9 h-9 rounded-xl bg-orange-600/30 border border-orange-500/50 flex items-center justify-center text-orange-400">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-orange-600 text-white rounded-full text-[10px] font-black flex items-center justify-center shadow-md">
+                  {totalItemsCount}
+                </span>
+              </div>
+              <div>
+                <div className="text-xs font-black text-amber-300">
+                  {totalPayableToman.toLocaleString('fa-IR')} تومان
+                </div>
+                <div className="text-[10px] text-slate-300">
+                  {cartLines.length} ردیف کالا در فاکتور جاری
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileCartOpen(true)}
+              className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>مشاهده فاکتور و ثبت</span>
+              <span className="text-sm">🧾</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile / Tablet Floating Cart Drawer Modal */}
+      {isMobileCartOpen && activeTabSection === 'POS_ORDER' && (
+        <div className="lg:hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl border border-orange-300 max-h-[92vh] flex flex-col animate-in slide-in-from-bottom-4 duration-300">
+            {renderCartCardContent(true)}
           </div>
         </div>
       )}
@@ -1910,15 +2129,18 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
         <Card className="p-6 space-y-4 rounded-3xl border-slate-200 shadow-md">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div>
-              <h3 className="text-base font-black text-slate-800">
-                نقشه وضعیت میزهای سالن و فضاهای پذیرایی
+              <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+                <span>نقشه و مدیریت جامع میزهای سالن و پذیرایی</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 font-bold">
+                  {tables.length} میز فعال
+                </span>
               </h3>
-              <p className="text-xs text-slate-500">
-                مشاهده بلادرنگ میزهای اشغال، جاری، رزرو و امکان تغییر سریع وضعیت میز پس از خروج مشتری
+              <p className="text-xs text-slate-500 mt-0.5">
+                مشاهده بلادرنگ میزها، تغییر وضعیت اشغال/تخلیه، افزودن میز جدید و حذف میزهای اضافه
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-2 text-xs flex-wrap">
               <span className="text-slate-500 font-bold">فیلتر بخش:</span>
               <select
                 value={tableSectionFilter}
@@ -1930,7 +2152,19 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
                 <option value="تراس و بالکن">تراس و بالکن</option>
                 <option value="سالن VIP">سالن VIP اختصاصی</option>
                 <option value="طبقه دوم">طبقه دوم</option>
+                <option value="روف گاردن">روف گاردن</option>
+                <option value="فضای باز">فضای باز</option>
               </select>
+
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleOpenAddTableModal}
+                className="bg-orange-600 hover:bg-orange-700 text-white font-black text-xs"
+                leftIcon={<Plus className="w-4 h-4" />}
+              >
+                افزودن میز جدید
+              </Button>
             </div>
           </div>
 
@@ -1952,7 +2186,27 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono font-black text-sm text-slate-800">{table.tableNumber}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-black text-sm text-slate-800">{table.tableNumber}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (table.status === 'OCCUPIED') {
+                              alert('میز در وضعیت اشغال است و امکان حذف آن وجود ندارد. لطفاً ابتدا میز را تخلیه و تسویه نمایید.');
+                              return;
+                            }
+                            setDeletingTable(table);
+                          }}
+                          className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                            table.status === 'OCCUPIED'
+                              ? 'text-slate-300 hover:text-slate-400 cursor-not-allowed'
+                              : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                          }`}
+                          title={table.status === 'OCCUPIED' ? 'میز اشغال قابل حذف نیست' : 'حذف این میز'}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
                           isOccupied
@@ -1978,7 +2232,7 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
                       )}
                     </div>
 
-                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between gap-1.5">
                       <Button
                         size="sm"
                         variant={isOccupied ? 'outline' : 'secondary'}
@@ -2386,6 +2640,171 @@ export const RestaurantCafeManagementView: React.FC<RestaurantCafeManagementView
                 leftIcon={<Save className="w-3.5 h-3.5" />}
               >
                 ذخیره آیتم در منو
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: Add New Restaurant Table (افزودن میز جدید سالن) */}
+      {/* ========================================================================= */}
+      {isAddingTableModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-orange-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center font-black">
+                  <UtensilsCrossed className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">تعریف و افزودن میز جدید</h3>
+                  <span className="text-[11px] text-slate-500">مشخصات میز را جهت افزوده شدن به نقشه سالن وارد کنید</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddingTableModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {tableModalError && (
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{tableModalError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveNewTable} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block font-bold text-slate-700">کد / شماره میز: *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newTableNumber}
+                    onChange={(e) => setNewTableNumber(e.target.value.toUpperCase())}
+                    placeholder="مثلاً: T-09 یا VIP-02"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-center font-black text-slate-900 focus:bg-white focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block font-bold text-slate-700">ظرفیت (تعداد نفرات):</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    required
+                    value={newTableCapacity}
+                    onChange={(e) => setNewTableCapacity(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-center font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block font-bold text-slate-700">عنوان یا نام نمایشی میز:</label>
+                <input
+                  type="text"
+                  value={newTableTitleFa}
+                  onChange={(e) => setNewTableTitleFa(e.target.value)}
+                  placeholder="مثلاً: میز ۴ نفره پنجره یا میز VIP گرد"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-orange-400"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block font-bold text-slate-700">بخش / فضای استقرار میز:</label>
+                <select
+                  value={newTableSectionFa}
+                  onChange={(e) => setNewTableSectionFa(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-orange-400"
+                >
+                  <option value="سالن اصلی">سالن اصلی</option>
+                  <option value="تراس و بالکن">تراس و بالکن</option>
+                  <option value="سالن VIP">سالن VIP اختصاصی</option>
+                  <option value="طبقه دوم">طبقه دوم</option>
+                  <option value="روف گاردن">روف گاردن</option>
+                  <option value="فضای باز">فضای باز / حیاط</option>
+                </select>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsAddingTableModalOpen(false)}
+                >
+                  انصراف
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={isSubmittingTable}
+                  className="bg-orange-600 hover:bg-orange-700 text-white font-black"
+                  leftIcon={<Plus className="w-4 h-4" />}
+                >
+                  {isSubmittingTable ? 'در حال ثبت...' : 'افزودن و ذخیره میز'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: Delete Restaurant Table Confirmation (حذف میز) */}
+      {/* ========================================================================= */}
+      {deletingTable && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+              <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center font-black shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900">حذف میز از سالن</h3>
+                <span className="text-[11px] text-slate-500">حذف دائم رکورد میز پذیرایی</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <p>
+                آیا از حذف دائم میز <strong className="text-rose-900">«{deletingTable.titleFa}»</strong> با کد{' '}
+                <span className="font-mono font-bold bg-white px-2 py-0.5 rounded-lg border border-slate-200 text-slate-900">
+                  {deletingTable.tableNumber}
+                </span>{' '}
+                ({deletingTable.sectionFa} - {deletingTable.capacity} نفره) اطمینان دارید؟
+              </p>
+              <p className="text-[11px] text-slate-500">
+                توجه: اطلاعات فاکتورها و سوابق مالی قبلی که با این میز ثبت شده‌اند در دفاتر مالی حفظ خواهند شد.
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setDeletingTable(null)}
+                disabled={isDeletingTableLoading}
+              >
+                انصراف
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleConfirmDeleteTable}
+                disabled={isDeletingTableLoading}
+                leftIcon={<Trash2 className="w-4 h-4" />}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-black"
+              >
+                {isDeletingTableLoading ? 'در حال حذف میز...' : 'بله، میز حذف شود'}
               </Button>
             </div>
           </div>

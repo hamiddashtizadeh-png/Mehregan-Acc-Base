@@ -88,6 +88,7 @@ import {
   ProjectRecord,
   ProjectMaterialRequisitionStatus,
   ProjectMaterialRequisitionRecord,
+  RequisitionLineItem,
   ProjectProfitabilityDetail,
   QuickSettlementPayload,
   FixedAssetRecord,
@@ -8267,17 +8268,23 @@ export class FoundationStore {
     const processedLines: SalesInvoiceLine[] = [];
 
     for (const line of data.lines) {
-      const item = itemMap.get(line.itemId);
-      if (!item) throw new Error(`کالا با شناسه [${line.itemId}] یافت نشد.`);
+      const item = line.itemId ? itemMap.get(line.itemId) : null;
+      if (!item && !(line as any).itemTitleFa) {
+        throw new Error(`کالا با شناسه [${line.itemId}] یافت نشد.`);
+      }
+
+      const itemTitleFa = item ? item.titleFa : ((line as any).itemTitleFa || 'کالای سفارشی/خدمات');
+      const itemCode = item ? item.itemCode : 'CUSTOM';
+      const unitNameFa = item ? (item.unitNameFa || 'عدد') : ((line as any).unitNameFa || 'عدد');
 
       const qty = Number(line.quantity) || 1;
       const unitPrice = Number(line.unitPriceIrr) || 0;
       const discount = Number(line.discountIrr) || 0;
       const vat = Number(line.vatAmountIrr) || 0;
-      const isServiceLine = Boolean(line.isService || line.skipInventoryMovement || data.isService || data.skipInventoryMovement);
+      const isServiceLine = !item || Boolean(line.isService || line.skipInventoryMovement || data.isService || data.skipInventoryMovement);
 
       // Validate serial numbers for serialized items
-      if (item.isSerialized && !isServiceLine) {
+      if (item && item.isSerialized && !isServiceLine) {
         if (!line.serialNumbers || line.serialNumbers.length === 0) {
           // Auto-select available IN_STOCK serials from source warehouse
           const availableInStock = (this.dbState.itemSerials || []).filter(
@@ -8343,10 +8350,10 @@ export class FoundationStore {
 
       processedLines.push({
         id: processedLines.length + 1,
-        itemId: item.id,
-        itemCode: item.itemCode,
-        itemTitleFa: item.titleFa,
-        unitNameFa: item.unitNameFa || 'عدد',
+        itemId: item ? item.id : 0,
+        itemCode,
+        itemTitleFa,
+        unitNameFa,
         quantity: qty,
         unitPriceIrr: unitPrice,
         discountIrr: discount,
@@ -12468,9 +12475,10 @@ export class FoundationStore {
   public createProjectRequisition(
     data: {
       projectId: number;
-      itemId: number;
+      itemId?: number;
+      items?: RequisitionLineItem[];
       sourceWarehouseId?: number;
-      requestedQty: number;
+      requestedQty?: number;
       serials?: string[];
       notesFa?: string;
     },
@@ -12488,15 +12496,44 @@ export class FoundationStore {
     const projectOrJobTitle = project ? project.titleFa : job!.titleFa;
     const installerName = (project ? project.installerTitleFa : job!.installerTitleFa) || 'کارشناس اجرایی';
 
-    const item = this.getItems().find((i) => i.id === data.itemId);
-    if (!item) throw new Error('کالای مورد نظر در کاتالوگ انبار یافت نشد.');
+    let formattedItems: RequisitionLineItem[] = [];
 
-    const qty = Number(data.requestedQty) || 0;
-    if (qty <= 0) throw new Error('تعداد درخواستی کالا باید بزرگتر از صفر باشد.');
+    if (Array.isArray(data.items) && data.items.length > 0) {
+      formattedItems = data.items.map((item, idx) => ({
+        id: item.id || `line-${Date.now()}-${idx}`,
+        itemId: item.itemId || null,
+        itemCode: item.itemCode || null,
+        itemNameFa: item.itemNameFa?.trim() || 'کالای سفارشی',
+        requestedQty: Number(item.requestedQty) > 0 ? Number(item.requestedQty) : 1,
+        unitFa: item.unitFa?.trim() || 'عدد',
+        approvedQty: Number(item.approvedQty) || Number(item.requestedQty) || 0,
+        actualConsumedQty: Number(item.actualConsumedQty) || Number(item.requestedQty) || 0,
+        unitPriceIrr: Number(item.unitPriceIrr) || 0,
+        totalPriceIrr: Number(item.totalPriceIrr) || 0,
+        notesFa: item.notesFa?.trim() || null,
+      }));
+    } else {
+      const item = this.getItems().find((i) => i.id === data.itemId);
+      const itemNameFa = item ? item.titleFa : 'کالای درخواستی/سفارشی';
+      const qty = Number(data.requestedQty) || 1;
+      formattedItems = [
+        {
+          id: `line-${Date.now()}-0`,
+          itemId: item ? item.id : null,
+          itemCode: item ? item.itemCode : null,
+          itemNameFa,
+          requestedQty: qty,
+          unitFa: item ? (item.unitNameFa || 'عدد') : 'عدد',
+          approvedQty: qty,
+          actualConsumedQty: qty,
+          notesFa: data.notesFa?.trim() || null,
+        },
+      ];
+    }
 
     const warehouseId = data.sourceWarehouseId || 1;
     const warehouse = this.getWarehouses().find((w) => w.id === warehouseId);
-    const warehouseTitleFa = warehouse ? warehouse.titleFa : 'انبار مرکزی تهران';
+    const warehouseTitleFa = warehouse ? warehouse.titleFa : 'انبار مرکزی';
 
     const nextId =
       this.dbState.projectRequisitions && this.dbState.projectRequisitions.length > 0
@@ -12505,25 +12542,24 @@ export class FoundationStore {
     const requestCode = `REQ-1405-${100 + nextId}`;
     const nowIso = new Date().toISOString();
 
-    const unitCostIrr = Number(item.purchasePriceIrr) || Number((item as any).costPriceIrr) || 0;
-
     const record: ProjectMaterialRequisitionRecord = {
       id: nextId,
       requestCode,
       projectId: projectOrJobId,
       projectCode: projectOrJobCode,
       projectTitleFa: projectOrJobTitle,
-      itemId: item.id,
-      itemCode: item.itemCode,
-      itemTitleFa: item.titleFa,
+      itemId: formattedItems[0]?.itemId || null,
+      itemCode: formattedItems[0]?.itemCode || null,
+      itemTitleFa: formattedItems.map((i) => `${i.itemNameFa} (${i.requestedQty} ${i.unitFa})`).join('، '),
+      items: formattedItems,
       sourceWarehouseId: warehouseId,
       sourceWarehouseTitleFa: warehouseTitleFa,
-      requestedQty: qty,
+      requestedQty: formattedItems.reduce((acc, i) => acc + i.requestedQty, 0),
       approvedQty: 0,
       issuedQty: 0,
       consumedQty: 0,
       returnedQty: 0,
-      unitCostIrr,
+      unitCostIrr: 0,
       totalCostIrr: 0,
       serials: data.serials || [],
       status: 'REQUESTED',
@@ -12551,7 +12587,7 @@ export class FoundationStore {
       targetEntity: 'projectRequisitions',
       targetId: String(record.id),
       status: 'SUCCESS',
-      detailsFa: `ثبت درخواست کالای ${record.itemTitleFa} برای پروژه ${record.projectCode}`,
+      detailsFa: `ثبت چک‌لیست درخواست کالا برای پروژه ${record.projectCode}`,
       actorUserId,
     });
 
@@ -12559,19 +12595,78 @@ export class FoundationStore {
     return record;
   }
 
-  public approveProjectRequisition(
+  public updateProjectRequisition(
     id: number,
-    approvedQty: number,
+    data: {
+      items?: Array<{ id: string; itemId?: number | null; itemNameFa: string; requestedQty: number; approvedQty?: number; unitFa: string; notesFa?: string }>;
+      notesFa?: string;
+      sourceWarehouseId?: number;
+      status?: string;
+    },
     actorUserId: number = 1
   ): ProjectMaterialRequisitionRecord {
     const req = this.getProjectRequisitionById(id);
     if (!req) throw new Error('درخواست کالای پروژه یافت نشد.');
-    if (req.status !== 'REQUESTED') {
-      throw new Error(`فقط درخواست‌های در وضعیت 'درخواست شده' قابل تأیید هستند (وضعیت جاری: ${req.status}).`);
+
+    if (Array.isArray(data.items)) {
+      req.items = data.items.map((i, idx) => ({
+        id: i.id || String(idx + 1),
+        itemId: i.itemId || null,
+        itemNameFa: i.itemNameFa.trim(),
+        requestedQty: Number(i.requestedQty) > 0 ? Number(i.requestedQty) : 1,
+        approvedQty: i.approvedQty !== undefined ? Number(i.approvedQty) : Number(i.requestedQty),
+        unitFa: i.unitFa || 'عدد',
+        notesFa: i.notesFa || '',
+      }));
+      req.requestedQty = req.items.reduce((sum, item) => sum + item.requestedQty, 0);
+      if (req.items.length > 0) {
+        req.itemTitleFa = req.items.length === 1 ? req.items[0].itemNameFa : `${req.items[0].itemNameFa} و ${req.items.length - 1} قلم دیگر`;
+      }
+    }
+    if (data.notesFa !== undefined) req.notesFa = data.notesFa.trim() || null;
+    if (data.sourceWarehouseId) {
+      req.sourceWarehouseId = data.sourceWarehouseId;
+      const wh = this.getWarehouses().find((w) => w.id === data.sourceWarehouseId);
+      if (wh) req.sourceWarehouseTitleFa = wh.titleFa;
+    }
+    if (data.status) req.status = data.status as any;
+    req.updatedAt = new Date().toISOString();
+
+    this.saveDbState();
+    return req;
+  }
+
+  public approveProjectRequisition(
+    id: number,
+    approvedQtyOrItems?: number | Array<{ id: string; approvedQty?: number; requestedQty?: number; itemNameFa?: string; unitFa?: string }>,
+    actorUserId: number = 1
+  ): ProjectMaterialRequisitionRecord {
+    const req = this.getProjectRequisitionById(id);
+    if (!req) throw new Error('درخواست کالای پروژه یافت نشد.');
+
+    if (Array.isArray(approvedQtyOrItems) && Array.isArray(req.items)) {
+      for (const item of approvedQtyOrItems) {
+        const line = req.items.find((i) => i.id === item.id);
+        if (line) {
+          const qty = item.approvedQty !== undefined ? item.approvedQty : item.requestedQty;
+          line.approvedQty = Number(qty) >= 0 ? Number(qty) : line.requestedQty;
+          if (item.itemNameFa) line.itemNameFa = item.itemNameFa;
+          if (item.unitFa) line.unitFa = item.unitFa;
+        }
+      }
+      req.approvedQty = req.items.reduce((sum, i) => sum + (i.approvedQty !== undefined ? i.approvedQty : i.requestedQty), 0);
+    } else if (typeof approvedQtyOrItems === 'number') {
+      const qty = Number(approvedQtyOrItems) > 0 ? Number(approvedQtyOrItems) : req.requestedQty;
+      req.approvedQty = qty;
+    } else {
+      req.approvedQty = req.requestedQty;
+      if (Array.isArray(req.items)) {
+        req.items.forEach((line) => {
+          if (line.approvedQty === undefined) line.approvedQty = line.requestedQty;
+        });
+      }
     }
 
-    const qty = Number(approvedQty) > 0 ? Number(approvedQty) : req.requestedQty;
-    req.approvedQty = qty;
     req.status = 'APPROVED';
     req.approvedByUserId = actorUserId;
     req.approvedByNameFa = 'مدیر ارشد و تأییدکننده فنی';
@@ -12583,12 +12678,165 @@ export class FoundationStore {
       targetEntity: 'projectRequisitions',
       targetId: String(req.id),
       status: 'SUCCESS',
-      detailsFa: `تأیید درخواست کالای ${req.itemTitleFa} برای پروژه ${req.projectCode}`,
+      detailsFa: `تأیید چک‌لیست درخواست کالای ${req.requestCode} برای پروژه ${req.projectCode}`,
       actorUserId,
     });
 
     this.saveDbState();
     return req;
+  }
+
+  public setRequisitionReadyForInstall(
+    id: number,
+    scheduledInstallDateJalali: string,
+    actorUserId: number = 1
+  ): ProjectMaterialRequisitionRecord {
+    const req = this.getProjectRequisitionById(id);
+    if (!req) throw new Error('درخواست کالا یافت نشد.');
+
+    req.scheduledInstallDateJalali = scheduledInstallDateJalali;
+    req.status = 'READY_FOR_INSTALL';
+    req.updatedAt = new Date().toISOString();
+
+    // Update associated project or installation job status
+    const project = this.getProjectById(req.projectId);
+    if (project) {
+      project.status = 'IN_PROGRESS';
+      if (scheduledInstallDateJalali) {
+        project.startDateJalali = scheduledInstallDateJalali;
+      }
+      project.notesFa = `آماده برای نصب - تاریخ نصب: ${scheduledInstallDateJalali} | ${project.notesFa || ''}`;
+    }
+    const job = (this.dbState.installationJobs || []).find((j) => j.id === req.projectId);
+    if (job) {
+      job.status = 'IN_PROGRESS';
+      if (scheduledInstallDateJalali) {
+        job.scheduledDateJalali = scheduledInstallDateJalali;
+      }
+    }
+
+    this.saveDbState();
+    return req;
+  }
+
+  public submitRequisitionFinalConsumption(
+    id: number,
+    consumedItems: Array<{ id: string; actualConsumedQty: number; notesFa?: string }>,
+    actorUserId: number = 1
+  ): ProjectMaterialRequisitionRecord {
+    const req = this.getProjectRequisitionById(id);
+    if (!req) throw new Error('درخواست کالا یافت نشد.');
+
+    if (Array.isArray(req.items)) {
+      for (const consumed of consumedItems) {
+        const line = req.items.find((i) => i.id === consumed.id);
+        if (line) {
+          line.actualConsumedQty = Number(consumed.actualConsumedQty) >= 0 ? Number(consumed.actualConsumedQty) : line.requestedQty;
+          if (consumed.notesFa) line.notesFa = consumed.notesFa;
+        }
+      }
+    }
+
+    req.status = 'CONSUMPTION_SUBMITTED';
+    req.updatedAt = new Date().toISOString();
+
+    this.saveDbState();
+    return req;
+  }
+
+  public priceAndInvoiceRequisition(
+    id: number,
+    pricedItems: Array<{ id: string; unitPriceIrr: number }>,
+    actorUserId: number = 1
+  ): { requisition: ProjectMaterialRequisitionRecord; invoice: SalesInvoiceRecord } {
+    const req = this.getProjectRequisitionById(id);
+    if (!req) throw new Error('درخواست کالا یافت نشد.');
+
+    if (Array.isArray(req.items)) {
+      for (const priced of pricedItems) {
+        const line = req.items.find((i) => i.id === priced.id);
+        if (line) {
+          line.unitPriceIrr = Number(priced.unitPriceIrr) >= 0 ? Number(priced.unitPriceIrr) : 0;
+          const qty = line.actualConsumedQty !== undefined ? line.actualConsumedQty : line.requestedQty;
+          line.totalPriceIrr = qty * line.unitPriceIrr;
+        }
+      }
+    }
+
+    let customerId = 1;
+    let project = this.getProjectById(req.projectId);
+    let job: InstallationJobRecord | null = null;
+    if (project) {
+      customerId = project.customerId;
+    } else {
+      job = (this.dbState.installationJobs || []).find((j) => j.id === req.projectId) || null;
+      if (job) customerId = job.customerId;
+    }
+
+    const invoiceLines: Array<{
+      itemId: number;
+      quantity: number;
+      unitPriceIrr: number;
+      itemTitleFa?: string;
+      unitNameFa?: string;
+      skipInventoryMovement?: boolean;
+    }> = [];
+
+    if (Array.isArray(req.items) && req.items.length > 0) {
+      for (const line of req.items) {
+        const qty = line.actualConsumedQty !== undefined ? line.actualConsumedQty : line.requestedQty;
+        if (qty > 0) {
+          invoiceLines.push({
+            itemId: line.itemId || 0,
+            itemTitleFa: line.itemNameFa,
+            unitNameFa: line.unitFa,
+            quantity: qty,
+            unitPriceIrr: line.unitPriceIrr || 0,
+            skipInventoryMovement: !line.itemId,
+          });
+        }
+      }
+    } else {
+      invoiceLines.push({
+        itemId: req.itemId || 0,
+        itemTitleFa: req.itemTitleFa || 'کالای درخواستی پروژه',
+        quantity: req.consumedQty || req.requestedQty,
+        unitPriceIrr: req.unitCostIrr || 0,
+        skipInventoryMovement: !req.itemId,
+      });
+    }
+
+    const invoice = this.createSalesInvoice(
+      {
+        saleType: 'STANDARD_SALE',
+        customerId,
+        sourceWarehouseId: req.sourceWarehouseId || 1,
+        lines: invoiceLines,
+        notesFa: `فاکتور فروش نهایی بر اساس گزارش اقلام مصرفی نصاب (${req.requestCode}) - پروژه ${req.projectCode}`,
+      },
+      actorUserId
+    );
+
+    req.status = 'PRICED_AND_INVOICED';
+    req.finalInvoiceId = invoice.id;
+    req.finalInvoiceNumber = invoice.invoiceNumber;
+    req.updatedAt = new Date().toISOString();
+
+    if (project) {
+      project.status = 'COMPLETED';
+      project.salesInvoiceId = invoice.id;
+      project.invoiceNumber = invoice.invoiceNumber;
+      project.actualCompletionDateJalali = new Date().toLocaleDateString('fa-IR');
+    }
+    if (job) {
+      job.status = 'COMPLETED';
+      job.salesInvoiceId = invoice.id;
+      job.invoiceNumber = invoice.invoiceNumber;
+      job.completedDateJalali = new Date().toLocaleDateString('fa-IR');
+    }
+
+    this.saveDbState();
+    return { requisition: req, invoice };
   }
 
   public issueProjectRequisition(
@@ -14752,6 +15000,63 @@ export class FoundationStore {
     }
     this.saveDbState();
     return table;
+  }
+
+  public addRestaurantTable(
+    tableData: {
+      tableNumber: string;
+      titleFa: string;
+      capacity: number;
+      sectionFa: string;
+    },
+    _actorUserId: number
+  ): RestaurantTableRecord {
+    if (!Array.isArray(this.dbState.restaurantTables)) {
+      this.dbState.restaurantTables = [];
+    }
+    const cleanNum = (tableData.tableNumber || '').trim().toUpperCase();
+    if (!cleanNum) {
+      throw new Error('شماره یا کد میز نمی‌تواند خالی باشد.');
+    }
+    const existing = this.dbState.restaurantTables.find(
+      (t) => t.tableNumber.trim().toUpperCase() === cleanNum
+    );
+    if (existing) {
+      throw new Error(`میز با شماره ${cleanNum} از قبل ثبت شده است.`);
+    }
+
+    const nextId = this.dbState.restaurantTables.reduce((max, t) => Math.max(max, t.id), 0) + 1;
+    const newTable: RestaurantTableRecord = {
+      id: nextId,
+      tableNumber: cleanNum,
+      titleFa: (tableData.titleFa || '').trim() || `میز شماره ${cleanNum}`,
+      capacity: Math.max(1, Number(tableData.capacity) || 4),
+      sectionFa: (tableData.sectionFa || '').trim() || 'سالن اصلی',
+      status: 'AVAILABLE',
+      currentOrderId: null,
+    };
+
+    this.dbState.restaurantTables.push(newTable);
+    this.saveDbState();
+    return newTable;
+  }
+
+  public deleteRestaurantTable(tableId: number, _actorUserId: number): { success: boolean; id: number } {
+    if (!Array.isArray(this.dbState.restaurantTables)) {
+      this.dbState.restaurantTables = [];
+    }
+    const index = this.dbState.restaurantTables.findIndex((t) => t.id === tableId);
+    if (index === -1) {
+      throw new Error(`میز با شناسه ${tableId} یافت نشد.`);
+    }
+    const table = this.dbState.restaurantTables[index];
+    if (table.status === 'OCCUPIED') {
+      throw new Error(`امکان حذف میز اشغال‌شده وجود ندارد. لطفاً ابتدا میز را تخلیه و تسویه نمایید.`);
+    }
+
+    this.dbState.restaurantTables.splice(index, 1);
+    this.saveDbState();
+    return { success: true, id: tableId };
   }
 
   public getRestaurantOrders(): RestaurantOrderRecord[] {

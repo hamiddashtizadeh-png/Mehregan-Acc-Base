@@ -56,6 +56,9 @@ import {
   resolveIndustryUiLabels,
 } from '../types/foundation';
 
+import { useColumnResizable } from '../hooks/useColumnResizable';
+import { ResizableTh } from './ui/ResizableTh';
+
 interface SalesManagementViewProps {
   foundationData: FoundationDataResponse;
   onRefresh: () => void;
@@ -82,6 +85,42 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SalesSubTab>('QUICK_POS');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Resizable Columns Hooks
+  const { columnWidths: invColWidths, startResizing: startInvResize } = useColumnResizable({
+    invoiceNumber: 130,
+    saleType: 110,
+    customer: 160,
+    date: 100,
+    total: 130,
+    cogs: 130,
+    paid: 120,
+    debt: 120,
+    docNum: 110,
+    status: 100,
+    actions: 120,
+  });
+
+  const { columnWidths: pfColWidths, startResizing: startPfResize } = useColumnResizable({
+    proformaNumber: 140,
+    customer: 180,
+    date: 110,
+    validUntil: 110,
+    total: 140,
+    status: 120,
+    actions: 150,
+  });
+
+  const { columnWidths: retColWidths, startResizing: startRetResize } = useColumnResizable({
+    returnNumber: 140,
+    invoiceNumber: 130,
+    customer: 170,
+    warehouse: 140,
+    date: 100,
+    total: 140,
+    docNum: 120,
+    status: 120,
+  });
 
   // Industry Profile Context from actual foundationData
   const industryProfile = foundationData.industryProfile;
@@ -1765,17 +1804,17 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
             <table className="w-full text-right text-xs">
               <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="px-3.5 py-3">شماره فاکتور</th>
-                  <th className="px-3.5 py-3">نوع فروش</th>
-                  <th className="px-3.5 py-3">مشتری</th>
-                  <th className="px-3.5 py-3">تاریخ</th>
-                  <th className="px-3.5 py-3">مبلغ کل (تومان)</th>
-                  <th className="px-3.5 py-3">بهای تمام‌شده COGS</th>
-                  <th className="px-3.5 py-3">دریافتی</th>
-                  <th className="px-3.5 py-3">مانده بدهی</th>
-                  <th className="px-3.5 py-3">رسید انبار</th>
-                  <th className="px-3.5 py-3">وضعیت</th>
-                  <th className="px-3.5 py-3 text-center">عملیات</th>
+                  <ResizableTh colKey="invoiceNumber" width={invColWidths.invoiceNumber} onStartResize={startInvResize}>شماره فاکتور</ResizableTh>
+                  <ResizableTh colKey="saleType" width={invColWidths.saleType} onStartResize={startInvResize}>نوع فروش</ResizableTh>
+                  <ResizableTh colKey="customer" width={invColWidths.customer} onStartResize={startInvResize}>مشتری</ResizableTh>
+                  <ResizableTh colKey="date" width={invColWidths.date} onStartResize={startInvResize}>تاریخ</ResizableTh>
+                  <ResizableTh colKey="total" width={invColWidths.total} onStartResize={startInvResize}>مبلغ کل (تومان)</ResizableTh>
+                  <ResizableTh colKey="cogs" width={invColWidths.cogs} onStartResize={startInvResize}>بهای تمام‌شده COGS</ResizableTh>
+                  <ResizableTh colKey="paid" width={invColWidths.paid} onStartResize={startInvResize}>دریافتی</ResizableTh>
+                  <ResizableTh colKey="debt" width={invColWidths.debt} onStartResize={startInvResize}>مانده بدهی</ResizableTh>
+                  <ResizableTh colKey="docNum" width={invColWidths.docNum} onStartResize={startInvResize}>رسید انبار</ResizableTh>
+                  <ResizableTh colKey="status" width={invColWidths.status} onStartResize={startInvResize}>وضعیت</ResizableTh>
+                  <ResizableTh colKey="actions" width={invColWidths.actions} onStartResize={startInvResize} className="text-center">عملیات</ResizableTh>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1939,13 +1978,13 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
             <table className="w-full text-right text-xs">
               <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="px-3.5 py-3">شماره پیش‌فاکتور</th>
-                  <th className="px-3.5 py-3">مشتری</th>
-                  <th className="px-3.5 py-3">تاریخ صدور</th>
-                  <th className="px-3.5 py-3">مهلت اعتبار</th>
-                  <th className="px-3.5 py-3">مبلغ کل (تومان)</th>
-                  <th className="px-3.5 py-3">وضعیت</th>
-                  <th className="px-3.5 py-3 text-center">عملیات</th>
+                  <ResizableTh colKey="proformaNumber" width={pfColWidths.proformaNumber} onStartResize={startPfResize}>شماره پیش‌فاکتور</ResizableTh>
+                  <ResizableTh colKey="customer" width={pfColWidths.customer} onStartResize={startPfResize}>مشتری</ResizableTh>
+                  <ResizableTh colKey="date" width={pfColWidths.date} onStartResize={startPfResize}>تاریخ صدور</ResizableTh>
+                  <ResizableTh colKey="validUntil" width={pfColWidths.validUntil} onStartResize={startPfResize}>مهلت اعتبار</ResizableTh>
+                  <ResizableTh colKey="total" width={pfColWidths.total} onStartResize={startPfResize}>مبلغ کل (تومان)</ResizableTh>
+                  <ResizableTh colKey="status" width={pfColWidths.status} onStartResize={startPfResize}>وضعیت</ResizableTh>
+                  <ResizableTh colKey="actions" width={pfColWidths.actions} onStartResize={startPfResize} className="text-center">عملیات</ResizableTh>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -2026,14 +2065,14 @@ export const SalesManagementView: React.FC<SalesManagementViewProps> = ({
             <table className="w-full text-right text-xs">
               <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="px-3.5 py-3">شماره برگشتی</th>
-                  <th className="px-3.5 py-3">عطف به فاکتور</th>
-                  <th className="px-3.5 py-3">مشتری</th>
-                  <th className="px-3.5 py-3">انبار مرجوعی</th>
-                  <th className="px-3.5 py-3">تاریخ</th>
-                  <th className="px-3.5 py-3">مبلغ استرداد (تومان)</th>
-                  <th className="px-3.5 py-3">رسید انبار</th>
-                  <th className="px-3.5 py-3">وضعیت</th>
+                  <ResizableTh colKey="returnNumber" width={retColWidths.returnNumber} onStartResize={startRetResize}>شماره برگشتی</ResizableTh>
+                  <ResizableTh colKey="invoiceNumber" width={retColWidths.invoiceNumber} onStartResize={startRetResize}>عطف به فاکتور</ResizableTh>
+                  <ResizableTh colKey="customer" width={retColWidths.customer} onStartResize={startRetResize}>مشتری</ResizableTh>
+                  <ResizableTh colKey="warehouse" width={retColWidths.warehouse} onStartResize={startRetResize}>انبار مرجوعی</ResizableTh>
+                  <ResizableTh colKey="date" width={retColWidths.date} onStartResize={startRetResize}>تاریخ</ResizableTh>
+                  <ResizableTh colKey="total" width={retColWidths.total} onStartResize={startRetResize}>مبلغ استرداد (تومان)</ResizableTh>
+                  <ResizableTh colKey="docNum" width={retColWidths.docNum} onStartResize={startRetResize}>رسید انبار</ResizableTh>
+                  <ResizableTh colKey="status" width={retColWidths.status} onStartResize={startRetResize}>وضعیت</ResizableTh>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

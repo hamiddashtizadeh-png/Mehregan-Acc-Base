@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   Users,
   Shield,
@@ -23,14 +23,29 @@ import {
   Truck,
   Smartphone,
   LogOut,
+  Home,
+  Receipt,
+  LayoutGrid,
+  MoreHorizontal,
+  Search,
+  Sparkles,
+  Inbox,
+  Bell,
+  Boxes,
+  Plus,
 } from 'lucide-react';
 import { LayoutDashboard } from 'lucide-react';
 import { FoundationDataResponse, PublicUser, resolveIndustryUiLabels } from './types/foundation';
 import { LoginModal } from './components/LoginModal';
 import { LoginScreen } from './components/LoginScreen';
 import { QuickAccessMobileDrawer } from './components/QuickAccessMobileDrawer';
+import { MobileMoreDrawer } from './components/MobileMoreDrawer';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { GlobalSearchModal } from './components/GlobalSearchModal';
+import { NaturalLanguageActionModal } from './components/NaturalLanguageActionModal';
+import { ActionInboxView } from './components/ActionInboxView';
+import { BusinessFeaturesHubView } from './components/BusinessFeaturesHubView';
 import { UserManagementView } from './components/UserManagementView';
 import { RbacConsoleView } from './components/RbacConsoleView';
 import { AuditLogView } from './components/AuditLogView';
@@ -52,9 +67,11 @@ import { MobileElectronicsManagementView } from './components/MobileElectronicsM
 import { ServicesContractingView } from './components/ServicesContractingView';
 import { InstallerPortalView } from './components/InstallerPortalView';
 import { Button, Card } from './components/ui';
+import { getActiveThemeId, getThemeConfig, applyAppTheme } from './utils/themeEngine';
 
 type WorkspaceTab =
   | 'DASHBOARD'
+  | 'BUSINESS_FEATURES_HUB'
   | 'SALES'
   | 'PURCHASES'
   | 'PARTIES'
@@ -82,6 +99,107 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isChangePassOpen, setIsChangePassOpen] = useState(false);
   const [isQuickSubmenuOpen, setIsQuickSubmenuOpen] = useState(false);
+  const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
+
+  // Global Search, Natural Language Actions (Gemini 3.8 Flash), and Action Inbox states
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+  const [isNlActionModalOpen, setIsNlActionModalOpen] = useState(false);
+  const [isActionInboxOpen, setIsActionInboxOpen] = useState(false);
+  const [nlInitialPrompt, setNlInitialPrompt] = useState('');
+
+  // Global Keyboard Shortcut: Ctrl+K / Cmd+K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsGlobalSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // UI Themes & Layout Customization State
+  const [activeThemeId, setActiveThemeId] = useState<string>(() => getActiveThemeId());
+  const activeThemeConfig = useMemo(() => getThemeConfig(activeThemeId), [activeThemeId]);
+
+  useEffect(() => {
+    // Initial sync
+    const currentTheme = getActiveThemeId();
+    applyAppTheme(currentTheme);
+
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ themeId: string }>;
+      if (customEvent.detail?.themeId) {
+        setActiveThemeId(customEvent.detail.themeId);
+      }
+    };
+    window.addEventListener('mehregan_theme_changed', handleThemeChange);
+    window.addEventListener('storage', handleThemeChange);
+    return () => {
+      window.removeEventListener('mehregan_theme_changed', handleThemeChange);
+      window.removeEventListener('storage', handleThemeChange);
+    };
+  }, []);
+
+  // Compute urgent actionable items count for header and navigation badges
+  const urgentActionCount = useMemo(() => {
+    if (!foundationData) return 0;
+    let count = 0;
+    foundationData.salesProformas?.forEach((p) => {
+      if (p.status === 'APPROVED' || p.status === 'DRAFT') count++;
+    });
+    foundationData.parties?.forEach((p) => {
+      if (Number(p.transactionsSummary?.netBalanceIrr || 0) < -10000000) count++;
+    });
+    foundationData.items?.forEach((i) => {
+      if (Number(i.totalStock || 0) <= 0) count++;
+    });
+    foundationData.projects?.forEach((prj) => {
+      if (prj.status === 'IN_PROGRESS' && !prj.installerId) count++;
+    });
+    return count;
+  }, [foundationData]);
+
+  // Mehregan Chief Accountant Agent (AI assistant): Hidden by default, toggled via Dashboard widgets
+  const [showSmartAgent, setShowSmartAgent] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('mehregan_dashboard_widgets_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.smartAgent === true;
+      }
+    } catch {
+      // fallback
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleWidgetsChange = (e: Event) => {
+      try {
+        const customEvent = e as CustomEvent<any>;
+        if (customEvent.detail && typeof customEvent.detail.smartAgent === 'boolean') {
+          setShowSmartAgent(customEvent.detail.smartAgent);
+          return;
+        }
+        const saved = localStorage.getItem('mehregan_dashboard_widgets_v1');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setShowSmartAgent(parsed.smartAgent === true);
+        }
+      } catch {
+        // fallback
+      }
+    };
+
+    window.addEventListener('mehregan_widgets_changed', handleWidgetsChange);
+    window.addEventListener('storage', handleWidgetsChange);
+    return () => {
+      window.removeEventListener('mehregan_widgets_changed', handleWidgetsChange);
+      window.removeEventListener('storage', handleWidgetsChange);
+    };
+  }, []);
 
   const fetchFoundationData = useCallback(async (retryCount = 0) => {
     try {
@@ -140,6 +258,11 @@ export default function App() {
 
   useEffect(() => {
     fetchFoundationData();
+    const handleUnauthenticated = () => {
+      setFoundationData(null);
+    };
+    window.addEventListener('mehregan:unauthenticated', handleUnauthenticated);
+    return () => window.removeEventListener('mehregan:unauthenticated', handleUnauthenticated);
   }, [fetchFoundationData]);
 
   const enableInstallationServices =
@@ -290,8 +413,8 @@ export default function App() {
       activeUser.assignedRoles?.includes('INSTALLER') ||
       activeUser.jobTitle?.includes('نصاب') ||
       activeUser.jobTitle?.includes('تکنسین') ||
-      activeUser.username.toLowerCase().includes('installer') ||
-      activeUser.username.includes('نصاب') ||
+      Boolean(activeUser.username && activeUser.username.toLowerCase().includes('installer')) ||
+      Boolean(activeUser.username && activeUser.username.includes('نصاب')) ||
       activeUser.fullName?.includes('نصاب') ||
       Boolean(
         foundationData.userRoleAssignments?.some(
@@ -307,8 +430,8 @@ export default function App() {
         data-industry-theme="cctv"
         className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans"
       >
-        {/* Dedicated Installer Focused Header */}
-        <header className="bg-white border-b border-slate-200/90 sticky top-0 z-40">
+        {/* Dedicated Installer Focused Header - Desktop Only */}
+        <header className="bg-white border-b border-slate-200/90 sticky top-0 z-40 hidden md:block">
           <div className="h-1.5 w-full bg-cyan-700" />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -365,11 +488,14 @@ export default function App() {
           </div>
         </header>
 
-        {/* Dedicated Installer Main Viewport */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+        {/* Dedicated Installer Main Viewport: Full screen mobile banking ergonomics */}
+        <main className="flex-1 max-w-7xl w-full mx-auto p-0 md:p-6">
           <InstallerPortalView
             foundationData={foundationData}
             onRefresh={fetchFoundationData}
+            onOpenChangePassword={() => setIsChangePassOpen(true)}
+            onLogout={handleLogout}
+            onOpenLoginModal={() => setIsLoginModalOpen(true)}
           />
         </main>
 
@@ -384,6 +510,33 @@ export default function App() {
           onClose={() => setIsChangePassOpen(false)}
           activeUser={activeUser}
         />
+
+        {/* Global Search Modal for Installer (RBAC filtered) */}
+        <GlobalSearchModal
+          isOpen={isGlobalSearchOpen}
+          onClose={() => setIsGlobalSearchOpen(false)}
+          onNavigate={() => {}}
+          foundationData={foundationData}
+        />
+
+        {/* Natural Language Action Modal for Installer */}
+        <NaturalLanguageActionModal
+          isOpen={isNlActionModalOpen}
+          onClose={() => setIsNlActionModalOpen(false)}
+          foundationData={foundationData}
+          onOperationSuccess={() => fetchFoundationData()}
+          initialPrompt={nlInitialPrompt}
+        />
+
+        {/* Action Inbox Modal for Installer */}
+        {isActionInboxOpen && (
+          <ActionInboxView
+            foundationData={foundationData}
+            onNavigateTab={() => setIsActionInboxOpen(false)}
+            isModal={true}
+            onClose={() => setIsActionInboxOpen(false)}
+          />
+        )}
       </div>
     );
   }
@@ -392,36 +545,45 @@ export default function App() {
     <div
       dir="rtl"
       data-industry-theme={theme.id || 'cctv'}
-      className="min-h-screen bg-slate-50 text-slate-900 flex flex-col"
+      data-ui-theme={activeThemeId}
+      className={`min-h-screen transition-colors duration-200 flex flex-col ${
+        activeThemeConfig.isDarkMode
+          ? 'bg-[#0b0f19] text-slate-100 dark'
+          : activeThemeConfig.bgCanvasClass || 'bg-slate-50 text-slate-900'
+      }`}
     >
       {/* Main Unified Header: Divided into 3 Structured Zones (Brand, Navigation, User Actions) */}
-      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-40">
-        {/* Industry Top Color Line */}
+      <header className={`border-b sticky top-0 z-40 transition-colors ${
+        activeThemeConfig.isDarkMode
+          ? 'bg-[#151c2f] border-slate-800 text-slate-100'
+          : 'bg-white border-slate-200/90'
+      }`}>
+        {/* Industry & Active UI Theme Top Color Line */}
         <div
-          className="h-1 w-full transition-colors duration-300"
-          style={{ backgroundColor: theme.primaryColor || 'var(--theme-top-bar, #0284c7)' }}
+          className="h-1.5 w-full transition-colors duration-300"
+          style={{ backgroundColor: activeThemeConfig.topBarColor || theme.primaryColor || '#0284c7' }}
         />
         {/* Top Row: Zone 1 (Brand Identity) & Zone 3 (User Actions) */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-3 transition-all">
           {/* ZONE 1: Brand & Industry Identity */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <a
               href="#top"
               onClick={(e) => {
                 e.preventDefault();
                 setActiveTab('DASHBOARD');
               }}
-              className="flex items-center gap-2.5 focus-ring rounded-xl"
+              className="flex items-center gap-2 focus-ring rounded-xl min-w-0"
             >
-              <span className="bg-slate-900 text-white px-3 py-1.5 rounded-xl font-black text-xs tracking-tight shrink-0">
+              <span className="bg-slate-900 text-white px-2.5 sm:px-3 py-1.5 rounded-xl font-black text-xs sm:text-sm tracking-tight truncate max-w-[170px] sm:max-w-[260px] shadow-2xs">
                 {foundationData.settings?.companyName || 'مهرگان'}
               </span>
-              <span className="font-extrabold text-slate-900 text-xs sm:text-sm truncate">
+              <span className="hidden sm:inline font-extrabold text-slate-900 text-xs sm:text-sm truncate max-w-[200px] lg:max-w-[280px]">
                 {theme.headerBrandTitleFa || 'سامانه جامع ERP و نظارت تصویری'}
               </span>
             </a>
 
-            <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 border-r border-slate-200 pr-3">
+            <div className="hidden lg:flex items-center gap-2 text-xs text-slate-500 border-r border-slate-200 pr-3">
               <span className="font-semibold text-slate-700 tabular-nums">
                 سال مالی {foundationData.settings?.activeFiscalYearCode || '۱۴۰۵'}
               </span>
@@ -437,11 +599,58 @@ export default function App() {
             </div>
           </div>
 
-          {/* ZONE 3: Active User Profile & Account Controls */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* ZONE 3: Global Actions (Search, NL, Action Inbox) & Account Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* 1. Global Search Trigger (Ctrl+K) */}
+            <button
+              type="button"
+              onClick={() => setIsGlobalSearchOpen(true)}
+              className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+              title="جست‌وجوی سراسری در تمام سیستم (Ctrl+K)"
+            >
+              <Search className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="hidden sm:inline">جست‌وجو</span>
+              <span className="hidden lg:inline text-[10px] text-slate-400 bg-white px-1.5 py-0.2 rounded border border-slate-200 font-mono">
+                Ctrl+K
+              </span>
+            </button>
+
+            {/* 2. Natural Language Actions (Gemini 3.8 Flash) Trigger */}
+            <button
+              type="button"
+              onClick={() => {
+                setNlInitialPrompt('');
+                setIsNlActionModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-800 border border-blue-200/80 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs"
+              title="ثبت عملیات با زبان طبیعی (Gemini 3.8 Flash)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-600 fill-blue-500/20 animate-pulse shrink-0" />
+              <span className="hidden sm:inline">عملیات هوشمند</span>
+              <span className="text-[10px] bg-blue-600 text-white font-mono px-1 py-0.2 rounded font-black">
+                AI
+              </span>
+            </button>
+
+            {/* 3. Action Inbox Trigger with Urgent Count Badge */}
+            <button
+              type="button"
+              onClick={() => setIsActionInboxOpen(true)}
+              className="relative flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+              title="صندوق کارهای منتظر اقدام"
+            >
+              <Inbox className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span className="hidden sm:inline">کارها</span>
+              {urgentActionCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-600 text-white font-mono">
+                  {urgentActionCount}
+                </span>
+              )}
+            </button>
+
             <PWAInstallButton variant="compact" />
 
-            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl">
+            <div className="hidden md:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl">
               <UserCheck className="h-3.5 w-3.5 text-blue-600 shrink-0" />
               <span className="font-extrabold text-slate-900">{activeUser.fullName}</span>
               <span className="text-[11px] text-slate-400 font-mono">(@{activeUser.username})</span>
@@ -453,8 +662,9 @@ export default function App() {
               onClick={() => setIsChangePassOpen(true)}
               leftIcon={<KeyRound className="h-3.5 w-3.5 text-amber-600" />}
               title="تغییر کلمه عبور کاربر جاری"
+              className="hidden sm:flex"
             >
-              <span className="hidden xs:inline">رمز عبور</span>
+              <span>رمز عبور</span>
             </Button>
 
             <Button
@@ -462,8 +672,9 @@ export default function App() {
               size="sm"
               onClick={() => setIsLoginModalOpen(true)}
               leftIcon={<UserCheck className="h-3.5 w-3.5" />}
+              title="تغییر حساب کاربری"
             >
-              تغییر حساب
+              <span className="hidden sm:inline">تغییر حساب</span>
             </Button>
 
             <Button
@@ -474,17 +685,17 @@ export default function App() {
               className="text-rose-700 hover:bg-rose-50 border-rose-200"
               title="خروج از حساب کاربری"
             >
-              خروج
+              <span className="hidden sm:inline">خروج</span>
             </Button>
           </div>
         </div>
 
-        {/* Bottom Row: ZONE 2 (Primary Navigation Bar - Wrap Layout, No Horizontal Scroll) */}
-        <div className="border-t border-slate-200/70 bg-slate-50/90 px-3 sm:px-6 py-2">
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
+        {/* Bottom Row: ZONE 2 (Primary Navigation Bar - Desktop Only, Hidden on Mobile to Free Screen Space) */}
+        <div className="hidden md:block border-t border-slate-200/70 bg-slate-50/90 px-3 sm:px-6 py-1.5">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 text-xs font-bold">
             
             {/* Left/Right Group: Quick Access Trigger & Primary Operational Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-none py-0.5">
               
               {/* Quick Access Dropdown Trigger */}
               <div className="relative shrink-0">
@@ -601,7 +812,7 @@ export default function App() {
               </div>
 
               {/* Core Operational Modules (Primary Pill Tabs) */}
-              <nav className="flex flex-wrap items-center gap-1.5 text-xs font-bold" aria-label="ناوبری عملیات اصلی">
+              <nav className="flex items-center gap-1.5 text-xs font-bold" aria-label="ناوبری عملیات اصلی">
                 <button
                   type="button"
                   onClick={() => setActiveTab('DASHBOARD')}
@@ -614,6 +825,20 @@ export default function App() {
                 >
                   <LayoutDashboard className={`w-3.5 h-3.5 ${activeTab === 'DASHBOARD' ? 'text-white' : 'text-slate-500'}`} />
                   <span>داشبورد</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('BUSINESS_FEATURES_HUB')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none whitespace-nowrap focus-ring ${
+                    activeTab === 'BUSINESS_FEATURES_HUB'
+                      ? 'bg-indigo-700 text-white font-extrabold shadow-xs'
+                      : 'bg-indigo-50 text-indigo-900 border border-indigo-200 hover:bg-indigo-100 font-extrabold'
+                  }`}
+                  title="درگاه یکپارچه امکانات، ابزارهای پیشرفته و قابلیت‌های برنامه‌ریزی‌شده"
+                >
+                  <Boxes className={`w-3.5 h-3.5 ${activeTab === 'BUSINESS_FEATURES_HUB' ? 'text-white' : 'text-indigo-600'}`} />
+                  <span>مرکز امکانات</span>
                 </button>
 
                 <button
@@ -800,7 +1025,7 @@ export default function App() {
             </div>
 
             {/* System & Governance Modules (Compact Pills Row) */}
-            <div className="flex flex-wrap items-center gap-1 bg-white border border-slate-200/90 p-1 rounded-xl text-[11px] shrink-0">
+            <div className="hidden lg:flex items-center gap-1 bg-white border border-slate-200/90 p-1 rounded-xl text-[11px] shrink-0 whitespace-nowrap">
               <span className="text-slate-400 font-bold px-1.5">سیستم:</span>
               <button
                 type="button"
@@ -879,12 +1104,23 @@ export default function App() {
       )}
 
       {/* Main Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 pb-20 md:pb-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] md:pb-6">
         {activeTab === 'DASHBOARD' && (
           <DashboardView
             foundationData={foundationData}
             onRefresh={fetchFoundationData}
             onNavigateTab={(tab) => setActiveTab(tab as WorkspaceTab)}
+            onOpenOperations={() => setIsQuickSubmenuOpen(true)}
+          />
+        )}
+        {activeTab === 'BUSINESS_FEATURES_HUB' && (
+          <BusinessFeaturesHubView
+            foundationData={foundationData}
+            onNavigateTab={(tab) => setActiveTab(tab as WorkspaceTab)}
+            onOpenNlAction={() => {
+              setNlInitialPrompt('');
+              setIsNlActionModalOpen(true);
+            }}
           />
         )}
         {activeTab === 'SALES' && (
@@ -1042,25 +1278,27 @@ export default function App() {
         onClose={() => setIsChangePassOpen(false)}
         activeUser={activeUser}
       />
-      <SmartAgentWidget
-        foundationData={foundationData}
-        onRefresh={fetchFoundationData}
-        onNavigateTab={(tab) => {
-          if (tab === 'PROFORMA' || tab === 'QUICK_SALE' || tab === 'RETURN') {
-            setActiveTab('SALES');
-          } else if (tab === 'PROJECTS' || tab === 'REQUISITION' || tab === 'INSTALLER') {
-            setActiveTab('INSTALLATION');
-          } else if (tab === 'EXPENSES' || tab === 'CHEQUES' || tab === 'INSTALLMENTS') {
-            setActiveTab('TREASURY');
-          } else if (tab === 'JOURNAL' || tab === 'TRIAL_BALANCE' || tab === 'PROFITABILITY') {
-            setActiveTab('ACCOUNTING');
-          } else {
-            setActiveTab(tab as WorkspaceTab);
-          }
-        }}
-      />
+      {showSmartAgent && (
+        <SmartAgentWidget
+          foundationData={foundationData}
+          onRefresh={fetchFoundationData}
+          onNavigateTab={(tab) => {
+            if (tab === 'PROFORMA' || tab === 'QUICK_SALE' || tab === 'RETURN') {
+              setActiveTab('SALES');
+            } else if (tab === 'PROJECTS' || tab === 'REQUISITION' || tab === 'INSTALLER') {
+              setActiveTab('INSTALLATION');
+            } else if (tab === 'EXPENSES' || tab === 'CHEQUES' || tab === 'INSTALLMENTS') {
+              setActiveTab('TREASURY');
+            } else if (tab === 'JOURNAL' || tab === 'TRIAL_BALANCE' || tab === 'PROFITABILITY') {
+              setActiveTab('ACCOUNTING');
+            } else {
+              setActiveTab(tab as WorkspaceTab);
+            }
+          }}
+        />
+      )}
 
-      {/* Quick Access Mobile Action Sheet Drawer */}
+      {/* Quick Access Mobile Action Sheet Drawer (مرکز عملیات جامع با جستجو) */}
       <QuickAccessMobileDrawer
         isOpen={isQuickSubmenuOpen}
         onClose={() => setIsQuickSubmenuOpen(false)}
@@ -1077,64 +1315,217 @@ export default function App() {
             setActiveTab(tab as WorkspaceTab);
           }
         }}
-        companyName={foundationData.settings?.companyName}
+        foundationData={foundationData}
+        companyName={foundationData?.settings?.companyName}
       />
 
-      {/* Admin Mobile Web App Bottom Navigation Bar (PWA Anchor) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-1 py-1 shadow-lg grid grid-cols-5 gap-0.5 md:hidden">
+      {/* Mobile More Drawer (سایر امکانات و ماژول‌ها) */}
+      <MobileMoreDrawer
+        isOpen={isMoreSheetOpen}
+        onClose={() => setIsMoreSheetOpen(false)}
+        onNavigate={(tab) => {
+          setIsMoreSheetOpen(false);
+          setActiveTab(tab as WorkspaceTab);
+        }}
+        foundationData={foundationData}
+        onOpenChangePassword={() => setIsChangePassOpen(true)}
+        onLogout={handleLogout}
+      />
+
+      {/* Iranian Mobile Banking Style Bottom Navigation Bar (PWA Anchor) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-2 pt-1 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] grid grid-cols-5 items-end justify-items-center md:hidden select-none">
+        {/* 1. خانه (Home) */}
         <button
           type="button"
-          onClick={() => setActiveTab('DASHBOARD')}
-          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-colors min-h-[48px] ${
-            activeTab === 'DASHBOARD' ? 'bg-blue-50 text-blue-800 font-bold' : 'text-slate-500 hover:text-slate-800'
+          onClick={() => {
+            setIsMoreSheetOpen(false);
+            setIsQuickSubmenuOpen(false);
+            setActiveTab('DASHBOARD');
+          }}
+          className={`w-full flex flex-col items-center justify-center py-1 rounded-xl transition-all min-h-[50px] touch-manipulation active:scale-95 cursor-pointer ${
+            activeTab === 'DASHBOARD' && !isMoreSheetOpen && !isQuickSubmenuOpen
+              ? 'text-blue-700 font-black'
+              : 'text-slate-500 hover:text-slate-800'
           }`}
         >
-          <LayoutDashboard className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">داشبورد</span>
+          <Home
+            className={`w-5 h-5 mb-0.5 ${
+              activeTab === 'DASHBOARD' && !isMoreSheetOpen && !isQuickSubmenuOpen
+                ? 'text-blue-700 stroke-[2.5]'
+                : 'text-slate-500'
+            }`}
+          />
+          <span className="text-[10px] tracking-tight">خانه</span>
         </button>
 
+        {/* 2. کارها و تراکنش‌ها (Tasks & Transactions / Action Inbox) */}
         <button
           type="button"
-          onClick={() => setActiveTab('SALES')}
-          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-colors min-h-[48px] ${
-            activeTab === 'SALES' ? 'bg-blue-50 text-blue-800 font-bold' : 'text-slate-500 hover:text-slate-800'
+          onClick={() => {
+            setIsMoreSheetOpen(false);
+            setIsQuickSubmenuOpen(false);
+            setIsActionInboxOpen(true);
+          }}
+          className={`w-full flex flex-col items-center justify-center py-1 rounded-xl transition-all min-h-[50px] touch-manipulation active:scale-95 cursor-pointer relative ${
+            isActionInboxOpen
+              ? 'text-amber-700 font-black'
+              : 'text-slate-500 hover:text-slate-800'
           }`}
         >
-          <ShoppingCart className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">فروش</span>
+          <div className="relative">
+            <Inbox
+              className={`w-5 h-5 mb-0.5 ${
+                isActionInboxOpen ? 'text-amber-700 stroke-[2.5]' : 'text-slate-500'
+              }`}
+            />
+            {urgentActionCount > 0 && (
+              <span className="absolute -top-1 -right-1.5 px-1 min-w-[14px] h-[14px] rounded-full text-[8px] font-black bg-rose-600 text-white flex items-center justify-center ring-2 ring-white font-mono">
+                {urgentActionCount}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] tracking-tight">کارها</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setIsQuickSubmenuOpen(true)}
-          className="flex flex-col items-center justify-center py-1 px-1 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-slate-950 font-bold shadow-md active:scale-95 transition-transform min-h-[48px]"
-        >
-          <Zap className="w-5 h-5 mb-0.5 fill-slate-950" />
-          <span className="text-[10px]">دسترسی سریع</span>
-        </button>
+        {/* 3. عملیات (Center Prominent Elevated Action Button - دکمه مرکزی برجسته) */}
+        <div className="relative -mt-6 flex flex-col items-center justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              setIsMoreSheetOpen(false);
+              setIsQuickSubmenuOpen(true);
+            }}
+            aria-label="مرکز عملیات و خدمات"
+            className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-blue-700 via-indigo-600 to-teal-500 text-white shadow-lg shadow-indigo-500/30 ring-4 ring-white flex items-center justify-center active:scale-90 transition-transform cursor-pointer touch-manipulation"
+          >
+            <LayoutGrid className="w-6 h-6 fill-white/20 text-white" />
+          </button>
+          <span className="text-[10px] font-black text-slate-800 mt-1 tracking-tight">عملیات</span>
+        </div>
 
+        {/* 4. اشخاص (Parties / Contacts - فقط در صورت مجاز بودن) */}
+        {!activeUser.assignedRoles?.includes('GUEST') ? (
+          <button
+            type="button"
+            onClick={() => {
+              setIsMoreSheetOpen(false);
+              setIsQuickSubmenuOpen(false);
+              setActiveTab('PARTIES');
+            }}
+            className={`w-full flex flex-col items-center justify-center py-1 rounded-xl transition-all min-h-[50px] touch-manipulation active:scale-95 cursor-pointer ${
+              activeTab === 'PARTIES' && !isMoreSheetOpen && !isQuickSubmenuOpen
+                ? 'text-blue-700 font-black'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Users
+              className={`w-5 h-5 mb-0.5 ${
+                activeTab === 'PARTIES' && !isMoreSheetOpen && !isQuickSubmenuOpen
+                  ? 'text-blue-700 stroke-[2.5]'
+                  : 'text-slate-500'
+              }`}
+            />
+            <span className="text-[10px] tracking-tight">اشخاص</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setIsMoreSheetOpen(false);
+              setIsQuickSubmenuOpen(false);
+              setActiveTab('SALES');
+            }}
+            className={`w-full flex flex-col items-center justify-center py-1 rounded-xl transition-all min-h-[50px] touch-manipulation active:scale-95 cursor-pointer ${
+              activeTab === 'SALES' && !isMoreSheetOpen && !isQuickSubmenuOpen
+                ? 'text-emerald-700 font-black'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ShoppingCart
+              className={`w-5 h-5 mb-0.5 ${
+                activeTab === 'SALES' && !isMoreSheetOpen && !isQuickSubmenuOpen
+                  ? 'text-emerald-700 stroke-[2.5]'
+                  : 'text-slate-500'
+              }`}
+            />
+            <span className="text-[10px] tracking-tight">فروش</span>
+          </button>
+        )}
+
+        {/* 5. بیشتر (More) */}
         <button
           type="button"
-          onClick={() => setActiveTab('INVENTORY')}
-          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-colors min-h-[48px] ${
-            activeTab === 'INVENTORY' ? 'bg-blue-50 text-blue-800 font-bold' : 'text-slate-500 hover:text-slate-800'
+          onClick={() => {
+            setIsQuickSubmenuOpen(false);
+            setIsMoreSheetOpen(true);
+          }}
+          className={`w-full flex flex-col items-center justify-center py-1 rounded-xl transition-all min-h-[50px] touch-manipulation active:scale-95 cursor-pointer ${
+            isMoreSheetOpen
+              ? 'text-indigo-700 font-black'
+              : 'text-slate-500 hover:text-slate-800'
           }`}
         >
-          <Package className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">انبار</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('SETTINGS_HEALTH')}
-          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-colors min-h-[48px] ${
-            activeTab === 'SETTINGS_HEALTH' || (activeTab as string) === 'SETTINGS' ? 'bg-blue-50 text-blue-800 font-bold' : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Settings className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">تنظیمات</span>
+          <MoreHorizontal
+            className={`w-5 h-5 mb-0.5 ${
+              isMoreSheetOpen ? 'text-indigo-700 stroke-[2.5]' : 'text-slate-500'
+            }`}
+          />
+          <span className="text-[10px] tracking-tight">بیشتر</span>
         </button>
       </nav>
+
+      {/* Global Search Modal (Ctrl+K) */}
+      <GlobalSearchModal
+        isOpen={isGlobalSearchOpen}
+        onClose={() => setIsGlobalSearchOpen(false)}
+        onNavigate={(tab, entityId) => {
+          if (tab === 'PROFORMA' || tab === 'QUICK_SALE' || tab === 'RETURN') {
+            setActiveTab('SALES');
+          } else if (tab === 'PROJECTS' || tab === 'REQUISITION' || tab === 'INSTALLER') {
+            setActiveTab('INSTALLATION');
+          } else if (tab === 'EXPENSES' || tab === 'CHEQUES' || tab === 'INSTALLMENTS') {
+            setActiveTab('TREASURY');
+          } else if (tab === 'JOURNAL' || tab === 'TRIAL_BALANCE' || tab === 'PROFITABILITY') {
+            setActiveTab('ACCOUNTING');
+          } else {
+            setActiveTab(tab as WorkspaceTab);
+          }
+        }}
+        foundationData={foundationData}
+      />
+
+      {/* Natural Language Actions Modal (Gemini 3.8 Flash) */}
+      <NaturalLanguageActionModal
+        isOpen={isNlActionModalOpen}
+        onClose={() => setIsNlActionModalOpen(false)}
+        foundationData={foundationData}
+        onOperationSuccess={() => fetchFoundationData()}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab as WorkspaceTab);
+        }}
+        initialPrompt={nlInitialPrompt}
+      />
+
+      {/* Action Inbox Modal */}
+      {isActionInboxOpen && (
+        <ActionInboxView
+          foundationData={foundationData}
+          onNavigateTab={(tab, entityId) => {
+            setIsActionInboxOpen(false);
+            if (tab === 'PROFORMA' || tab === 'QUICK_SALE' || tab === 'RETURN') {
+              setActiveTab('SALES');
+            } else if (tab === 'PROJECTS' || tab === 'REQUISITION' || tab === 'INSTALLER') {
+              setActiveTab('INSTALLATION');
+            } else if (tab === 'EXPENSES' || tab === 'CHEQUES' || tab === 'INSTALLMENTS') {
+              setActiveTab('TREASURY');
+            } else {
+              setActiveTab(tab as WorkspaceTab);
+            }
+          }}
+          isModal={true}
+          onClose={() => setIsActionInboxOpen(false)}
+        />
+      )}
     </div>
   );
 }

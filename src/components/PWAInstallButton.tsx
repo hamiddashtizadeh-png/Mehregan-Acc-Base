@@ -48,11 +48,11 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'b
       <>
         <button
           onClick={handleInstallClick}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-300 rounded-lg text-xs font-medium transition-all duration-200 active:scale-95"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-700 dark:text-sky-300 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 shrink-0"
           title="نصب وب‌اپلیکیشن مهرگان روی گوشی یا سیستم"
         >
-          <Download className="w-3.5 h-3.5 text-sky-400" />
-          <span>نصب برنامه</span>
+          <Download className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+          <span className="hidden sm:inline">نصب برنامه</span>
         </button>
 
         {showIOSGuide && (

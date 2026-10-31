@@ -47,6 +47,8 @@ import { PriceInput } from './PriceInput';
 import { printHtmlContent } from '../utils/printUtils';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { GoldColleagueTradeModal } from './GoldColleagueTradeModal';
+import { useColumnResizable } from '../hooks/useColumnResizable';
+import { ResizableTh } from './ui/ResizableTh';
 
 interface PartiesManagementViewProps {
   foundationData: FoundationDataResponse;
@@ -92,8 +94,22 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Mouse Drag Column Resizing
+  const { columnWidths, startResizing } = useColumnResizable({
+    code: 110,
+    name: 200,
+    type: 140,
+    contact: 160,
+    nationalId: 120,
+    records: 140,
+    balance: 150,
+    status: 90,
+    actions: 140,
+  });
+
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [editingParty, setEditingParty] = useState<PartyRecord | null>(null);
   const [viewingPartyDetail, setViewingPartyDetail] = useState<
     (PartyRecord & { transactions: PartyTransactionRecord[] }) | null
@@ -433,6 +449,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
 
   const handleOpenCreateModal = () => {
     setEditingParty(null);
+    setModalError(null);
     setFormData({
       personType: 'NATURAL',
       primaryType: 'CUSTOMER',
@@ -468,6 +485,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
 
   const handleOpenEditModal = (party: PartyRecord) => {
     setEditingParty(party);
+    setModalError(null);
     setFormData({
       personType: party.personType,
       primaryType: party.primaryType,
@@ -575,20 +593,19 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
   const handleSavePartySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFeedback(null);
+    setModalError(null);
 
     if (duplicateCheckState.isBlocking) {
-      setFeedback({
-        type: 'ERROR',
-        textFa: 'کد ملی یا شناسه ملی تکراری است و مانع از ثبت اطلاعات می‌شود.',
-      });
+      const msg = 'کد ملی یا شناسه ملی تکراری است و مانع از ثبت اطلاعات می‌شود.';
+      setModalError(msg);
+      setFeedback({ type: 'ERROR', textFa: msg });
       return;
     }
 
     if (duplicateCheckState.hasDuplicate && !allowDuplicateConfirmed && !editingParty) {
-      setFeedback({
-        type: 'ERROR',
-        textFa: 'شخص مشابه در سیستم یافت شد. تایید صریح ثبت شخص تکراری الزامی است.',
-      });
+      const msg = 'شخص مشابه در سیستم یافت شد. تایید صریح ثبت شخص تکراری الزامی است.';
+      setModalError(msg);
+      setFeedback({ type: 'ERROR', textFa: msg });
       return;
     }
 
@@ -604,7 +621,10 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
         body: JSON.stringify(payload),
       });
 
@@ -612,24 +632,33 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
       if (json.ok) {
         setFeedback({ type: 'SUCCESS', textFa: json.messageFa });
         setIsCreateModalOpen(false);
+        setModalError(null);
         await fetchPartiesList();
         await onRefresh();
       } else {
-        setFeedback({ type: 'ERROR', textFa: json.messageFa || 'خطا در ثبت اطلاعات شخص.' });
+        const msg = json.messageFa || 'خطا در ثبت اطلاعات شخص.';
+        setModalError(msg);
+        setFeedback({ type: 'ERROR', textFa: msg });
       }
     } catch {
-      setFeedback({ type: 'ERROR', textFa: 'خطای شبکه در ذخیره طرف تجاری.' });
+      const msg = 'خطای شبکه در ذخیره طرف تجاری.';
+      setModalError(msg);
+      setFeedback({ type: 'ERROR', textFa: msg });
     }
   };
 
   const handleAttachTransactionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!viewingPartyDetail) return;
+    setModalError(null);
 
     try {
       const res = await fetch(`/api/parties/${viewingPartyDetail.id}/transactions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
         body: JSON.stringify({
           ...newTxForm,
           amountIrr: Number(newTxForm.amountIrr || 0),
@@ -640,6 +669,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
       if (json.ok) {
         setFeedback({ type: 'SUCCESS', textFa: json.messageFa });
         setIsAttachRecordOpen(false);
+        setModalError(null);
         setNewTxForm({
           recordType: 'SALE_INVOICE',
           referenceNumber: '',
@@ -652,14 +682,19 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
         await handleViewPartyDetail(viewingPartyDetail.id);
         await fetchPartiesList();
       } else {
-        setFeedback({ type: 'ERROR', textFa: json.messageFa || 'خطا در ثبت سند.' });
+        const msg = json.messageFa || 'خطا در ثبت سند.';
+        setModalError(msg);
+        setFeedback({ type: 'ERROR', textFa: msg });
       }
     } catch {
-      setFeedback({ type: 'ERROR', textFa: 'خطای شبکه در اتصال سند.' });
+      const msg = 'خطای شبکه در اتصال سند.';
+      setModalError(msg);
+      setFeedback({ type: 'ERROR', textFa: msg });
     }
   };
 
   const handleOpenSettlementModal = (party: PartyRecord) => {
+    setModalError(null);
     const netBal = party.transactionsSummary?.netBalanceIrr || 0;
     // If creditor (netBal > 0), default to PAYMENT; if debtor (netBal < 0), default to RECEIPT
     const defaultTx: 'RECEIPT' | 'PAYMENT' = netBal > 0 ? 'PAYMENT' : 'RECEIPT';
@@ -684,16 +719,20 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
   const handleSaveSettlementSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settlingParty) return;
+    setModalError(null);
     const amount = Number(settleForm.amountIrr || 0);
     if (amount <= 0) {
-      setFeedback({ type: 'ERROR', textFa: 'مبلغ تسویه باید بزرگتر از صفر باشد.' });
+      setModalError('مبلغ تسویه باید بزرگتر از صفر باشد.');
       return;
     }
 
     try {
       const res = await fetch(`/api/parties/${settlingParty.id}/settle`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
         body: JSON.stringify({
           ...settleForm,
           amountIrr: amount,
@@ -704,13 +743,18 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
       if (json.ok) {
         setFeedback({ type: 'SUCCESS', textFa: json.messageFa || 'تسویه حساب طرف تجاری با موفقیت در خزانه و اسناد مالی ثبت شد.' });
         setSettlingParty(null);
+        setModalError(null);
         await fetchPartiesList();
         await onRefresh();
       } else {
-        setFeedback({ type: 'ERROR', textFa: json.messageFa || 'خطا در ثبت تسویه حساب.' });
+        const msg = json.messageFa || 'خطا در ثبت تسویه حساب.';
+        setModalError(msg);
+        setFeedback({ type: 'ERROR', textFa: msg });
       }
     } catch {
-      setFeedback({ type: 'ERROR', textFa: 'خطای شبکه در ارتباط با سرور جهت تسویه حساب.' });
+      const msg = 'خطای شبکه در ارتباط با سرور جهت تسویه حساب.';
+      setModalError(msg);
+      setFeedback({ type: 'ERROR', textFa: msg });
     }
   };
 
@@ -903,20 +947,38 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
       </div>
 
       {/* Main Parties Table */}
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+      <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-right text-xs">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
               <tr>
-                <th className="py-3 px-4">کد شخص</th>
-                <th className="py-3 px-4">نام و عنوان طرف تجاری</th>
-                <th className="py-3 px-4">نوع و نقش‌ها</th>
-                <th className="py-3 px-4">اطلاعات تماس</th>
-                <th className="py-3 px-4">شناسه / کد ملی</th>
-                <th className="py-3 px-4">سوابق متصل</th>
-                <th className="py-3 px-4">مانده تراز (ریال)</th>
-                <th className="py-3 px-4 text-center">وضعیت</th>
-                <th className="py-3 px-4 text-center">عملیات</th>
+                <ResizableTh colKey="code" width={columnWidths.code} onStartResize={startResizing}>
+                  کد شخص
+                </ResizableTh>
+                <ResizableTh colKey="name" width={columnWidths.name} onStartResize={startResizing}>
+                  نام و عنوان طرف تجاری
+                </ResizableTh>
+                <ResizableTh colKey="type" width={columnWidths.type} onStartResize={startResizing}>
+                  نوع و نقش‌ها
+                </ResizableTh>
+                <ResizableTh colKey="contact" width={columnWidths.contact} onStartResize={startResizing}>
+                  اطلاعات تماس
+                </ResizableTh>
+                <ResizableTh colKey="nationalId" width={columnWidths.nationalId} onStartResize={startResizing}>
+                  شناسه / کد ملی
+                </ResizableTh>
+                <ResizableTh colKey="records" width={columnWidths.records} onStartResize={startResizing}>
+                  سوابق متصل
+                </ResizableTh>
+                <ResizableTh colKey="balance" width={columnWidths.balance} onStartResize={startResizing}>
+                  مانده تراز (ریال)
+                </ResizableTh>
+                <ResizableTh colKey="status" width={columnWidths.status} onStartResize={startResizing} className="text-center">
+                  وضعیت
+                </ResizableTh>
+                <ResizableTh colKey="actions" width={columnWidths.actions} onStartResize={startResizing} className="text-center">
+                  عملیات
+                </ResizableTh>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -944,34 +1006,34 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                   return (
                     <tr key={party.id} className="hover:bg-slate-50/80 transition-colors">
                       {/* Code */}
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900" dir="ltr">
+                      <td style={{ width: `${columnWidths.code}px`, minWidth: `${columnWidths.code}px`, maxWidth: `${columnWidths.code}px` }} className="py-3 px-3 font-mono font-bold text-slate-900 truncate" dir="ltr">
                         {party.partyCode}
                       </td>
 
                       {/* Name */}
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900">{party.fullName}</div>
+                      <td style={{ width: `${columnWidths.name}px`, minWidth: `${columnWidths.name}px`, maxWidth: `${columnWidths.name}px` }} className="py-3 px-3 truncate">
+                        <div className="font-bold text-slate-900 truncate">{party.fullName}</div>
                         {party.companyTitle && (
-                          <div className="text-[11px] text-slate-500">{party.companyTitle}</div>
+                          <div className="text-[11px] text-slate-500 truncate">{party.companyTitle}</div>
                         )}
                         {party.installerSkills && (
-                          <div className="text-[11px] text-amber-800 line-clamp-1 mt-0.5">
+                          <div className="text-[11px] text-amber-800 line-clamp-1 mt-0.5 truncate">
                             🛠️ {party.installerSkills}
                           </div>
                         )}
                       </td>
 
                       {/* Types & Roles */}
-                      <td className="py-3 px-4">
+                      <td style={{ width: `${columnWidths.type}px`, minWidth: `${columnWidths.type}px`, maxWidth: `${columnWidths.type}px` }} className="py-3 px-3 truncate">
                         <div className="flex flex-wrap items-center gap-1">
                           <span
-                            className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-semibold ${typeConf.colorClass}`}
+                            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-semibold ${typeConf.colorClass}`}
                           >
                             <TypeIcon className="h-3 w-3" />
                             <span>{typeConf.labelFa}</span>
                           </span>
                           {party.personType === 'LEGAL' && (
-                            <span className="rounded bg-slate-100 text-slate-600 px-1.5 py-0.5 text-[10px]">
+                            <span className="rounded-lg bg-slate-100 text-slate-600 px-1.5 py-0.5 text-[10px]">
                               حقوقی
                             </span>
                           )}
@@ -979,43 +1041,43 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                       </td>
 
                       {/* Contact Info */}
-                      <td className="py-3 px-4 space-y-0.5">
-                        <div className="font-mono text-slate-900 flex items-center gap-1" dir="ltr">
-                          <Smartphone className="h-3 w-3 text-slate-400" />
-                          <span>{party.mobile}</span>
+                      <td style={{ width: `${columnWidths.contact}px`, minWidth: `${columnWidths.contact}px`, maxWidth: `${columnWidths.contact}px` }} className="py-3 px-3 space-y-0.5 truncate">
+                        <div className="font-mono text-slate-900 flex items-center gap-1 truncate" dir="ltr">
+                          <Smartphone className="h-3 w-3 text-slate-400 shrink-0" />
+                          <span className="truncate">{party.mobile}</span>
                         </div>
                         {party.phone && (
                           <div
-                            className="font-mono text-[11px] text-slate-500 flex items-center gap-1"
+                            className="font-mono text-[11px] text-slate-500 flex items-center gap-1 truncate"
                             dir="ltr"
                           >
-                            <Phone className="h-3 w-3 text-slate-400" />
-                            <span>{party.phone}</span>
+                            <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                            <span className="truncate">{party.phone}</span>
                           </div>
                         )}
-                        <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-slate-400" />
-                          <span>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-1 truncate">
+                          <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
+                          <span className="truncate">
                             {party.province} · {party.city}
                           </span>
                         </div>
                       </td>
 
                       {/* IDs */}
-                      <td className="py-3 px-4 font-mono text-[11px] text-slate-700" dir="ltr">
+                      <td style={{ width: `${columnWidths.nationalId}px`, minWidth: `${columnWidths.nationalId}px`, maxWidth: `${columnWidths.nationalId}px` }} className="py-3 px-3 font-mono text-[11px] text-slate-700 truncate" dir="ltr">
                         {party.nationalId || '—'}
                       </td>
 
                       {/* Linked records summary */}
-                      <td className="py-3 px-4 text-[11px]">
-                        <div className="space-y-0.5">
-                          <div>
+                      <td style={{ width: `${columnWidths.records}px`, minWidth: `${columnWidths.records}px`, maxWidth: `${columnWidths.records}px` }} className="py-3 px-3 text-[11px] truncate">
+                        <div className="space-y-0.5 truncate">
+                          <div className="truncate">
                             فروش: {party.transactionsSummary?.totalSalesCount || 0} | خرید:{' '}
                             {party.transactionsSummary?.totalPurchasesCount || 0}
                           </div>
                           {party.transactionsSummary?.activeProjectsCount ? (
-                            <div className="text-blue-700 font-semibold">
-                              پروژه مداربسته فعال:{' '}
+                            <div className="text-blue-700 font-semibold truncate">
+                              پروژه فعال:{' '}
                               {party.transactionsSummary.activeProjectsCount}
                             </div>
                           ) : null}
@@ -1023,7 +1085,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                       </td>
 
                       {/* Balance */}
-                      <td className="py-3 px-4 font-mono font-bold" dir="ltr">
+                      <td style={{ width: `${columnWidths.balance}px`, minWidth: `${columnWidths.balance}px`, maxWidth: `${columnWidths.balance}px` }} className="py-3 px-3 font-mono font-bold truncate" dir="ltr">
                         <span
                           className={
                             netBal > 0
@@ -1041,7 +1103,7 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                       </td>
 
                       {/* Status */}
-                      <td className="py-3 px-4 text-center">
+                      <td style={{ width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`, maxWidth: `${columnWidths.status}px` }} className="py-3 px-3 text-center truncate">
                         <button
                           type="button"
                           onClick={() => handleToggleStatus(party.id)}
@@ -1128,6 +1190,23 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                 <X className="h-5 w-5" />
               </button>
             </div>
+
+            {/* Modal Error Alert Banner */}
+            {modalError && (
+              <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-950 font-bold flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+                  <span>{modalError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalError(null)}
+                  className="text-red-700 underline text-[11px] font-semibold hover:no-underline"
+                >
+                  بستن
+                </button>
+              </div>
+            )}
 
             {/* Real-time Duplicate Detection Alert Banner */}
             {duplicateCheckState.hasDuplicate && (
@@ -1812,6 +1891,23 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
               </button>
             </div>
 
+            {/* Modal Error Alert Banner */}
+            {modalError && (
+              <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-950 font-bold flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+                  <span>{modalError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalError(null)}
+                  className="text-red-700 underline text-[11px] font-semibold hover:no-underline"
+                >
+                  بستن
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handleAttachTransactionSubmit} className="space-y-3 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">نوع سند</label>
@@ -1960,6 +2056,23 @@ export const PartiesManagementView: React.FC<PartiesManagementViewProps> = ({
                 <X className="h-5 w-5" />
               </button>
             </div>
+
+            {/* Modal Error Alert Banner */}
+            {modalError && (
+              <div className="mx-6 mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-950 font-bold flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+                  <span>{modalError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalError(null)}
+                  className="text-red-700 underline text-[11px] font-semibold hover:no-underline"
+                >
+                  بستن
+                </button>
+              </div>
+            )}
 
             {/* Current Balance Notice */}
             <div className="px-6 pt-4">

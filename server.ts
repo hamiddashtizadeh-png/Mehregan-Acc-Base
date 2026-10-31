@@ -1037,6 +1037,64 @@ async function startServer() {
     }
   );
 
+  // 10. Quick settlement for party
+  app.post(
+    '/api/parties/:id/settle',
+    requirePermission('parties.edit'),
+    (req: Request, res: Response) => {
+      try {
+        const activeUser = foundationStore.getActiveUser();
+        const partyId = Number(req.params.id);
+        const party = foundationStore.getPartyById(partyId);
+        if (!party) {
+          return res.status(404).json({ ok: false, messageFa: 'شخص مورد نظر یافت نشد.' });
+        }
+
+        const {
+          txType,
+          amountIrr,
+          dateJalali,
+          paymentMethod,
+          descriptionFa,
+          referenceNumber,
+        } = req.body || {};
+
+        const numAmount = Number(amountIrr || 0);
+        if (numAmount <= 0) {
+          return res.status(400).json({ ok: false, messageFa: 'مبلغ تسویه باید بزرگتر از صفر باشد.' });
+        }
+
+        const recType = txType === 'RECEIPT' ? 'RECEIPT' : 'PAYMENT';
+        const titleFa = descriptionFa || `تسویه حساب (${txType === 'RECEIPT' ? 'دریافت از' : 'پرداخت به'} ${party.fullName})`;
+
+        const tx = foundationStore.addPartyTransaction(
+          partyId,
+          {
+            recordType: recType,
+            titleFa,
+            amountIrr: numAmount,
+            dateJalali: dateJalali || '1405/01/25',
+            referenceNumber: referenceNumber || `SETTLE-${Date.now().toString().slice(-6)}`,
+            status: 'SETTLED',
+            notesFa: `روش تسویه: ${paymentMethod || 'POS'}`,
+          },
+          activeUser.id
+        );
+
+        res.status(200).json({
+          ok: true,
+          messageFa: `تسویه حساب به مبلغ ${numAmount.toLocaleString('fa-IR')} ریال برای «${party.fullName}» با موفقیت در اسناد مالی ثبت گردید.`,
+          transaction: tx,
+        });
+      } catch (err: unknown) {
+        res.status(400).json({
+          ok: false,
+          messageFa: err instanceof Error ? err.message : 'خطا در ثبت تسویه حساب طرف تجاری.',
+        });
+      }
+    }
+  );
+
   // ============================================================================
   // STAGE 4: INVENTORY, ITEMS, BRANDS, WAREHOUSES, SERIALS & KARDEX ENDPOINTS
   // ============================================================================
@@ -3061,27 +3119,23 @@ async function startServer() {
   // 83. Approve Project Requisition (صرفاً مدیران و انبارداران؛ مسدود برای نصاب)
   app.post(
     '/api/projects/requisitions/:reqId/approve',
-    (req: Request, res: Response, next: NextFunction) => {
-      const activeUser = getRequestUser(req);
-      const activeInstallerId = getActiveInstallerPartyId(activeUser);
-      if (activeInstallerId) {
-        return res.status(403).json({
-          ok: false,
-          errorCode: 'INSTALLER_ACTION_FORBIDDEN',
-          messageFa: 'دسترسی غیرمجاز: نصاب مجاز به تأیید درخواست کالا نیست. این عملیات صرفاً در صلاحیت مدیر یا انباردار است.',
-        });
-      }
-      return requirePermission('inventory.transfer.manage')(req, res, next);
-    },
     (req: Request, res: Response) => {
       try {
+        const activeUser = getRequestUser(req) || foundationStore.getActiveUser();
+        const activeInstallerId = getActiveInstallerPartyId(activeUser);
+        if (activeInstallerId) {
+          return res.status(403).json({
+            ok: false,
+            errorCode: 'INSTALLER_ACTION_FORBIDDEN',
+            messageFa: 'دسترسی غیرمجاز: نصاب مجاز به تأیید درخواست کالا نیست. این عملیات صرفاً در صلاحیت مدیر یا انباردار است.',
+          });
+        }
         const reqId = Number(req.params.reqId);
-        const activeUser = getRequestUser(req);
-        const { approvedQty } = req.body || {};
-        const requisition = foundationStore.approveProjectRequisition(reqId, approvedQty, activeUser.id);
+        const { approvedQty, items } = req.body || {};
+        const requisition = foundationStore.approveProjectRequisition(reqId, items || approvedQty, activeUser.id);
         res.json({
           ok: true,
-          messageFa: `درخواست ${requisition.requestCode} با تأیید ${requisition.approvedQty} عدد تصویب گردید.`,
+          messageFa: `درخواست ${requisition.requestCode} با موفقیت تصویب و برای نصاب ارسال گردید.`,
           requisition,
         });
       } catch (err: unknown) {
@@ -3092,6 +3146,25 @@ async function startServer() {
       }
     }
   );
+
+  // 83b. Update/Amend Project Requisition (اصلاحیه چک‌لیست درخواست کالا توسط مدیر)
+  app.put('/api/projects/requisitions/:reqId', (req: Request, res: Response) => {
+    try {
+      const activeUser = getRequestUser(req) || foundationStore.getActiveUser();
+      const reqId = Number(req.params.reqId);
+      const requisition = foundationStore.updateProjectRequisition(reqId, req.body || {}, activeUser.id);
+      res.json({
+        ok: true,
+        messageFa: `اصلاحیه درخواست کالای ${requisition.requestCode} با موفقیت ثبت گردید.`,
+        requisition,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ویرایش و اصلاح درخواست کالا.',
+      });
+    }
+  });
 
   // 84. Issue Project Requisition (صرفاً انباردار؛ مسدود برای نصاب)
   app.post(
@@ -3163,7 +3236,7 @@ async function startServer() {
   app.post('/api/projects/requisitions/:reqId/return', (req: Request, res: Response) => {
     try {
       const reqId = Number(req.params.reqId);
-      const activeUser = foundationStore.getActiveUser();
+      const activeUser = getRequestUser(req) || foundationStore.getActiveUser();
       const { returnedQty, dateJalali } = req.body || {};
       const requisition = foundationStore.returnProjectRequisition(
         reqId,
@@ -3180,6 +3253,79 @@ async function startServer() {
       res.status(400).json({
         ok: false,
         messageFa: err instanceof Error ? err.message : 'خطا در برگشت کالا به انبار.',
+      });
+    }
+  });
+
+  // 86b. Set Requisition Ready for Install + Scheduled Install Date (توسط نصاب)
+  app.post('/api/projects/requisitions/:reqId/ready-for-install', (req: Request, res: Response) => {
+    try {
+      const reqId = Number(req.params.reqId);
+      const activeUser = getRequestUser(req) || foundationStore.getActiveUser();
+      const { scheduledInstallDateJalali } = req.body || {};
+      const requisition = foundationStore.setRequisitionReadyForInstall(
+        reqId,
+        scheduledInstallDateJalali,
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        messageFa: `وضعیت پروژه به «آماده برای نصب» تغییر یافت و تاریخ نصب ${scheduledInstallDateJalali || ''} ثبت گردید.`,
+        requisition,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در تغییر وضعیت به آماده برای نصب.',
+      });
+    }
+  });
+
+  // 86c. Submit Final Consumption Report (توسط نصاب پس از پایان کار)
+  app.post('/api/projects/requisitions/:reqId/submit-final-consumption', (req: Request, res: Response) => {
+    try {
+      const reqId = Number(req.params.reqId);
+      const activeUser = getRequestUser(req) || foundationStore.getActiveUser();
+      const { consumedItems } = req.body || {};
+      const requisition = foundationStore.submitRequisitionFinalConsumption(
+        reqId,
+        consumedItems || [],
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        messageFa: 'گزارش و اصلاحیه اقلام مصرفی نهایی با موفقیت برای بررسی و قیمت‌گذاری مدیریت ارسال گردید.',
+        requisition,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در ثبت گزارش مصرفی نهایی.',
+      });
+    }
+  });
+
+  // 86d. Price and Invoice Requisition (توسط مدیر: قیمت‌گذاری + صدور فاکتور نهایی + تسویه)
+  app.post('/api/projects/requisitions/:reqId/price-and-invoice', (req: Request, res: Response) => {
+    try {
+      const reqId = Number(req.params.reqId);
+      const activeUser = getRequestUser(req) || foundationStore.getActiveUser();
+      const { pricedItems } = req.body || {};
+      const result = foundationStore.priceAndInvoiceRequisition(
+        reqId,
+        pricedItems || [],
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        messageFa: `قیمت‌گذاری اقلام انجام شد و فاکتور فروش نهایی ${result.invoice.invoiceNumber} با موفقیت صادر و پروژه تکمیل گردید.`,
+        requisition: result.requisition,
+        invoice: result.invoice,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در قیمت‌گذاری و صدور فاکتور نهایی.',
       });
     }
   });
@@ -3769,20 +3915,26 @@ async function startServer() {
 4. در صورت ابهام یا ناقص بودن اطلاعات دستور کاربر (مانند مشخص نبودن نام شخص، مبلغ دقیق به تومان، یا تاریخ برای فاکتور، پرداخت/دریافت، هزینه یا سند):
    پاسخ را با intent \"NEED_CLARIFICATION\" و پر کردن clarificationPayload برگردانید که شامل یک سوال صریح و چند گزینه پیشنهادی (suggestedOptions) باشد تا کاربر به راحتی انتخاب کند.
 
-5. در صورت کامل بودن مشخصات فاکتور (نوع، نام طرف حساب، مبلغ/کالا):
-   با intent \"ACTION_CREATE_INVOICE\" فیلد invoicePayload را پر کنید.
+5. در صورت کامل بودن مشخصات فاکتور یا پیش‌فاکتور (نوع، نام طرف حساب، مبلغ/کالا):
+   با intent "ACTION_CREATE_INVOICE" فیلد invoicePayload را پر کنید. اگر کاربر درخواست «پیش‌فاکتور» یا «استعلام» داده، فیلد isProforma را true بگذارید.
 
 6. در صورت کامل بودن مشخصات ثبت سند حسابداری دوطرفه:
-   با intent \"ACTION_CREATE_JOURNAL_VOUCHER\" فیلد journalVoucherPayload را همراه با ردیف‌های بدهکار و بستانکار پر کنید.
+   با intent "ACTION_CREATE_JOURNAL_VOUCHER" فیلد journalVoucherPayload را همراه با ردیف‌های بدهکار و بستانکار پر کنید.
 
-7. در صورت کامل بودن مشخصات واریز/برداشت/قبض دریافت و پرداخت:
-   با intent \"ACTION_CREATE_PAYMENT_RECEIPT\" فیلد paymentReceiptPayload را پر کنید.
+7. در صورت کامل بودن مشخصات واریز/برداشت/قبض دریافت و پرداخت (مانند «از آقای احمدی ۵ میلیون تومان دریافت کردم»):
+   با intent "ACTION_CREATE_PAYMENT_RECEIPT" فیلد paymentReceiptPayload را پر کنید (نوع RECEIPT برای دریافت، PAYMENT برای پرداخت). مبلغ را حتماً به تومان استخراج کنید.
 
-8. در صورت کامل بودن مشخصات هزینه جاری:
-   با intent \"ACTION_CREATE_EXPENSE\" فیلد expensePayload را پر کنید.
+8. در صورت کامل بودن مشخصات هزینه جاری (مانند «۸۰۰ هزار تومان هزینه مغازه ثبت کن»):
+   با intent "ACTION_CREATE_EXPENSE" فیلد expensePayload را پر کنید.
 
-9. در صورت درخواست ناوبری به صفحات:
+9. در صورت درخواست ثبت یا تغییر وضعیت پروژه/سفارش نصب (مانند «وضعیت نصب پروژه مشتری را ثبت کن»):
+   اگر پروژه یا وضعیت مشخص نیست با intent "NEED_CLARIFICATION" شفاف‌سازی کنید. در صورت وجود مشخصات با intent "ACTION_UPDATE_PROJECT_STATUS" فیلد projectPayload را پر کنید.
+
+10. در صورت درخواست ناوبری به صفحات:
    فیلد navigateTab را تنظیم کنید.
+
+قاعده تبدیل ارز و مبلغ:
+واحد در گفتار روزمره تومان است (۱ تومان = ۱۰ ریال). مبالغ را به تومان استخراج نموده و در متن پاسخ معادل ریالی آن را نیز صریحاً بنویسید تا هیچ خطای محاسباتی رخ ندهد.
 
 خلاصه داده‌های فعلی سیستم ERP مهرگان:
 ${JSON.stringify(foundationDataSummary || {}, null, 2)}"
@@ -3790,7 +3942,7 @@ ${JSON.stringify(foundationDataSummary || {}, null, 2)}"
 ساختار خروجی الزامی باید JSON دقیق زیر باشد:
 {
   "text": "متن رسمی و دقیق حسابدار ارشد به فارسی همراه با کد حساب/شماره سند/استعلام مالیشفاف",
-  "intent": "NEED_CLARIFICATION" | "ACTION_CREATE_INVOICE" | "ACTION_CREATE_JOURNAL_VOUCHER" | "ACTION_CREATE_PAYMENT_RECEIPT" | "ACTION_CREATE_EXPENSE" | "ACTION_NAVIGATE" | "QUERY_BANK_BALANCES" | "QUERY_INVENTORY" | "QUERY_PARTY_LEDGER" | "QUERY_CHEQUES" | "GUIDE_HELP" | "GENERAL_CHAT",
+  "intent": "NEED_CLARIFICATION" | "ACTION_CREATE_INVOICE" | "ACTION_CREATE_JOURNAL_VOUCHER" | "ACTION_CREATE_PAYMENT_RECEIPT" | "ACTION_CREATE_EXPENSE" | "ACTION_UPDATE_PROJECT_STATUS" | "ACTION_NAVIGATE" | "QUERY_BANK_BALANCES" | "QUERY_INVENTORY" | "QUERY_PARTY_LEDGER" | "QUERY_CHEQUES" | "GUIDE_HELP" | "GENERAL_CHAT",
   "clarificationPayload": {
     "questionFa": "متن سوال شفاف‌سازی",
     "missingField": "نام فیلد ناقص",
@@ -3801,6 +3953,7 @@ ${JSON.stringify(foundationDataSummary || {}, null, 2)}"
   },
   "invoicePayload": {
     "type": "SALES" | "PURCHASE",
+    "isProforma": false,
     "partyId": 1,
     "partyName": "نام طرف حساب",
     "items": [{ "title": "عنوان کالا", "quantity": 1, "unitPrice": 1000000, "totalPrice": 1000000 }],
@@ -3817,19 +3970,27 @@ ${JSON.stringify(foundationDataSummary || {}, null, 2)}"
     "type": "RECEIPT" | "PAYMENT",
     "partyName": "نام شخص",
     "sourceTargetTitle": "بانک/صندوق",
-    "amount": 500000,
+    "amount": 5000000,
     "paymentMethod": "BANK" | "CASH" | "POS"
   },
   "expensePayload": {
     "title": "عنوان هزینه",
-    "amount": 100000,
+    "amount": 800000,
     "category": "هزینه‌های جاری و اداری"
+  },
+  "projectPayload": {
+    "projectId": 1,
+    "projectTitle": "عنوان پروژه",
+    "customerName": "نام مشتری",
+    "newStatus": "IN_PROGRESS" | "COMPLETED" | "NEED_PARTS",
+    "statusFa": "در حال اجرا",
+    "notes": "توضیحات پیشرفت کار"
   },
   "navigateTab": "نام تب"
 }`;
 
       let responseText = '';
-      const candidateModels = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+      const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
 
       for (const modelName of candidateModels) {
         try {
@@ -3986,6 +4147,43 @@ ${JSON.stringify(foundationDataSummary || {}, null, 2)}"
       res.status(400).json({
         ok: false,
         messageFa: err instanceof Error ? err.message : 'خطا در تغییر وضعیت میز.',
+      });
+    }
+  });
+
+  app.post('/api/restaurant/tables', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const table = foundationStore.addRestaurantTable(req.body, activeUser.id);
+      res.status(201).json({
+        ok: true,
+        messageFa: `میز ${table.titleFa} با موفقیت افزوده شد.`,
+        table,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در افزودن میز جدید.',
+      });
+    }
+  });
+
+  app.delete('/api/restaurant/tables/:id', (req: Request, res: Response) => {
+    try {
+      const activeUser = foundationStore.getActiveUser();
+      const result = foundationStore.deleteRestaurantTable(
+        Number(req.params.id),
+        activeUser.id
+      );
+      res.json({
+        ok: true,
+        messageFa: 'میز رستوران با موفقیت حذف گردید.',
+        ...result,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({
+        ok: false,
+        messageFa: err instanceof Error ? err.message : 'خطا در حذف میز.',
       });
     }
   });

@@ -39,6 +39,12 @@ import {
   Settings,
   LayoutGrid,
   X,
+  ListTodo,
+  Activity,
+  BellRing,
+  ArrowRight,
+  Palette,
+  Maximize2,
 } from 'lucide-react';
 import { FoundationDataResponse, resolveIndustryUiLabels, ExecutiveBiMetrics } from '../types/foundation';
 import {
@@ -52,15 +58,22 @@ import {
   TableCell,
   TableEmptyState,
   Input,
+  StatCard,
+  Badge,
 } from './ui';
 
 interface DashboardViewProps {
   foundationData: FoundationDataResponse;
   onNavigateTab: (tab: string) => void;
   onRefresh: () => void;
+  onOpenOperations?: () => void;
 }
 
 export interface WidgetVisibility {
+  smartAgent: boolean;
+  smartLaunchpad: boolean;
+  actionRequired: boolean;
+  recentActivity: boolean;
   kpiCards: boolean;
   salesChart: boolean;
   liquidityChart: boolean;
@@ -72,6 +85,10 @@ export interface WidgetVisibility {
 }
 
 const DEFAULT_WIDGETS: WidgetVisibility = {
+  smartAgent: false,
+  smartLaunchpad: true,
+  actionRequired: true,
+  recentActivity: true,
   kpiCards: true,
   salesChart: true,
   liquidityChart: true,
@@ -88,6 +105,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   foundationData,
   onNavigateTab,
   onRefresh,
+  onOpenOperations,
 }) => {
   const industryProfile = foundationData.industryProfile;
   const profileCode = industryProfile?.code || 'CCTV_SECURITY';
@@ -125,12 +143,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   });
 
   const [isWidgetManagerOpen, setIsWidgetManagerOpen] = useState(false);
+  const [activeTheme, setActiveTheme] = useState(() => {
+    return localStorage.getItem('mehregan_active_ui_theme') || 'isee_smart_hub';
+  });
+
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ themeId: string }>;
+      if (customEvent.detail?.themeId) {
+        setActiveTheme(customEvent.detail.themeId);
+      }
+    };
+    window.addEventListener('mehregan_theme_changed', handleThemeChange);
+    return () => window.removeEventListener('mehregan_theme_changed', handleThemeChange);
+  }, []);
 
   const toggleWidget = (key: keyof WidgetVisibility) => {
     setWidgets((prev) => {
       const updated = { ...prev, [key]: !prev[key] };
       try {
         localStorage.setItem('mehregan_dashboard_widgets_v1', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('mehregan_widgets_changed', { detail: updated }));
       } catch {
         // ignore
       }
@@ -269,6 +302,247 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     [installationJobs]
   );
 
+  // 1. Action-Required Items Cockpit (کارهای نیازمند اقدام فوری)
+  const actionRequiredItems = useMemo(() => {
+    const list: Array<{
+      id: string;
+      titleFa: string;
+      count: number;
+      amountToman?: number;
+      descriptionFa: string;
+      urgency: 'HIGH' | 'MEDIUM' | 'NORMAL';
+      targetTab: string;
+      actionLabelFa: string;
+      badgeText: string;
+    }> = [];
+
+    // Cheques in hand needing deposit/clearance
+    const inHandCount = inHandCheques.length;
+    if (inHandCount > 0) {
+      list.push({
+        id: 'CHEQUES_IN_HAND',
+        titleFa: 'چک‌های صیادی نزد صندوق',
+        count: inHandCount,
+        amountToman: Math.round(totalInHandChequesIrr / 10),
+        descriptionFa: 'نیازمند واگذاری به بانک، تعیین وضعیت یا ثبت وصول در سامانه صیاد',
+        urgency: 'HIGH',
+        targetTab: 'TREASURY',
+        actionLabelFa: 'مدیریت چک‌ها در خزانه',
+        badgeText: `${inHandCount} فقره چک`,
+      });
+    }
+
+    // Critical low stock items
+    if (lowStockItems.length > 0) {
+      list.push({
+        id: 'LOW_STOCK',
+        titleFa: 'کسری موجودی اقلام بحرانی انبار',
+        count: lowStockItems.length,
+        descriptionFa: `${lowStockItems.slice(0, 2).map((i) => i.titleFa).join('، ')}${
+          lowStockItems.length > 2 ? ' و سایر اقلام' : ''
+        } زیر نقطه سفارش هستند`,
+        urgency: 'HIGH',
+        targetTab: 'INVENTORY',
+        actionLabelFa: 'مشاهده کاردکس و ثبت سفارش خرید',
+        badgeText: `${lowStockItems.length} قلم کالا`,
+      });
+    }
+
+    // Unpaid sales receivables
+    const pendingSales = salesInvoices.filter((inv) => inv.status !== 'PAID');
+    const unpaidSalesAmountIrr = pendingSales.reduce(
+      (sum, inv) =>
+        sum +
+        (inv.remainingBalanceIrr ??
+          Math.max(0, (inv.totalInvoiceAmountIrr || 0) - (inv.paidAmountIrr || 0))),
+      0
+    );
+    if (pendingSales.length > 0) {
+      list.push({
+        id: 'PENDING_SALES',
+        titleFa: 'مطالبات فاکتورهای فروش معوق',
+        count: pendingSales.length,
+        amountToman: Math.round(unpaidSalesAmountIrr / 10),
+        descriptionFa: 'فاکتورهای تسویه‌نشده مشتریان جهت پیگیری وصول و تسویه بدهی',
+        urgency: 'MEDIUM',
+        targetTab: 'SALES',
+        actionLabelFa: 'پیگیری فاکتورهای بدهکار',
+        badgeText: `${pendingSales.length} فاکتور باز`,
+      });
+    }
+
+    // Installation tasks or projects awaiting assignment/approval
+    const pendingInstallations = installationJobs.filter(
+      (j) => j.status === 'PENDING_ASSIGNMENT' || j.status === 'ASSIGNED'
+    );
+    const pendingPrjs = projects.filter((p) => p.status === 'DRAFT' || p.status === 'APPROVED');
+    const totalPendingOps = pendingInstallations.length + (features.enableInstallationServices ? pendingPrjs.length : 0);
+    if (totalPendingOps > 0) {
+      list.push({
+        id: 'PENDING_INSTALLATIONS',
+        titleFa: 'سفارشات خدمات و پروژه‌ها',
+        count: totalPendingOps,
+        descriptionFa: 'پروژه‌ها و سفارشات نیازمند تخصیص نصاب، صدور حواله تجهیزات یا تأیید کارفرما',
+        urgency: 'NORMAL',
+        targetTab: 'INSTALLATION',
+        actionLabelFa: 'کارتابل خدمات و نصب',
+        badgeText: `${totalPendingOps} سفارش منتظر اقدام`,
+      });
+    }
+
+    // Accounts payable to suppliers
+    if (totalPayablesIrr > 0) {
+      list.push({
+        id: 'ACCOUNTS_PAYABLE',
+        titleFa: 'بدهی به تأمین‌کنندگان کالا',
+        count: parties.filter((p) => (p.transactionsSummary?.netBalanceIrr ?? 0) > 0).length || 1,
+        amountToman: Math.round(totalPayablesIrr / 10),
+        descriptionFa: 'مانده‌حساب بستانکاری طرف‌حساب‌های خرید و سررسید فاکتورهای تدارکات',
+        urgency: 'MEDIUM',
+        targetTab: 'TREASURY',
+        actionLabelFa: 'ثبت پرداخت و تسویه تدارکات',
+        badgeText: 'تعهدات مالی',
+      });
+    }
+
+    return list;
+  }, [
+    inHandCheques,
+    totalInHandChequesIrr,
+    lowStockItems,
+    salesInvoices,
+    installationJobs,
+    projects,
+    features.enableInstallationServices,
+    totalPayablesIrr,
+    parties,
+  ]);
+
+  // 2. Dynamic Recent System Activities Feed (آخرین فعالیت‌ها و وقایع سیستم)
+  const recentActivities = useMemo(() => {
+    interface ActivityItem {
+      id: string;
+      category: 'SALE' | 'PURCHASE' | 'CHEQUE' | 'INSTALLATION' | 'SYSTEM';
+      titleFa: string;
+      counterpartyFa?: string;
+      amountToman?: number;
+      dateFa: string;
+      statusFa: string;
+      statusTone: 'emerald' | 'amber' | 'blue' | 'purple' | 'slate';
+      targetTab: string;
+    }
+
+    const list: ActivityItem[] = [];
+
+    // Sales invoices
+    salesInvoices.slice(0, 4).forEach((inv) => {
+      list.push({
+        id: `sale-${inv.id}`,
+        category: 'SALE',
+        titleFa: `فاکتور فروش #${inv.invoiceNumber}`,
+        counterpartyFa: inv.customerTitleFa,
+        amountToman: Math.round(inv.totalInvoiceAmountIrr / 10),
+        dateFa: inv.dateJalali || 'ثبت شده',
+        statusFa:
+          inv.status === 'PAID'
+            ? 'تسویه کامل'
+            : inv.status === 'PARTIALLY_PAID'
+            ? 'تسویه ناقص'
+            : 'در انتظار پرداخت',
+        statusTone: inv.status === 'PAID' ? 'emerald' : inv.status === 'PARTIALLY_PAID' ? 'amber' : 'purple',
+        targetTab: 'SALES',
+      });
+    });
+
+    // Purchase invoices
+    purchaseInvoices.slice(0, 3).forEach((pur) => {
+      list.push({
+        id: `pur-${pur.id}`,
+        category: 'PURCHASE',
+        titleFa: `فاکتور خرید #${pur.invoiceNumber}`,
+        counterpartyFa: pur.supplierTitleFa || 'تأمین‌کننده',
+        amountToman: Math.round(
+          (pur.totalInvoicePayableToSupplierIrr || pur.totalInventoryValuationIrr || 0) / 10
+        ),
+        dateFa: pur.dateJalali || 'ثبت شده',
+        statusFa: pur.status === 'PAID' ? 'تسویه‌شده' : pur.status === 'PARTIALLY_PAID' ? 'تسویه ناقص' : 'مانده‌حساب',
+        statusTone: pur.status === 'PAID' ? 'emerald' : 'blue',
+        targetTab: 'PURCHASES',
+      });
+    });
+
+    // Cheques
+    cheques.slice(0, 3).forEach((chq) => {
+      list.push({
+        id: `chq-${chq.id}`,
+        category: 'CHEQUE',
+        titleFa: `${chq.chequeType === 'INBOUND' ? 'دریافت چک' : 'صدور چک'} ${
+          chq.bankNameFa || 'بانک'
+        } (${chq.chequeNumber})`,
+        counterpartyFa: chq.partyNameFa || 'طرف‌حساب',
+        amountToman: Math.round(chq.amountIrr / 10),
+        dateFa: `سررسید: ${chq.dueDateJalali || '-'}`,
+        statusFa:
+          chq.status === 'CLEARED'
+            ? 'وصول‌شده'
+            : chq.status === 'IN_HAND'
+            ? 'نزد صندوق'
+            : 'در جریان وصول',
+        statusTone: chq.status === 'CLEARED' ? 'emerald' : 'amber',
+        targetTab: 'TREASURY',
+      });
+    });
+
+    // Projects / installation jobs
+    if (features.enableInstallationServices) {
+      projects.slice(0, 2).forEach((prj) => {
+        list.push({
+          id: `prj-${prj.id}`,
+          category: 'INSTALLATION',
+          titleFa: `پروژه نظارتی: ${prj.titleFa}`,
+          counterpartyFa: prj.customerTitleFa,
+          amountToman: Math.round(prj.contractAmountIrr / 10),
+          dateFa: prj.startDateJalali || 'پروژه جاری',
+          statusFa:
+            prj.status === 'COMPLETED'
+              ? 'تکمیل‌شده'
+              : prj.status === 'IN_PROGRESS'
+              ? 'در حال اجرا'
+              : 'در انتظار',
+          statusTone: prj.status === 'COMPLETED' ? 'emerald' : 'purple',
+          targetTab: 'INSTALLATION',
+        });
+      });
+    }
+
+    // Audit logs
+    const auditEvents = foundationData.auditLogs || foundationData.executiveBi?.recentAuditEvents || [];
+    auditEvents.slice(0, 2).forEach((log) => {
+      list.push({
+        id: `audit-${log.id}`,
+        category: 'SYSTEM',
+        titleFa: (log as any).actionTitleFa || (log as any).action || 'رویداد امنیتی سیستم',
+        counterpartyFa: (log as any).actorUsername || 'کاربر سیستم',
+        dateFa: log.timestamp
+          ? new Date(log.timestamp).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
+          : 'امروز',
+        statusFa: 'ثبت امن',
+        statusTone: 'slate',
+        targetTab: 'SETTINGS_HEALTH',
+      });
+    });
+
+    return list.slice(0, 8);
+  }, [
+    salesInvoices,
+    purchaseInvoices,
+    cheques,
+    features.enableInstallationServices,
+    projects,
+    foundationData.auditLogs,
+    foundationData.executiveBi?.recentAuditEvents,
+  ]);
+
   // Filtered recent sales invoices
   const filteredSales = useMemo(() => {
     return salesInvoices
@@ -323,13 +597,277 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6 text-slate-800 pb-12">
-      {/* 1. EXECUTIVE HERO COMMAND HEADER */}
-      <Card
-        variant="default"
-        padding="lg"
-        className="relative overflow-hidden bg-slate-900 border-slate-800 text-white shadow-sm"
-      >
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+      {/* ========================================================================= */}
+      {/* 1. MOBILE BANKING DASHBOARD (مخصوص موبایل: کوتاه، خلوت و سریع) */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-4 select-none">
+        {/* کارت خلاصه وضعیت نقدینگی و دارایی (Mobile Banking Card) */}
+        <div className="p-4 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white shadow-md border border-slate-700/80 space-y-3.5 relative overflow-hidden">
+          <div className="flex items-center justify-between text-xs text-slate-300">
+            <div className="flex items-center gap-1.5 font-black text-emerald-400">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>{foundationData.settings?.companyName || 'مهرگان'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono tabular-nums text-slate-400 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-slate-400" />
+                {currentTimeStr}
+              </span>
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                title="بروزرسانی اطلاعات"
+                className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-1">
+            <span className="text-[11px] text-slate-400 block font-medium">موجودی نقد و بانک در دسترس:</span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-2xl font-black font-mono tabular-nums tracking-tight text-white">
+                {(totalLiquidityIrr / 10).toLocaleString('fa-IR')}
+              </span>
+              <span className="text-xs text-slate-300 font-bold">تومان</span>
+            </div>
+          </div>
+
+          {/* Quick Metrics Strip */}
+          <div className="pt-3 border-t border-slate-800/80 grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="bg-slate-800/60 p-2 rounded-xl">
+              <span className="text-[10px] text-slate-400 block">فروش دوره</span>
+              <span className="font-mono font-black text-emerald-400 text-xs tabular-nums block mt-0.5">
+                {(totalSalesIrr / 10).toLocaleString('fa-IR')} <span className="text-[9px] font-normal">ت</span>
+              </span>
+            </div>
+            <div className="bg-slate-800/60 p-2 rounded-xl">
+              <span className="text-[10px] text-slate-400 block">مطالبات مشتری</span>
+              <span className="font-mono font-black text-amber-300 text-xs tabular-nums block mt-0.5">
+                {(totalReceivablesIrr / 10).toLocaleString('fa-IR')} <span className="text-[9px] font-normal">ت</span>
+              </span>
+            </div>
+            <div className="bg-slate-800/60 p-2 rounded-xl">
+              <span className="text-[10px] text-slate-400 block">بدهی تأمین</span>
+              <span className="font-mono font-black text-rose-300 text-xs tabular-nums block mt-0.5">
+                {(totalPayablesIrr / 10).toLocaleString('fa-IR')} <span className="text-[9px] font-normal">ت</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* حداکثر ۴ عملیات محبوب و پرتکرار (Max 4 Top Favorite Operations) */}
+        <Card variant="default" padding="sm" className="space-y-2.5">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5 font-black text-xs text-slate-900">
+              <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span>عملیات پرکاربرد</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenOperations) {
+                  onOpenOperations();
+                } else {
+                  onNavigateTab('SALES');
+                }
+              }}
+              className="text-[11px] font-extrabold text-blue-600 hover:text-blue-800 flex items-center gap-0.5 cursor-pointer"
+            >
+              <span>مشاهده همه عملیات</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {/* 1. SALES */}
+            <button
+              type="button"
+              onClick={() => onNavigateTab('SALES')}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-emerald-50/70 border border-slate-200/80 hover:border-emerald-300 transition-all text-right flex items-center gap-2.5 active:scale-[0.97] touch-manipulation cursor-pointer min-h-[58px]"
+            >
+              <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800 shrink-0">
+                <ShoppingCart className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-black text-slate-900 block truncate">
+                  {uiLabels.quickPosButtonLabelFa || 'فروش POS'}
+                </span>
+                <span className="text-[10px] text-slate-500 block truncate mt-0.5">فاکتور و تسویه</span>
+              </div>
+            </button>
+
+            {/* 2. PURCHASES */}
+            <button
+              type="button"
+              onClick={() => onNavigateTab('PURCHASES')}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-amber-50/70 border border-slate-200/80 hover:border-amber-300 transition-all text-right flex items-center gap-2.5 active:scale-[0.97] touch-manipulation cursor-pointer min-h-[58px]"
+            >
+              <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 shrink-0">
+                <ShoppingBag className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-black text-slate-900 block truncate">فاکتور خرید</span>
+                <span className="text-[10px] text-slate-500 block truncate mt-0.5">تأمین کالا</span>
+              </div>
+            </button>
+
+            {/* 3. TREASURY */}
+            <button
+              type="button"
+              onClick={() => onNavigateTab('TREASURY')}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/70 border border-slate-200/80 hover:border-teal-300 transition-all text-right flex items-center gap-2.5 active:scale-[0.97] touch-manipulation cursor-pointer min-h-[58px]"
+            >
+              <div className="p-2.5 rounded-xl bg-teal-100 text-teal-800 shrink-0">
+                <Landmark className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-black text-slate-900 block truncate">دریافت و پرداخت</span>
+                <span className="text-[10px] text-slate-500 block truncate mt-0.5">خزانه و چک صیادی</span>
+              </div>
+            </button>
+
+            {/* 4. INVENTORY or INSTALLATION */}
+            {features.enableInstallationServices ? (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('INSTALLATION')}
+                className="p-3 rounded-2xl bg-slate-50 hover:bg-cyan-50/70 border border-slate-200/80 hover:border-cyan-300 transition-all text-right flex items-center gap-2.5 active:scale-[0.97] touch-manipulation cursor-pointer min-h-[58px]"
+              >
+                <div className="p-2.5 rounded-xl bg-cyan-100 text-cyan-800 shrink-0">
+                  <Wrench className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-black text-slate-900 block truncate">خدمات و نصب</span>
+                  <span className="text-[10px] text-slate-500 block truncate mt-0.5">پروژه و نصابان</span>
+                </div>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('INVENTORY')}
+                className="p-3 rounded-2xl bg-slate-50 hover:bg-indigo-50/70 border border-slate-200/80 hover:border-indigo-300 transition-all text-right flex items-center gap-2.5 active:scale-[0.97] touch-manipulation cursor-pointer min-h-[58px]"
+              >
+                <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-800 shrink-0">
+                  <Package className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-black text-slate-900 block truncate">کالا و انبارداری</span>
+                  <span className="text-[10px] text-slate-500 block truncate mt-0.5">موجودی و کاردکس</span>
+                </div>
+              </button>
+            )}
+          </div>
+        </Card>
+
+        {/* حداکثر ۳ مورد نیازمند اقدام فوری (Max 3 Action-Required Items) */}
+        <Card variant="default" padding="sm" className="space-y-2.5">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5 font-black text-xs text-slate-900">
+              <ListTodo className="w-3.5 h-3.5 text-rose-600" />
+              <span>کارهای نیازمند اقدام فوری</span>
+            </div>
+            {actionRequiredItems.length > 0 ? (
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                {Math.min(actionRequiredItems.length, 3).toLocaleString('fa-IR')} مورد
+              </span>
+            ) : (
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                پایدار
+              </span>
+            )}
+          </div>
+
+          {actionRequiredItems.length === 0 ? (
+            <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl flex items-center gap-2.5 text-xs text-emerald-800">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>تمام چک‌ها، اسناد و موجودی انبار در وضعیت پایدار هستند.</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {actionRequiredItems.slice(0, 3).map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => onNavigateTab(item.targetTab)}
+                  className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2.5 active:scale-[0.98] touch-manipulation ${
+                    item.urgency === 'HIGH'
+                      ? 'bg-rose-50/50 border-rose-200 hover:border-rose-400'
+                      : item.urgency === 'MEDIUM'
+                      ? 'bg-amber-50/50 border-amber-200 hover:border-amber-400'
+                      : 'bg-blue-50/50 border-blue-200 hover:border-blue-400'
+                  }`}
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <AlertTriangle
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          item.urgency === 'HIGH'
+                            ? 'text-rose-600'
+                            : item.urgency === 'MEDIUM'
+                            ? 'text-amber-600'
+                            : 'text-blue-600'
+                        }`}
+                      />
+                      <span className="font-black text-xs text-slate-900 truncate">{item.titleFa}</span>
+                      <span
+                        className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded-full shrink-0 ${
+                          item.urgency === 'HIGH'
+                            ? 'bg-rose-100 text-rose-800'
+                            : item.urgency === 'MEDIUM'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {item.badgeText}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 truncate">{item.descriptionFa}</p>
+                    {item.amountToman !== undefined && (
+                      <p className="text-[11px] font-mono font-black text-slate-800 tabular-nums">
+                        مبلغ: {item.amountToman.toLocaleString('fa-IR')} تومان
+                      </p>
+                    )}
+                  </div>
+                  <ChevronLeft className="w-4 h-4 text-slate-400 shrink-0" />
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* دسترسی مستقیم به سایر بخش‌های مهم */}
+        <div className="p-3 bg-white border border-slate-200/80 rounded-2xl flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
+              <Landmark className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-black text-slate-900 text-xs">گردش حساب و تراکنش‌ها</p>
+              <p className="text-[10px] text-slate-500">مشاهده ریز دریافت، پرداخت و اسناد</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('TREASURY')}
+            className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-800 font-extrabold hover:bg-blue-100 transition-colors cursor-pointer text-xs"
+          >
+            مشاهده
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2. DESKTOP EXECUTIVE DASHBOARD (نسخه دسکتاپ کامل و دست‌نخورده) */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block space-y-6">
+        {/* 1. EXECUTIVE HERO COMMAND HEADER */}
+        <Card
+          variant="default"
+          padding="lg"
+          className="relative overflow-hidden bg-slate-900 border-slate-800 text-white shadow-sm"
+        >
+          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           {/* Brand & Greeting */}
           <div className="space-y-2 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
@@ -458,6 +996,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </Card>
 
+
+
       {/* 2. INTERACTIVE PERSPECTIVE / VIEW FILTER TABS & WIDGET TOGGLES */}
       <div className="space-y-3">
         <Card variant="default" padding="sm" className="flex items-center justify-between flex-wrap gap-3">
@@ -544,7 +1084,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => setIsWidgetManagerOpen(!isWidgetManagerOpen)}
               leftIcon={<Settings className="w-3.5 h-3.5 text-indigo-600" />}
             >
-              مدیریت ویجت‌ها ({Object.values(widgets).filter(Boolean).length}/8)
+              مدیریت ویجت‌ها ({Object.values(widgets).filter(Boolean).length}/{Object.keys(widgets).length})
             </Button>
             <div className="text-[11px] text-slate-500 font-normal px-2 hidden sm:block">
               سال مالی:{' '}
@@ -576,6 +1116,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
               {[
+                { key: 'smartAgent', label: 'دستیار و ایجنت حسابدار ارشد مهرگان (AI)' },
+                { key: 'smartLaunchpad', label: 'میز کار هوشمند (میانبرهای پرتکرار)' },
+                { key: 'actionRequired', label: 'کارهای نیازمند اقدام فوری (Cockpit)' },
+                { key: 'recentActivity', label: 'جریان رویدادها و فعالیت‌های زنده' },
                 { key: 'kpiCards', label: 'کارت‌های شاخص کلیدی KPI' },
                 { key: 'salesChart', label: 'نمودار تحلیل فروش' },
                 { key: 'liquidityChart', label: 'نمودار ترکیب نقدینگی' },
@@ -592,7 +1136,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 },
                 { key: 'bankVault', label: 'موجودی بانک و صندوق' },
                 { key: 'lowStockAlerts', label: 'دیده‌بان موجودی انبار' },
-                { key: 'quickShortcuts', label: 'پنل عمودی میانبرها (راست)' },
+                { key: 'quickShortcuts', label: 'پنل عمودی میانبرها (ستون جانبی)' },
               ].map((w) => {
                 const active = widgets[w.key as keyof WidgetVisibility];
                 return (
@@ -620,11 +1164,287 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         )}
       </div>
 
+      {/* 2.5 SMART WORKSPACE FREQUENT ACTIONS LAUNCHPAD */}
+      {widgets.smartLaunchpad && (
+        <Card variant="default" padding="md" className="space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <h3 className="font-extrabold text-xs sm:text-sm text-slate-900">
+                میز کار هوشمند: میانبرهای عملیات پرتکرار
+              </h3>
+            </div>
+            <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+              دسترسی سریع به ماژول‌های پرکاربرد سیستم
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+            <button
+              type="button"
+              onClick={() => onNavigateTab('SALES')}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-emerald-50/80 border border-slate-200/80 hover:border-emerald-300 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer min-h-[58px] active:scale-95 touch-manipulation"
+            >
+              <div className="p-2.5 bg-emerald-100 text-emerald-800 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <ShoppingCart className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-black text-slate-900 block truncate max-w-full">
+                {uiLabels.quickPosButtonLabelFa || 'فروش POS'}
+              </span>
+              <span className="text-[10px] text-slate-400 group-hover:text-emerald-700 block truncate">
+                فاکتور و تسویه
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('PURCHASES')}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-amber-50/80 border border-slate-200/80 hover:border-amber-300 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer min-h-[58px] active:scale-95 touch-manipulation"
+            >
+              <div className="p-2.5 bg-amber-100 text-amber-800 rounded-xl group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                <ShoppingBag className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-black text-slate-900 block truncate max-w-full">
+                فاکتور خرید
+              </span>
+              <span className="text-[10px] text-slate-400 group-hover:text-amber-700 block truncate">
+                تأمین کالا
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('TREASURY')}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/80 border border-slate-200/80 hover:border-teal-300 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer min-h-[58px] active:scale-95 touch-manipulation"
+            >
+              <div className="p-2.5 bg-teal-100 text-teal-800 rounded-xl group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                <Landmark className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-black text-slate-900 block truncate max-w-full">
+                خزانه و چک
+              </span>
+              <span className="text-[10px] text-slate-400 group-hover:text-teal-700 block truncate">
+                بانک و صندوق
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('INVENTORY')}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-300 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer min-h-[58px] active:scale-95 touch-manipulation"
+            >
+              <div className="p-2.5 bg-indigo-100 text-indigo-800 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                <Package className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-black text-slate-900 block truncate max-w-full">
+                کاردکس انبار
+              </span>
+              <span className="text-[10px] text-slate-400 group-hover:text-indigo-700 block truncate">
+                موجودی و بارکد
+              </span>
+            </button>
+
+            {features.enableInstallationServices ? (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('INSTALLATION')}
+                className="p-3 rounded-2xl bg-slate-50 hover:bg-cyan-50/80 border border-slate-200/80 hover:border-cyan-300 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer min-h-[58px] active:scale-95 touch-manipulation"
+              >
+                <div className="p-2.5 bg-cyan-100 text-cyan-800 rounded-xl group-hover:bg-cyan-600 group-hover:text-white transition-colors">
+                  <Wrench className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-black text-slate-900 block truncate max-w-full">
+                  خدمات و نصب
+                </span>
+                <span className="text-[10px] text-slate-400 group-hover:text-cyan-700 block truncate">
+                  پروژه‌ها و نصاب
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('SALES')}
+                className="p-3 rounded-2xl bg-slate-50 hover:bg-emerald-50/80 border border-slate-200/80 hover:border-emerald-300 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer min-h-[58px] active:scale-95 touch-manipulation"
+              >
+                <div className="p-2.5 bg-emerald-100 text-emerald-800 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-black text-slate-900 block truncate max-w-full">
+                  پیش‌فاکتور
+                </span>
+                <span className="text-[10px] text-slate-400 group-hover:text-emerald-700 block truncate">
+                  استعلام قیمت
+                </span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('PARTIES')}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/80 border border-slate-200/80 hover:border-blue-300 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer min-h-[58px] active:scale-95 touch-manipulation"
+            >
+              <div className="p-2.5 bg-blue-100 text-blue-800 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <Users className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-black text-slate-900 block truncate max-w-full">
+                اشخاص و طرفین
+              </span>
+              <span className="text-[10px] text-slate-400 group-hover:text-blue-700 block truncate">
+                مانده‌حساب‌ها
+              </span>
+            </button>
+
+            {enableDoubleEntryAccounting ? (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('ACCOUNTING')}
+                className="p-3 rounded-2xl bg-slate-50 hover:bg-purple-50/80 border border-slate-200/80 hover:border-purple-300 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer min-h-[58px] active:scale-95 touch-manipulation"
+              >
+                <div className="p-2.5 bg-purple-100 text-purple-800 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-black text-slate-900 block truncate max-w-full">
+                  حسابداری دوبل
+                </span>
+                <span className="text-[10px] text-slate-400 group-hover:text-purple-700 block truncate">
+                  اسناد و تراز
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('TREASURY')}
+                className="p-3 rounded-2xl bg-slate-50 hover:bg-purple-50/80 border border-slate-200/80 hover:border-purple-300 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer min-h-[58px] active:scale-95 touch-manipulation"
+              >
+                <div className="p-2.5 bg-purple-100 text-purple-800 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                  <DollarSign className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-black text-slate-900 block truncate max-w-full">
+                  هزینه‌ها و درآمد
+                </span>
+                <span className="text-[10px] text-slate-400 group-hover:text-purple-700 block truncate">
+                  سایر مخارج
+                </span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('SETTINGS_HEALTH')}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 hover:border-slate-300 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer min-h-[58px] active:scale-95 touch-manipulation"
+            >
+              <div className="p-2.5 bg-slate-200 text-slate-800 rounded-xl group-hover:bg-slate-800 group-hover:text-white transition-colors">
+                <SlidersHorizontal className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-black text-slate-900 block truncate max-w-full">
+                تنظیمات سیستم
+              </span>
+              <span className="text-[10px] text-slate-400 group-hover:text-slate-800 block truncate">
+                پیکربندی و صنف
+              </span>
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* ACTION-REQUIRED COCKPIT */}
+      {widgets.actionRequired && (
+        <Card variant="default" padding="md" className="space-y-3.5 border-slate-200">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+            <div className="flex items-center gap-2">
+              <ListTodo className="w-4 h-4 text-rose-600" />
+              <h3 className="font-black text-xs sm:text-sm text-slate-900 flex items-center gap-2">
+                <span>کارهای نیازمند اقدام فوری (Cockpit)</span>
+                {actionRequiredItems.length > 0 ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800">
+                    {actionRequiredItems.length.toLocaleString('fa-IR')} مورد اقدام
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
+                    وضعیت پایدار
+                  </span>
+                )}
+              </h3>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              تعهدات سررسیدشده، هشدارهای کسری انبار و اسناد منتظر تعیین تکلیف
+            </p>
+          </div>
+
+          {actionRequiredItems.length === 0 ? (
+            <div className="p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl flex items-center gap-3 text-xs text-emerald-800">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <span>تمامی اسناد، چک‌های صیادی و موجودی کالا در وضعیت پایدار هستند و هیچ اقدام معوقی ثبت نشده است.</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {actionRequiredItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => onNavigateTab(item.targetTab)}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-2.5 group hover:shadow-sm ${
+                    item.urgency === 'HIGH'
+                      ? 'bg-rose-50/40 border-rose-200 hover:border-rose-400'
+                      : item.urgency === 'MEDIUM'
+                      ? 'bg-amber-50/40 border-amber-200 hover:border-amber-400'
+                      : 'bg-blue-50/40 border-blue-200 hover:border-blue-400'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-extrabold text-xs text-slate-900 group-hover:text-blue-900 transition-colors flex items-center gap-1.5">
+                        <AlertTriangle
+                          className={`w-3.5 h-3.5 shrink-0 ${
+                            item.urgency === 'HIGH'
+                              ? 'text-rose-600'
+                              : item.urgency === 'MEDIUM'
+                              ? 'text-amber-600'
+                              : 'text-blue-600'
+                          }`}
+                        />
+                        <span className="truncate">{item.titleFa}</span>
+                      </span>
+                      <span
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 ${
+                          item.urgency === 'HIGH'
+                            ? 'bg-rose-100 text-rose-800'
+                            : item.urgency === 'MEDIUM'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {item.badgeText}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-2">
+                      {item.descriptionFa}
+                    </p>
+
+                    {item.amountToman !== undefined && (
+                      <p className="text-xs font-mono font-black text-slate-900 tabular-nums pt-0.5">
+                        مبلغ درگیر: {item.amountToman.toLocaleString('fa-IR')}{' '}
+                        <span className="text-[10px] font-normal text-slate-500">تومان</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-bold text-slate-700 group-hover:text-slate-900">
+                    <span className="group-hover:translate-x-[-2px] transition-transform">{item.actionLabelFa}</span>
+                    <ChevronLeft className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-[-2px] transition-all" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* MAIN DASHBOARD CONTAINER WITH RIGHT VERTICAL SHORTCUTS SIDEBAR */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* RIGHT COLUMN IN RTL: VERTICAL QUICK ACCESS SHORTCUTS PANEL */}
+        {/* RIGHT COLUMN IN RTL: VERTICAL QUICK ACCESS SHORTCUTS PANEL (DESKTOP DOCK) */}
         {widgets.quickShortcuts && (
-          <Card variant="default" padding="md" className="lg:col-span-1 space-y-3 sticky top-28">
+          <Card variant="default" padding="md" className="hidden lg:block lg:col-span-1 space-y-3 sticky top-28">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-black text-xs text-slate-900 flex items-center gap-1.5">
                 <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
@@ -809,261 +1629,99 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {widgets.kpiCards && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Card 1: Liquidity */}
-              <Card
-                variant="default"
-                padding="md"
+              <StatCard
+                title="کل نقدینگی و خزانه"
+                value={(totalLiquidityIrr / 10).toLocaleString('fa-IR')}
+                unit="تومان"
+                icon={<Landmark className="w-5 h-5" />}
+                color="emerald"
+                secondaryStats={[
+                  { label: 'بانک‌ها', value: `${Math.round((totalBankBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%` },
+                  { label: 'صندوق‌ها', value: `${Math.round((totalCashBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%` },
+                ]}
+                actionLabel="مدیریت حساب‌ها"
                 onClick={() => onNavigateTab('TREASURY')}
-                className={`group cursor-pointer hover:border-teal-400 transition-all flex flex-col justify-between ${
-                  activePerspective === 'TREASURY' || activePerspective === 'ALL' ? '' : 'opacity-60'
-                }`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-slate-500">کل نقدینگی و خزانه</span>
-                    <div className="p-2.5 bg-teal-50 text-teal-700 rounded-xl group-hover:bg-teal-600 group-hover:text-white transition-colors">
-                      <Landmark className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
-                      {(totalLiquidityIrr / 10).toLocaleString('fa-IR')}
-                      <span className="text-[11px] font-normal text-slate-500 mr-1.5">تومان</span>
-                    </p>
-                    <div className="mt-2.5 space-y-1.5">
-                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex">
-                        <div
-                          style={{ width: `${Math.round((totalBankBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%` }}
-                          className="bg-teal-600 h-full"
-                          title="بانک‌ها"
-                        />
-                        <div
-                          style={{ width: `${Math.round((totalCashBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%` }}
-                          className="bg-emerald-400 h-full"
-                          title="صندوق‌ها"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 tabular-nums">
-                        <span>بانک: {Math.round((totalBankBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%</span>
-                        <span>صندوق: {Math.round((totalCashBalanceIrr / (totalLiquidityIrr || 1)) * 100)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[11px] font-bold text-teal-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                  <span>مدیریت حساب‌ها</span>
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </span>
-              </Card>
+                className={activePerspective === 'TREASURY' || activePerspective === 'ALL' ? '' : 'opacity-60'}
+              />
 
               {/* Card 2: Total Sales */}
-              <Card
-                variant="default"
-                padding="md"
+              <StatCard
+                title={uiLabels.salesTabTitleFa}
+                value={(totalSalesIrr / 10).toLocaleString('fa-IR')}
+                unit="تومان"
+                icon={<ShoppingCart className="w-5 h-5" />}
+                color="blue"
+                subtitle={`${salesInvoices.length.toLocaleString('fa-IR')} فاکتور فروش ثبت‌شده`}
+                actionLabel={uiLabels.quickPosButtonLabelFa}
                 onClick={() => onNavigateTab('SALES')}
-                className={`group cursor-pointer hover:border-emerald-400 transition-all flex flex-col justify-between ${
-                  activePerspective === 'SALES' || activePerspective === 'ALL' ? '' : 'opacity-60'
-                }`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-slate-500">
-                      {uiLabels.salesTabTitleFa}
-                    </span>
-                    <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                      <ShoppingCart className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xl font-black text-emerald-700 tracking-tight font-mono tabular-nums">
-                      {(totalSalesIrr / 10).toLocaleString('fa-IR')}
-                      <span className="text-[11px] font-normal text-slate-500 mr-1.5">تومان</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-1.5">
-                      تعداد: <strong className="text-slate-800 font-mono tabular-nums">{salesInvoices.length}</strong> فاکتور رسمی
-                    </p>
-                  </div>
-                </div>
-                <span className="text-[11px] font-bold text-emerald-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                  <span>{uiLabels.quickPosButtonLabelFa}</span>
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </span>
-              </Card>
+                className={activePerspective === 'SALES' || activePerspective === 'ALL' ? '' : 'opacity-60'}
+              />
 
               {/* Card 3: Receivables */}
-              <Card
-                variant="default"
-                padding="md"
+              <StatCard
+                title="مطالبات از خریداران"
+                value={(totalReceivablesIrr / 10).toLocaleString('fa-IR')}
+                unit="تومان"
+                icon={<Users className="w-5 h-5" />}
+                color="rose"
+                subtitle={`بدهی تأمین‌کننده: ${(totalPayablesIrr / 10).toLocaleString('fa-IR')} تومان`}
+                actionLabel="صورت‌حساب اشخاص"
                 onClick={() => onNavigateTab('PARTIES')}
-                className={`group cursor-pointer hover:border-blue-400 transition-all flex flex-col justify-between ${
-                  activePerspective === 'SALES' || activePerspective === 'ALL' ? '' : 'opacity-60'
-                }`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-slate-500">مطالبات از خریداران</span>
-                    <div className="p-2.5 bg-blue-50 text-blue-700 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                      <Users className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xl font-black text-blue-700 tracking-tight font-mono tabular-nums">
-                      {(totalReceivablesIrr / 10).toLocaleString('fa-IR')}
-                      <span className="text-[11px] font-normal text-slate-500 mr-1.5">تومان</span>
-                    </p>
-                    <p
-                      className="text-[11px] text-slate-500 mt-1.5 truncate tabular-nums"
-                      title={`بدهی به تأمین‌کنندگان: ${(totalPayablesIrr / 10).toLocaleString('fa-IR')} تومان`}
-                    >
-                      بدهی تأمین‌کننده: {(totalPayablesIrr / 10).toLocaleString('fa-IR')} تومان
-                    </p>
-                  </div>
-                </div>
-                <span className="text-[11px] font-bold text-blue-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                  <span>صورت‌حساب اشخاص</span>
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </span>
-              </Card>
+                className={activePerspective === 'SALES' || activePerspective === 'ALL' ? '' : 'opacity-60'}
+              />
 
               {/* Card 4: Installation & Projects OR Purchases & Supply */}
               {features.enableInstallationServices ? (
-                <Card
-                  variant="default"
-                  padding="md"
+                <StatCard
+                  title="پروژه‌های نصب دوربین"
+                  value={(activeProjects.length + activeJobs.length).toLocaleString('fa-IR')}
+                  unit="مورد فعال"
+                  icon={<Wrench className="w-5 h-5" />}
+                  color="cyan"
+                  subtitle="کارتابل نصابان و پیشرفت میدانی"
+                  actionLabel="مدیریت پروژه‌ها"
                   onClick={() => onNavigateTab('INSTALLATION')}
-                  className={`group cursor-pointer hover:border-cyan-400 transition-all flex flex-col justify-between ${
-                    activePerspective === 'PROJECTS' || activePerspective === 'ALL' ? '' : 'opacity-60'
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-slate-500">پروژه‌های نصب دوربین</span>
-                      <div className="p-2.5 bg-cyan-50 text-cyan-700 rounded-xl group-hover:bg-cyan-600 group-hover:text-white transition-colors">
-                        <Wrench className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
-                        {activeProjects.length + activeJobs.length}
-                        <span className="text-[11px] font-normal text-slate-500 mr-1.5">مورد فعال</span>
-                      </p>
-                      <p className="text-[11px] text-cyan-800 font-medium mt-1.5">
-                        کارتابل نصابان و پیشرفت میدانی
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-bold text-cyan-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                    <span>مدیریت پروژه‌ها</span>
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </span>
-                </Card>
+                  className={activePerspective === 'PROJECTS' || activePerspective === 'ALL' ? '' : 'opacity-60'}
+                />
               ) : (
-                <Card
-                  variant="default"
-                  padding="md"
+                <StatCard
+                  title={uiLabels.purchasesTabTitleFa}
+                  value={(totalPurchasesIrr / 10).toLocaleString('fa-IR')}
+                  unit="تومان"
+                  icon={<ShoppingBag className="w-5 h-5" />}
+                  color="amber"
+                  subtitle={`${purchaseInvoices.length.toLocaleString('fa-IR')} فاکتور خرید دوره`}
+                  actionLabel="مدیریت خرید و ورود انبار"
                   onClick={() => onNavigateTab('PURCHASES')}
-                  className={`group cursor-pointer hover:border-amber-400 transition-all flex flex-col justify-between ${
-                    activePerspective === 'PURCHASES' || activePerspective === 'ALL' ? '' : 'opacity-60'
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-slate-500">
-                        {uiLabels.purchasesTabTitleFa}
-                      </span>
-                      <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                        <ShoppingBag className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
-                        {(totalPurchasesIrr / 10).toLocaleString('fa-IR')}
-                        <span className="text-[11px] font-normal text-slate-500 mr-1.5">تومان</span>
-                      </p>
-                      <p className="text-[11px] text-amber-800 font-medium mt-1.5">
-                        تعداد: <strong className="font-mono tabular-nums">{purchaseInvoices.length}</strong> فاکتور خرید دوره
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-bold text-amber-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                    <span>مدیریت خرید و ورود انبار</span>
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </span>
-                </Card>
+                  className={activePerspective === 'PURCHASES' || activePerspective === 'ALL' ? '' : 'opacity-60'}
+                />
               )}
 
               {/* Card 5: In-hand Cheques */}
-              <Card
-                variant="default"
-                padding="md"
+              <StatCard
+                title="چک‌های نزد صندوق"
+                value={(totalInHandChequesIrr / 10).toLocaleString('fa-IR')}
+                unit="تومان"
+                icon={<CreditCard className="w-5 h-5" />}
+                color="purple"
+                subtitle={`${inHandCheques.length.toLocaleString('fa-IR')} فقره چک دریافتنی`}
+                actionLabel="دفتر چک و سررسید"
                 onClick={() => onNavigateTab('TREASURY')}
-                className={`group cursor-pointer hover:border-indigo-400 transition-all flex flex-col justify-between ${
-                  activePerspective === 'TREASURY' || activePerspective === 'ALL' ? '' : 'opacity-60'
-                }`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-slate-500">چک‌های نزد صندوق</span>
-                    <div className="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                      <CreditCard className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xl font-black text-indigo-700 tracking-tight font-mono tabular-nums">
-                      {(totalInHandChequesIrr / 10).toLocaleString('fa-IR')}
-                      <span className="text-[11px] font-normal text-slate-500 mr-1.5">تومان</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-1.5">
-                      تعداد: <strong className="text-slate-800 font-mono tabular-nums">{inHandCheques.length}</strong> فقره چک دریافتنی
-                    </p>
-                  </div>
-                </div>
-                <span className="text-[11px] font-bold text-indigo-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                  <span>دفتر چک و سررسید</span>
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </span>
-              </Card>
+                className={activePerspective === 'TREASURY' || activePerspective === 'ALL' ? '' : 'opacity-60'}
+              />
 
               {/* Card 6: Low Stock Alert */}
-              <Card
-                variant="default"
-                padding="md"
+              <StatCard
+                title="اقلام نیازمند سفارش"
+                value={lowStockItems.length.toLocaleString('fa-IR')}
+                unit="کالا"
+                icon={<AlertTriangle className="w-5 h-5" />}
+                color={lowStockItems.length > 0 ? 'amber' : 'slate'}
+                subtitle={lowStockItems.length > 0 ? 'کمتر از نقطه سفارش انبار' : 'موجودی انبار در حد مطلوب'}
+                actionLabel="کاردکس و انبارداری"
                 onClick={() => onNavigateTab('INVENTORY')}
-                className={`group cursor-pointer hover:border-amber-400 transition-all flex flex-col justify-between ${
-                  activePerspective === 'INVENTORY' || activePerspective === 'ALL' ? '' : 'opacity-60'
-                }`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-slate-500">اقلام نیازمند سفارش</span>
-                    <div
-                      className={`p-2.5 rounded-xl transition-colors ${
-                        lowStockItems.length > 0
-                          ? 'bg-amber-100 text-amber-800 group-hover:bg-amber-500 group-hover:text-white'
-                          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-700 group-hover:text-white'
-                      }`}
-                    >
-                      <AlertTriangle className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xl font-black text-slate-900 tracking-tight font-mono tabular-nums">
-                      {lowStockItems.length}
-                      <span className="text-[11px] font-normal text-slate-500 mr-1.5">کالا</span>
-                    </p>
-                    <p
-                      className={`text-[11px] font-bold mt-1.5 ${
-                        lowStockItems.length > 0 ? 'text-amber-700' : 'text-emerald-700'
-                      }`}
-                    >
-                      {lowStockItems.length > 0 ? 'کمتر از نقطه سفارش انبار' : 'موجودی انبار در حد مطلوب'}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-[11px] font-bold text-amber-700 mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                  <span>کاردکس و انبارداری</span>
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </span>
-              </Card>
+                className={activePerspective === 'INVENTORY' || activePerspective === 'ALL' ? '' : 'opacity-60'}
+              />
             </div>
           )}
 
@@ -1385,6 +2043,110 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           )}
 
+          {/* RECENT ACTIVITIES & LIVE EVENTS STREAM */}
+          {widgets.recentActivity && (
+            <Card variant="default" padding="lg" className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-indigo-50 text-indigo-700 rounded-xl">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">
+                      آخرین فعالیت‌ها و رویدادهای زنده سیستم
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      پایش لحظه‌ای فاکتورهای فروش و خرید، اسناد خزانه و رویدادهای عملیاتی
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleManualRefresh}
+                    leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />}
+                  >
+                    بروزرسانی
+                  </Button>
+                </div>
+              </div>
+
+              {recentActivities.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-xs">
+                  هنوز رویداد یا فعالیتی در دوره ثبت نشده است.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {recentActivities.map((act) => (
+                    <div
+                      key={act.id}
+                      onClick={() => onNavigateTab(act.targetTab)}
+                      className="p-3.5 rounded-2xl bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-indigo-300 transition-all cursor-pointer flex items-center justify-between gap-3 group active:scale-[0.99] touch-manipulation"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`p-2.5 rounded-xl shrink-0 ${
+                            act.category === 'SALE'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : act.category === 'PURCHASE'
+                              ? 'bg-amber-100 text-amber-800'
+                              : act.category === 'CHEQUE'
+                              ? 'bg-teal-100 text-teal-800'
+                              : act.category === 'INSTALLATION'
+                              ? 'bg-cyan-100 text-cyan-800'
+                              : 'bg-slate-200 text-slate-800'
+                          }`}
+                        >
+                          {act.category === 'SALE' && <ShoppingCart className="w-4 h-4" />}
+                          {act.category === 'PURCHASE' && <ShoppingBag className="w-4 h-4" />}
+                          {act.category === 'CHEQUE' && <Landmark className="w-4 h-4" />}
+                          {act.category === 'INSTALLATION' && <Wrench className="w-4 h-4" />}
+                          {act.category === 'SYSTEM' && <ShieldCheck className="w-4 h-4" />}
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="font-extrabold text-xs text-slate-900 truncate group-hover:text-indigo-900 transition-colors">
+                            {act.titleFa}
+                          </p>
+                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                            {act.counterpartyFa && <span className="font-medium text-slate-700">{act.counterpartyFa} · </span>}
+                            <span className="font-mono tabular-nums">{act.dateFa}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-left shrink-0 space-y-1">
+                        {act.amountToman !== undefined && (
+                          <p className="font-mono font-black text-xs text-slate-900 tabular-nums">
+                            {act.amountToman.toLocaleString('fa-IR')}{' '}
+                            <span className="text-[10px] font-normal text-slate-500">تومان</span>
+                          </p>
+                        )}
+                        <span
+                          className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            act.statusTone === 'emerald'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : act.statusTone === 'amber'
+                              ? 'bg-amber-100 text-amber-800'
+                              : act.statusTone === 'blue'
+                              ? 'bg-blue-100 text-blue-800'
+                              : act.statusTone === 'purple'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-slate-200 text-slate-800'
+                          }`}
+                        >
+                          {act.statusFa}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+
           {/* 5. MAIN OPERATIONS SPLIT: RECENT INVOICES & CCTV PROJECTS VS BANK VAULT & ALERTS */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left 2 Cols: Invoices Table with Search & CCTV Active Projects */}
@@ -1486,21 +2248,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               {(inv.totalInvoiceAmountIrr / 10).toLocaleString('fa-IR')}
                             </TableCell>
                             <TableCell className="text-center">
-                              <span
-                                className={`text-[11px] font-extrabold ${
+                              <Badge
+                                variant={
                                   inv.status === 'PAID'
-                                    ? 'text-emerald-700'
+                                    ? 'success'
                                     : inv.status === 'PARTIALLY_PAID'
-                                    ? 'text-amber-700'
-                                    : 'text-rose-700'
-                                }`}
+                                    ? 'warning'
+                                    : 'danger'
+                                }
+                                size="sm"
+                                dot
                               >
                                 {inv.status === 'PAID'
                                   ? 'تسویه کامل'
                                   : inv.status === 'PARTIALLY_PAID'
                                   ? 'تسویه ناقص'
                                   : 'در انتظار پرداخت'}
-                              </span>
+                              </Badge>
                             </TableCell>
                             <TableCell className="text-center">
                               <button
@@ -1801,6 +2565,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 

@@ -3,6 +3,80 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        // 1. Suppress console.error reports for Vite HMR WebSocket failures
+        var origConsoleError = console.error;
+        console.error = function() {
+          var args = Array.prototype.slice.call(arguments);
+          var isViteWsError = args.some(function(arg) {
+            if (!arg) return false;
+            var str = arg instanceof Error ? (arg.message + ' ' + (arg.stack || '')) : String(arg);
+            return str.includes('WebSocket closed without opened') || (str.includes('WebSocket') && str.includes('@vite/client'));
+          });
+          if (isViteWsError) {
+            return;
+          }
+          return origConsoleError.apply(console, args);
+        };
+
+        // 2. Suppress unhandled error and rejection events from Vite client
+        window.addEventListener('error', function(e) {
+          if (e && (e.message?.includes('WebSocket') || e.filename?.includes('@vite/client'))) {
+            e.preventDefault?.();
+            e.stopImmediatePropagation?.();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(e) {
+          var reason = e && (e.reason?.message || e.reason?.stack || String(e.reason));
+          if (reason && (reason.includes('WebSocket') || reason.includes('@vite/client'))) {
+            e.preventDefault?.();
+            e.stopImmediatePropagation?.();
+            return true;
+          }
+        }, true);
+
+        // 3. Mock Vite HMR WebSocket so @vite/client never fires close errors
+        var NativeWebSocket = window.WebSocket;
+        if (NativeWebSocket) {
+          window.WebSocket = function(url, protocols) {
+            if (protocols === 'vite-hmr' || (typeof protocols === 'string' && protocols.indexOf('vite') !== -1)) {
+              var target = new EventTarget();
+              target.readyState = 1;
+              target.url = url;
+              target.protocol = protocols;
+              target.binaryType = 'blob';
+              target.bufferedAmount = 0;
+              target.extensions = '';
+              target.send = function() {};
+              target.close = function(code, reason) {
+                target.readyState = 3;
+                var evt = new Event('close');
+                evt.wasClean = true;
+                evt.code = code || 1000;
+                evt.reason = reason || 'Closed';
+                if (typeof target.onclose === 'function') target.onclose(evt);
+                target.dispatchEvent(evt);
+              };
+              setTimeout(function() {
+                var evt = new Event('open');
+                if (typeof target.onopen === 'function') target.onopen(evt);
+                target.dispatchEvent(evt);
+              }, 10);
+              return target;
+            }
+            return new NativeWebSocket(url, protocols);
+          };
+          window.WebSocket.prototype = NativeWebSocket.prototype;
+          window.WebSocket.CONNECTING = NativeWebSocket.CONNECTING;
+          window.WebSocket.OPEN = NativeWebSocket.OPEN;
+          window.WebSocket.CLOSING = NativeWebSocket.CLOSING;
+          window.WebSocket.CLOSED = NativeWebSocket.CLOSED;
+        }
+      })();
+    </script>
     <title>مهرگان — سیستم حسابداری، فروش، پیش‌فاکتور، Quick POS و انبارداری</title>
     <meta name="description" content="سیستم جامع حسابداری و فروش مهرگان — فروش سریع Quick POS، جستجوی کالا و سریال/MAC، تبدیل پیش‌فاکتور به فروش، دریافت وجه، تسویه بدهی و محاسبه دقیق بهای تمام‌شده COGS" />
     <meta property="og:title" content="مهرگان — سیستم حسابداری، فروش، پیش‌فاکتور، Quick POS و انبارداری" />

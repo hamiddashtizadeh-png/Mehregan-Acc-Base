@@ -20,7 +20,7 @@ export function generatePrintDocumentHtml(options: {
     
     @page {
       size: ${isThermal ? '80mm auto' : 'A4 portrait'};
-      margin: ${isThermal ? '2mm' : '8mm'};
+      margin: ${isThermal ? '0mm' : '8mm'};
     }
 
     * {
@@ -36,16 +36,20 @@ export function generatePrintDocumentHtml(options: {
       color: #0f172a;
       direction: rtl;
       font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Tahoma, sans-serif;
-      font-size: ${isThermal ? '10px' : '11px'};
-      line-height: 1.4;
+      font-size: ${isThermal ? '11px' : '11px'};
+      line-height: 1.35;
+      overflow-x: hidden;
     }
 
     .printable-sheet {
-      width: ${isThermal ? '80mm' : '100%'};
-      max-width: ${isThermal ? '80mm' : '210mm'};
+      width: ${isThermal ? '72mm' : '100%'};
+      max-width: ${isThermal ? '72mm' : '210mm'};
       margin: 0 auto;
-      padding: ${isThermal ? '4mm' : '6mm'};
+      padding: ${isThermal ? '2mm' : '6mm'};
       background: #fff;
+      box-sizing: border-box;
+      overflow: hidden;
+      word-break: break-word;
     }
 
     table {
